@@ -20,6 +20,7 @@
         "@genspire/data": "workspace:*",
         "@genspire/data-mikroorm": "workspace:*",
         "@genspire/server": "workspace:*",
+        "@genspire/storage": "workspace:*",
         "@genspire/swagger": "workspace:*",
         "@mikro-orm/core": "^7.1.4",
         "@mikro-orm/decorators": "^7.1.4",
@@ -72,6 +73,13 @@
         "@genspire/core": "workspace:*",
       },
     },
+    "packages/storage": {
+      "name": "@genspire/storage",
+      "version": "0.0.0",
+      "dependencies": {
+        "@genspire/core": "workspace:*",
+      },
+    },
     "packages/swagger": {
       "name": "@genspire/swagger",
       "version": "0.0.0",
@@ -93,6 +101,8 @@
     "@genspire/playground-api": ["@genspire/playground-api@workspace:apps/playground-api"],
 
     "@genspire/server": ["@genspire/server@workspace:packages/server"],
+
+    "@genspire/storage": ["@genspire/storage@workspace:packages/storage"],
 
     "@genspire/swagger": ["@genspire/swagger@workspace:packages/swagger"],
 

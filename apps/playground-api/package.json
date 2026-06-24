@@ -11,6 +11,7 @@
     "@genspire/server": "workspace:*",
     "@genspire/swagger": "workspace:*",
     "@genspire/auth": "workspace:*",
+    "@genspire/storage": "workspace:*",
     "@mikro-orm/core": "^7.1.4",
     "@mikro-orm/decorators": "^7.1.4",
     "@mikro-orm/migrations": "^7.1.4",

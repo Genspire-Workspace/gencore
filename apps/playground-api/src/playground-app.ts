@@ -8,6 +8,9 @@ import {
 import { serverExtension, Server } from "@genspire/server";
 import { swaggerExtension } from "@genspire/swagger";
 import { authExtension, AuthConfiguration, AuthController, RoleController, bearerAuthMiddleware, authGuardMiddleware, ipBanMiddleware } from "@genspire/auth";
+import { storageExtension, localStorageProvider } from "@genspire/storage";
+import path from "node:path";
+import { mkdirSync } from "node:fs";
 import { PlaygroundAuthUserEntity } from "./auth/playground-auth-user.entity.js";
 import {
   createPlaygroundMikroOrmConfig,
@@ -16,6 +19,7 @@ import {
 import { adminUserSeeder } from "./auth/auth-seeder.js";
 import { AuthActivityController } from "./auth/auth-activity.controller.js";
 import { AuthBanController } from "./auth/auth-ban.controller.js";
+import { FileController } from "./files/file.controller.js";
 import { HealthController } from "./health/health.controller.js";
 import { TodoController } from "./todos/todo.controller.js";
 
@@ -35,6 +39,20 @@ export async function createPlaygroundApp(
   await app.use(
     dataExtension({
       runSeedersOnStart: false,
+    }),
+  );
+
+  const repoRoot = options.repoRoot ?? process.cwd();
+  const storageDir = path.resolve(repoRoot, "data", "storage");
+  mkdirSync(storageDir, { recursive: true });
+
+  await app.use(
+    storageExtension({
+      provider: localStorageProvider({
+        rootDirectory: storageDir,
+        publicBaseUrl: "http://localhost:3000/files",
+      }),
+      defaultBucket: "default",
     }),
   );
 
@@ -94,7 +112,7 @@ export async function createPlaygroundApp(
     }),
   );
 
-  app.get(Server).registerControllers(HealthController, AuthController, RoleController, AuthActivityController, AuthBanController, TodoController);
+  app.get(Server).registerControllers(FileController, HealthController, AuthController, RoleController, AuthActivityController, AuthBanController, TodoController);
 
   return app;
 }

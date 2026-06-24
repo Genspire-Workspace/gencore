@@ -35,6 +35,7 @@
       "@genspire/data-mikroorm": ["./packages/data-mikroorm/src/index.ts"],
       "@genspire/swagger": ["./packages/swagger/src/index.ts"],
       "@genspire/auth": ["./packages/auth/src/index.ts"],
+      "@genspire/storage": ["./packages/storage/src/index.ts"],
       "@mikro-orm/decorators": ["./apps/playground-api/node_modules/@mikro-orm/decorators/es/index.d.ts"],
       "@mikro-orm/decorators/es": ["./apps/playground-api/node_modules/@mikro-orm/decorators/es/index.d.ts"]
     }
