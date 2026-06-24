@@ -11,34 +11,41 @@ import type {
   MikroOrmMigrationUpDownOptions,
 } from "./migration-options.js";
 
+type MikroOrmMigrator = {
+  create(
+    path?: string,
+    blank?: boolean,
+    initial?: boolean,
+    name?: string,
+  ): Promise<MigrationResult>;
+  getPending(options?: MikroOrmMigrationPendingOptions): Promise<MigrationInfo[]>;
+  getExecuted(options?: MikroOrmMigrationExecutedOptions): Promise<MigrationRow[]>;
+  up(options?: MikroOrmMigrationUpDownOptions): Promise<MigrationInfo[]>;
+  down(options?: MikroOrmMigrationUpDownOptions): Promise<MigrationInfo[]>;
+};
+
 type MikroOrmLike = {
-  getMigrator?: () => {
-    create(
-      path?: string,
-      blank?: boolean,
-      initial?: boolean,
-      name?: string,
-    ): Promise<MigrationResult>;
-    getPending(options?: MikroOrmMigrationPendingOptions): Promise<MigrationInfo[]>;
-    getExecuted(options?: MikroOrmMigrationExecutedOptions): Promise<MigrationRow[]>;
-    up(options?: MikroOrmMigrationUpDownOptions): Promise<MigrationInfo[]>;
-    down(options?: MikroOrmMigrationUpDownOptions): Promise<MigrationInfo[]>;
-  };
+  getMigrator?: () => MikroOrmMigrator;
+  migrator?: MikroOrmMigrator;
 };
 
 export class MikroOrmMigrationRunner {
   constructor(private readonly service: MikroOrmService) {}
 
-  getMigrator() {
+  getMigrator(): MikroOrmMigrator {
     const orm = this.service.getOrm() as MikroOrmLike;
 
-    if (typeof orm.getMigrator !== "function") {
-      throw new Error(
-        "MikroORM migrator is not available. Make sure @mikro-orm/migrations is installed and Migrator is registered in the MikroORM extensions config.",
-      );
+    if (typeof orm.getMigrator === "function") {
+      return orm.getMigrator();
     }
 
-    return orm.getMigrator();
+    if (orm.migrator) {
+      return orm.migrator;
+    }
+
+    throw new Error(
+      "MikroORM migrator is not available. Make sure @mikro-orm/migrations is installed and Migrator is registered in the MikroORM extensions config.",
+    );
   }
 
   async create(

@@ -1,19 +1,18 @@
 {
-  "name": "@genspire/playground-api",
+  "name": "@genspire/auth",
   "version": "0.0.0",
   "private": true,
   "type": "module",
   "main": "./src/index.ts",
   "dependencies": {
     "@genspire/core": "workspace:*",
+    "@genspire/server": "workspace:*",
     "@genspire/data": "workspace:*",
     "@genspire/data-mikroorm": "workspace:*",
-    "@genspire/server": "workspace:*",
-    "@genspire/swagger": "workspace:*",
-    "@genspire/auth": "workspace:*",
     "@mikro-orm/core": "^7.1.4",
     "@mikro-orm/decorators": "^7.1.4",
-    "@mikro-orm/migrations": "^7.1.4",
+    "jose": "^5.9.6",
+    "hash-wasm": "^4.11.0",
     "reflect-metadata": "^0.2.2"
   }
 }

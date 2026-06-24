@@ -2,7 +2,9 @@ import { mkdir } from "node:fs/promises";
 import path from "node:path";
 import type { MikroOrmExtensionOptions } from "@genspire/data-mikroorm";
 import { Migrator } from "@mikro-orm/migrations";
+import { AuthRefreshTokenEntity } from "@genspire/auth";
 import { TodoEntity } from "../todos/todo.entity.js";
+import { PlaygroundAuthUserEntity } from "../auth/playground-auth-user.entity.js";
 
 export type PlaygroundSchemaMode = "update" | "migrations" | "none";
 
@@ -55,7 +57,7 @@ export async function createPlaygroundMikroOrmConfig(
 
   return {
     runtimeDriver: "libsql",
-    entities: [TodoEntity],
+    entities: [TodoEntity, PlaygroundAuthUserEntity, AuthRefreshTokenEntity],
     dbName,
     allowGlobalContext: true,
     debug: false,

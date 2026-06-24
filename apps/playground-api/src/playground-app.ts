@@ -7,6 +7,8 @@ import {
 } from "@genspire/data-mikroorm";
 import { serverExtension, Server } from "@genspire/server";
 import { swaggerExtension } from "@genspire/swagger";
+import { authExtension, AuthController } from "@genspire/auth";
+import { PlaygroundAuthUserEntity } from "./auth/playground-auth-user.entity.js";
 import {
   createPlaygroundMikroOrmConfig,
   resolvePlaygroundSchemaMode,
@@ -39,10 +41,19 @@ export async function createPlaygroundApp(
     ),
   );
 
+  await app.use(
+    authExtension({
+      userEntity: PlaygroundAuthUserEntity,
+      jwtSecret: env.GENCORE_AUTH_JWT_SECRET ?? "dev-playground-secret-change-me",
+      issuer: "gencore-playground-api",
+      audience: "gencore-playground",
+    }),
+  );
+
   if (schemaMode !== "none") {
     await app.use({
       name: "playground-schema",
-      dependsOn: ["data-mikroorm"],
+      dependsOn: ["data-mikroorm", "auth"],
       async start(currentApp) {
         if (schemaMode === "update") {
           // Playground-only schema sync. Production deployments should use migrations.
@@ -69,7 +80,7 @@ export async function createPlaygroundApp(
     }),
   );
 
-  app.get(Server).registerControllers(HealthController, TodoController);
+  app.get(Server).registerControllers(HealthController, AuthController, TodoController);
 
   return app;
 }

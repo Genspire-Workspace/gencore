@@ -1,0 +1,30 @@
+import type { GenExtension } from "@genspire/core";
+import { Argon2PasswordHasher } from "../hashing/argon2-password-hasher.js";
+import { TokenService } from "../services/token.service.js";
+import { AuthConfiguration } from "../services/auth-configuration.js";
+import { AuthDbContext } from "../context/auth-db-context.js";
+import { AuthService } from "../services/auth.service.js";
+import { PasswordHasher } from "../hashing/password-hasher.js";
+import type { AuthExtensionOptions } from "../types/auth-options.js";
+
+export function authExtension(options: AuthExtensionOptions): GenExtension {
+  return {
+    name: "auth",
+    dependsOn: ["data", "data-mikroorm"] as const,
+
+    register(app) {
+      if (!options.jwtSecret) {
+        throw new Error(
+          "jwtSecret is required for @genspire/auth. Provide it in authExtension({ jwtSecret: '...' }).",
+        );
+      }
+
+      const config = new AuthConfiguration(options);
+      app.provide(AuthConfiguration, config);
+      app.registerSingleton(TokenService);
+      app.registerSingleton(PasswordHasher, Argon2PasswordHasher);
+      app.registerScoped(AuthDbContext);
+      app.registerScoped(AuthService);
+    },
+  };
+}

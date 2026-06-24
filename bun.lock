@@ -7,26 +7,15 @@
       "devDependencies": {
         "@types/bun": "latest",
         "reflect-metadata": "^0.2.2",
+        "tinyglobby": "^0.2.13",
         "typescript": "latest",
-      },
-    },
-    "apps/person-api": {
-      "name": "@genspire/person-api",
-      "version": "0.0.0",
-      "dependencies": {
-        "@genspire/core": "workspace:*",
-        "@genspire/data": "workspace:*",
-        "@genspire/data-mikroorm": "workspace:*",
-        "@genspire/server": "workspace:*",
-        "@mikro-orm/core": "^7.1.4",
-        "@mikro-orm/decorators": "^7.1.4",
-        "reflect-metadata": "^0.2.2",
       },
     },
     "apps/playground-api": {
       "name": "@genspire/playground-api",
       "version": "0.0.0",
       "dependencies": {
+        "@genspire/auth": "workspace:*",
         "@genspire/core": "workspace:*",
         "@genspire/data": "workspace:*",
         "@genspire/data-mikroorm": "workspace:*",
@@ -35,6 +24,21 @@
         "@mikro-orm/core": "^7.1.4",
         "@mikro-orm/decorators": "^7.1.4",
         "@mikro-orm/migrations": "^7.1.4",
+        "reflect-metadata": "^0.2.2",
+      },
+    },
+    "packages/auth": {
+      "name": "@genspire/auth",
+      "version": "0.0.0",
+      "dependencies": {
+        "@genspire/core": "workspace:*",
+        "@genspire/data": "workspace:*",
+        "@genspire/data-mikroorm": "workspace:*",
+        "@genspire/server": "workspace:*",
+        "@mikro-orm/core": "^7.1.4",
+        "@mikro-orm/decorators": "^7.1.4",
+        "hash-wasm": "^4.11.0",
+        "jose": "^5.9.6",
         "reflect-metadata": "^0.2.2",
       },
     },
@@ -78,13 +82,13 @@
     },
   },
   "packages": {
+    "@genspire/auth": ["@genspire/auth@workspace:packages/auth"],
+
     "@genspire/core": ["@genspire/core@workspace:packages/core"],
 
     "@genspire/data": ["@genspire/data@workspace:packages/data"],
 
     "@genspire/data-mikroorm": ["@genspire/data-mikroorm@workspace:packages/data-mikroorm"],
-
-    "@genspire/person-api": ["@genspire/person-api@workspace:apps/person-api"],
 
     "@genspire/playground-api": ["@genspire/playground-api@workspace:apps/playground-api"],
 
@@ -132,6 +136,12 @@
 
     "detect-libc": ["detect-libc@2.0.2", "", {}, "sha512-UX6sGumvvqSaXgdKGUsgZWqcUyIXZ/vZTrlRT/iobiKhGL0zL4d3osHj3uqllWJK+i+sixDS/3COVEOFbupFyw=="],
 
+    "fdir": ["fdir@6.5.0", "", { "peerDependencies": { "picomatch": "^3 || ^4" }, "optionalPeers": ["picomatch"] }, "sha512-tIbYtZbucOs0BRGqPJkshJUYdL+SDH7dVM8gjy+ERp3WAUjLEFJE+02kanyHtwjWOnwrKYBiwAmM0p4kLJAnXg=="],
+
+    "hash-wasm": ["hash-wasm@4.12.0", "", {}, "sha512-+/2B2rYLb48I/evdOIhP+K/DD2ca2fgBjp6O+GBEnCDk2e4rpeXIK8GvIyRPjTezgmWn9gmKwkQjjx6BtqDHVQ=="],
+
+    "jose": ["jose@5.10.0", "", {}, "sha512-s+3Al/p9g32Iq+oqXxkW//7jk2Vig6FF1CFqzVXoTUXt2qz89YWbL+OwS17NFYEvxC35n0FKeGO2LGYSxeM2Gg=="],
+
     "kysely": ["kysely@0.29.2", "", {}, "sha512-s6WVJyEZrbm6jhBpiKHsGHyePMrVQKJ85wZCFCr9W4QHv6WTjWIrdvTmO9hDEA3bNK0xkrE2DqrHsXMLWuZpQg=="],
 
     "libsql": ["libsql@0.5.29", "", { "dependencies": { "@neon-rs/load": "^0.0.4", "detect-libc": "2.0.2" }, "optionalDependencies": { "@libsql/darwin-arm64": "0.5.29", "@libsql/darwin-x64": "0.5.29", "@libsql/linux-arm-gnueabihf": "0.5.29", "@libsql/linux-arm-musleabihf": "0.5.29", "@libsql/linux-arm64-gnu": "0.5.29", "@libsql/linux-arm64-musl": "0.5.29", "@libsql/linux-x64-gnu": "0.5.29", "@libsql/linux-x64-musl": "0.5.29", "@libsql/win32-x64-msvc": "0.5.29" }, "os": [ "linux", "win32", "darwin", ], "cpu": [ "arm", "x64", "arm64", ] }, "sha512-8lMP8iMgiBzzoNbAPQ59qdVcj6UaE/Vnm+fiwX4doX4Narook0a4GPKWBEv+CR8a1OwbfkgL18uBfBjWdF0Fzg=="],
@@ -154,6 +164,8 @@
 
     "pgpass": ["pgpass@1.0.5", "", { "dependencies": { "split2": "^4.1.0" } }, "sha512-FdW9r/jQZhSeohs1Z3sI1yxFQNFvMcnmfuj4WBMUTxOrAyLMaTcE1aAMBiTlbMNaXvBCQuVi0R7hd8udDSP7ug=="],
 
+    "picomatch": ["picomatch@4.0.4", "", {}, "sha512-QP88BAKvMam/3NxH6vj2o21R6MjxZUAd6nlwAS/pnGvN9IVLocLHxGYIzFhg6fUQ+5th6P4dv4eW9jX3DSIj7A=="],
+
     "postgres-array": ["postgres-array@3.0.4", "", {}, "sha512-nAUSGfSDGOaOAEGwqsRY27GPOea7CNipJPOA7lPbdEpx5Kg3qzdP0AaWC5MlhTWV9s4hFX39nomVZ+C4tnGOJQ=="],
 
     "postgres-bytea": ["postgres-bytea@1.0.1", "", {}, "sha512-5+5HqXnsZPE65IJZSMkZtURARZelel2oXUEO8rH83VS/hxH5vv1uHquPg5wZs8yMAfdv971IU+kcPUczi7NVBQ=="],
@@ -165,6 +177,8 @@
     "reflect-metadata": ["reflect-metadata@0.2.2", "", {}, "sha512-urBwgfrvVP/eAyXx4hluJivBKzuEbSQs9rKWCrCkbSxNv8mxPcUZKeuoF3Uy4mJl3Lwprp6yy5/39VWigZ4K6Q=="],
 
     "split2": ["split2@4.2.0", "", {}, "sha512-UcjcJOWknrNkF6PLX83qcHM6KHgVKNkV62Y8a5uYDVv9ydGQVwAHMKqHdJje1VTWpljG0WYpCDhrCdAOYH4TWg=="],
+
+    "tinyglobby": ["tinyglobby@0.2.17", "", { "dependencies": { "fdir": "^6.5.0", "picomatch": "^4.0.4" } }, "sha512-wXR/dYpcqKmfWpEdZjiKJOwCNFndD0DMnrW/cYjVGttEkBfVgcLFHoNrlj47mjOVic9yyNu65alsgF4NQyTa2g=="],
 
     "typescript": ["typescript@6.0.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-y2TvuxSZPDyQakkFRPZHKFm+KKVqIisdg9/CZwm9ftvKXLP8NRWj38/ODjNbr43SsoXqNuAisEf1GdCxqWcdBw=="],
 
