@@ -11,12 +11,15 @@ import { HttpError } from "../responses/http-error.js";
 import { problem } from "../responses/response-helpers.js";
 import { Router } from "../routing/router.js";
 import type { RegisteredRoute, RouteRegistrationOptions } from "../routing/router.js";
+import { type IClientIpOptions, resolveClientIp } from "../ip/client-ip.js";
 
 export interface ServerOptions {
   port?: number;
   container: Container;
   loggerFactory: LoggerFactory;
   middlewares?: readonly HttpMiddleware[];
+  clientIp?: IClientIpOptions;
+  trustProxy?: boolean;
 }
 
 export class Server {
@@ -141,11 +144,20 @@ export class Server {
     registerControllerGroup(this.router, this.config.container, ...controllers);
   }
 
+  private resolveClientIpConfig(): IClientIpOptions {
+    if (this.config.clientIp) {
+      return this.config.clientIp;
+    }
+    return { trustProxy: this.config.trustProxy ?? false };
+  }
+
   async handle(req: Request): Promise<Response> {
     const logger = this.config.loggerFactory.createLogger("Server");
 
     try {
-      return await this.router.handle(req, this.middlewares);
+      const clientIpOptions = this.resolveClientIpConfig();
+      const resolvedIp = resolveClientIp(req, clientIpOptions);
+      return await this.router.handle(req, this.middlewares, undefined, resolvedIp);
     } catch (error) {
       if (error instanceof InvalidJsonBodyError) {
         logger.warn("Invalid JSON request body", {

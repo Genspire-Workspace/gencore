@@ -158,10 +158,18 @@ function setMethodAuthMetadata(
 }
 
 export function getMethodAuthMetadata(
-  target: object,
+  controller: ControllerClass,
   handlerName: string,
 ): IRouteAuthorizationMetadata | undefined {
-  return (target as Record<symbol, Record<string, IRouteAuthorizationMetadata> | undefined>)[METHOD_AUTH_METADATA]?.[handlerName];
+  const proto = controller.prototype as Record<string, unknown>;
+  const method = proto[handlerName];
+  if (typeof method === "function") {
+      const fromMethod = (method as unknown as Record<symbol, Record<string, IRouteAuthorizationMetadata> | undefined>)?.[METHOD_AUTH_METADATA]?.[handlerName];
+    if (fromMethod) {
+      return fromMethod;
+    }
+  }
+  return (controller.prototype as Record<symbol, Record<string, IRouteAuthorizationMetadata> | undefined>)[METHOD_AUTH_METADATA]?.[handlerName];
 }
 
 export function Authorize(requirement?: IAuthorizationRequirement): ClassDecorator & MethodDecorator {
@@ -171,7 +179,7 @@ export function Authorize(requirement?: IAuthorizationRequirement): ClassDecorat
 
   const decorator = (...args: unknown[]) => {
     if (args.length === 3) {
-      const [prototype, propertyKey] = args as [object, string | symbol];
+      const [prototype, propertyKey] = args as [object, string | symbol, unknown?];
       setMethodAuthMetadata(prototype, String(propertyKey), auth);
       return;
     }
@@ -206,7 +214,7 @@ export function AllowAnonymous(): ClassDecorator & MethodDecorator {
 
   const decorator = (...args: unknown[]) => {
     if (args.length === 3) {
-      const [prototype, propertyKey] = args as [object, string | symbol];
+      const [prototype, propertyKey] = args as [object, string | symbol, unknown?];
       setMethodAuthMetadata(prototype, String(propertyKey), auth);
       return;
     }

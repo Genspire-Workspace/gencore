@@ -3,6 +3,9 @@
 export type { HttpContext, RequestContextInit } from "./context/http-context.js";
 export { HttpContextItems, InvalidJsonBodyError, RequestContext } from "./context/http-context.js";
 
+export { resolveClientIp } from "./ip/client-ip.js";
+export type { IClientIpOptions, IResolvedClientIp } from "./ip/client-ip.js";
+
 export {
   ApiDto,
   ApiField,

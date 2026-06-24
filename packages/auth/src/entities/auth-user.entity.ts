@@ -1,7 +1,7 @@
 import { Entity, PrimaryKey, Property, Unique, Index } from "@mikro-orm/decorators";
-import type { EntityState, IEntity } from "@genspire/data";
+import type { AuthUserState } from "../types/auth-user-state.js";
 
-export abstract class AuthUserBase implements IEntity<string> {
+export abstract class AuthUserBase {
   @PrimaryKey({ type: "string" })
   id!: string;
 
@@ -24,7 +24,7 @@ export abstract class AuthUserBase implements IEntity<string> {
   emailConfirmed = false;
 
   @Property({ type: "string" })
-  state: EntityState = "active";
+  state: AuthUserState = "active";
 
   @Property({ type: "datetime" })
   createdAt: Date = new Date();

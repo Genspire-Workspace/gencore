@@ -47,6 +47,8 @@ export interface RequestContextInit {
   query: URLSearchParams;
   container: ScopedContainer;
   items?: HttpContextItems;
+  clientIp?: string | null;
+  clientIpSource?: string;
 }
 
 export class RequestContext {
@@ -56,6 +58,8 @@ export class RequestContext {
   public readonly query: URLSearchParams;
   public readonly container: ScopedContainer;
   public readonly items: HttpContextItems;
+  public readonly clientIp: string | null;
+  public readonly clientIpSource: string;
 
   constructor(init: RequestContextInit) {
     this.req = init.req;
@@ -64,6 +68,8 @@ export class RequestContext {
     this.query = init.query;
     this.container = init.container;
     this.items = init.items ?? new HttpContextItems();
+    this.clientIp = init.clientIp ?? null;
+    this.clientIpSource = init.clientIpSource ?? "unknown";
   }
 
   async json<T>(): Promise<T> {

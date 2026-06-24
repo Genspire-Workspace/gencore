@@ -5,6 +5,8 @@ import type { AuthUserBase, AuthUserEntity } from "../entities/auth-user.entity.
 import type { AuthRefreshTokenEntity } from "../entities/auth-refresh-token.entity.js";
 import { AuthRoleEntity } from "../entities/auth-role.entity.js";
 import { AuthUserRoleEntity } from "../entities/auth-user-role.entity.js";
+import { AuthEventEntity } from "../entities/auth-event.entity.js";
+import { AuthBannedIpEntity } from "../entities/auth-banned-ip.entity.js";
 import type { MikroOrmDbSet } from "@genspire/data-mikroorm";
 
 @Scoped()
@@ -17,6 +19,8 @@ export class AuthDbContext<
   readonly refreshTokens: MikroOrmDbSet<AuthRefreshTokenEntity, string>;
   readonly roles: MikroOrmDbSet<AuthRoleEntity, string>;
   readonly userRoles: MikroOrmDbSet<AuthUserRoleEntity, string>;
+  readonly events: MikroOrmDbSet<AuthEventEntity, string>;
+  readonly bannedIps: MikroOrmDbSet<AuthBannedIpEntity, string>;
 
   constructor(
     entityManagerProvider: EntityManagerProvider,
@@ -29,5 +33,7 @@ export class AuthDbContext<
     );
     this.roles = this.set<AuthRoleEntity, string>(AuthRoleEntity);
     this.userRoles = this.set<AuthUserRoleEntity, string>(AuthUserRoleEntity);
+    this.events = this.set<AuthEventEntity, string>(AuthEventEntity);
+    this.bannedIps = this.set<AuthBannedIpEntity, string>(AuthBannedIpEntity);
   }
 }

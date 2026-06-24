@@ -8,6 +8,7 @@ import type { HttpMiddleware } from "../middleware/middleware.js";
 import { toResponse } from "../responses/response-normalizer.js";
 import type { ControllerClass, ControllerOptions } from "../controllers/controller-metadata.js";
 import type { IRouteAuthorizationMetadata } from "../auth/route-authorization.js";
+import type { IResolvedClientIp } from "../ip/client-ip.js";
 
 export interface RegisteredRoute {
   method: HttpMethod;
@@ -178,6 +179,7 @@ export class Router {
     req: Request,
     middlewares: readonly HttpMiddleware[] = [],
     items?: Record<string, unknown>,
+    clientIp?: IResolvedClientIp,
   ): Promise<Response> {
     const match = this.match(req);
     if (!match) {
@@ -193,6 +195,8 @@ export class Router {
       query: match.url.searchParams,
       container: scope,
       items: new HttpContextItems(items),
+      clientIp: clientIp?.ipAddress ?? null,
+      clientIpSource: clientIp?.source ?? "unknown",
     });
     const startedAt = Date.now();
 

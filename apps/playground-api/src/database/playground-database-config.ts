@@ -2,7 +2,7 @@ import { mkdir } from "node:fs/promises";
 import path from "node:path";
 import type { MikroOrmExtensionOptions } from "@genspire/data-mikroorm";
 import { Migrator } from "@mikro-orm/migrations";
-import { AuthRefreshTokenEntity, AuthRoleEntity, AuthUserRoleEntity } from "@genspire/auth";
+import { AuthRefreshTokenEntity, AuthRoleEntity, AuthUserRoleEntity, AuthEventEntity, AuthBannedIpEntity } from "@genspire/auth";
 import { TodoEntity } from "../todos/todo.entity.js";
 import { PlaygroundAuthUserEntity } from "../auth/playground-auth-user.entity.js";
 
@@ -57,7 +57,7 @@ export async function createPlaygroundMikroOrmConfig(
 
   return {
     runtimeDriver: "libsql",
-    entities: [TodoEntity, PlaygroundAuthUserEntity, AuthRefreshTokenEntity, AuthRoleEntity, AuthUserRoleEntity],
+    entities: [TodoEntity, PlaygroundAuthUserEntity, AuthRefreshTokenEntity, AuthRoleEntity, AuthUserRoleEntity, AuthEventEntity, AuthBannedIpEntity],
     dbName,
     allowGlobalContext: true,
     debug: false,

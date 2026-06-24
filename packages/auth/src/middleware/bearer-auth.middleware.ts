@@ -2,6 +2,7 @@ import type { HttpMiddleware } from "@genspire/server";
 import { jwtVerify } from "jose";
 import { AuthConfiguration } from "../services/auth-configuration.js";
 import { AuthDbContext } from "../context/auth-db-context.js";
+import { AuthEventService } from "../services/auth-event.service.js";
 import { CURRENT_USER_KEY, type ICurrentUser } from "../types/current-user.js";
 
 export function bearerAuthMiddleware(
@@ -32,7 +33,27 @@ export function bearerAuthMiddleware(
 
       const db = ctx.container.resolve(AuthDbContext) as AuthDbContext;
       const user = await db.users.findById(userId);
-      if (!user || user.state !== "active") {
+      if (!user) {
+        return await next();
+      }
+
+      if (user.state !== "active") {
+        if (user.state === "banned") {
+          try {
+            const events = ctx.container.resolve(AuthEventService) as AuthEventService;
+            await events.record({
+              eventType: "user_blocked",
+              userId: user.id,
+              email: user.email,
+              ipAddress: ctx.clientIp ?? null,
+              userAgent: ctx.header("user-agent") ?? null,
+              success: false,
+              failureCode: "AUTH_USER_BANNED",
+            });
+          } catch {
+            // Event logging should not break auth flow
+          }
+        }
         return await next();
       }
 

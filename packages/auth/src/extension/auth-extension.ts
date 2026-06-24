@@ -5,6 +5,8 @@ import { AuthConfiguration } from "../services/auth-configuration.js";
 import { AuthDbContext } from "../context/auth-db-context.js";
 import { AuthService } from "../services/auth.service.js";
 import { AuthRoleService } from "../services/auth-role.service.js";
+import { AuthEventService } from "../services/auth-event.service.js";
+import { AuthBanService } from "../services/auth-ban.service.js";
 import { PasswordHasher } from "../hashing/password-hasher.js";
 import type { IAuthExtensionOptions } from "../types/auth-options.js";
 
@@ -27,6 +29,8 @@ export function authExtension(options: IAuthExtensionOptions): GenExtension {
       app.registerScoped(AuthDbContext);
       app.registerScoped(AuthService);
       app.registerScoped(AuthRoleService);
+      app.registerScoped(AuthEventService);
+      app.registerScoped(AuthBanService);
     },
   };
 }

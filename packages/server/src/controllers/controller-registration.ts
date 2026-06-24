@@ -21,7 +21,7 @@ function resolveRouteDocs(
   docs?: HttpRouteDocs,
 ): HttpRouteDocs | undefined {
   const metadata = getControllerMetadata(controller);
-  const methodAuth = getMethodAuthMetadata(controller.prototype, handlerName);
+  const methodAuth = getMethodAuthMetadata(controller, handlerName);
 
   const mergedAuth = methodAuth ?? docs?.authorization;
 

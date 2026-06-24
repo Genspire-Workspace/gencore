@@ -3,6 +3,8 @@ import type { RequestContext } from "@genspire/server";
 import { problem, json } from "@genspire/server";
 import { defineProblemDetailsType } from "@genspire/server";
 import { AuthService } from "../services/auth.service.js";
+import { getAuthRequestMetadata } from "../types/auth-request-metadata.js";
+import { requireCurrentUser } from "../services/current-user.js";
 import { RegisterRequestDto } from "../dtos/register-request.dto.js";
 import { LoginRequestDto } from "../dtos/login-request.dto.js";
 import { RefreshRequestDto } from "../dtos/refresh-request.dto.js";
@@ -43,7 +45,8 @@ export class AuthController {
   })
   async register(ctx: RequestContext): Promise<Response> {
     const body = await ctx.json<RegisterRequestDto>();
-    const result = await this.authService.register(body);
+    const metadata = getAuthRequestMetadata(ctx);
+    const result = await this.authService.register(body, metadata);
     return json(result, { status: 201 });
   }
 
@@ -61,7 +64,8 @@ export class AuthController {
   })
   async login(ctx: RequestContext): Promise<Response> {
     const body = await ctx.json<LoginRequestDto>();
-    const result = await this.authService.login(body);
+    const metadata = getAuthRequestMetadata(ctx);
+    const result = await this.authService.login(body, metadata);
     return json(result);
   }
 
@@ -74,7 +78,8 @@ export class AuthController {
   })
   async refresh(ctx: RequestContext): Promise<Response> {
     const body = await ctx.json<RefreshRequestDto>();
-    const result = await this.authService.refresh(body);
+    const metadata = getAuthRequestMetadata(ctx);
+    const result = await this.authService.refresh(body, metadata);
     return json(result);
   }
 
@@ -90,7 +95,8 @@ export class AuthController {
   })
   async logout(ctx: RequestContext): Promise<Response> {
     const body = await ctx.json<LogoutRequestDto>();
-    const result = await this.authService.logout(body);
+    const metadata = getAuthRequestMetadata(ctx);
+    const result = await this.authService.logout(body, metadata);
     return json(result);
   }
 
@@ -106,32 +112,15 @@ export class AuthController {
     },
   })
   async me(ctx: RequestContext): Promise<Response> {
-    const authHeader = ctx.header("authorization");
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return problem({
-        title: "Unauthorized",
-        status: 401,
-        detail: "Missing or invalid authorization header.",
-        code: "AUTH_MISSING_TOKEN",
-      });
-    }
+    const currentUser = requireCurrentUser(ctx);
+    const metadata = getAuthRequestMetadata(ctx);
+    const user = await this.authService.getUserProfile(currentUser.id, metadata);
 
-    const token = authHeader.slice(7).trim();
-    if (!token) {
-      return problem({
-        title: "Unauthorized",
-        status: 401,
-        detail: "Missing or invalid authorization header.",
-        code: "AUTH_MISSING_TOKEN",
-      });
-    }
-
-    const user = await this.authService.getCurrentUserFromAccessToken(token);
     if (!user) {
       return problem({
         title: "Unauthorized",
         status: 401,
-        detail: "Invalid or expired access token.",
+        detail: "User not found or inactive.",
         code: "AUTH_INVALID_TOKEN",
       });
     }
