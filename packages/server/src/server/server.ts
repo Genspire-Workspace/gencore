@@ -3,6 +3,7 @@
 import type { Container } from "@genspire/core";
 import { EnvService, LoggerFactory } from "@genspire/core";
 import type { HttpMiddleware } from "../middleware/middleware.js";
+import { problem } from "../responses/response-helpers.js";
 import { Router } from "../routing/router.js";
 import type { RegisteredRoute } from "../routing/router.js";
 
@@ -64,6 +65,23 @@ export class Server {
     return this.router.list();
   }
 
+  async handle(req: Request): Promise<Response> {
+    const logger = this.config.loggerFactory.createLogger("Server");
+
+    try {
+      return await this.router.handle(req, this.middlewares);
+    } catch (error) {
+      logger.error("Unhandled request failure", error, {
+        method: req.method,
+        url: req.url,
+      });
+      return problem({
+        status: 500,
+        title: "Internal Server Error",
+      });
+    }
+  }
+
   async start(): Promise<void> {
     if (this.bunServer) {
       return;
@@ -73,17 +91,7 @@ export class Server {
 
     this.bunServer = Bun.serve({
       port: this.port,
-      fetch: async (req) => {
-        try {
-          return await this.router.handle(req, this.middlewares);
-        } catch (error) {
-          logger.error("Unhandled request failure", error, {
-            method: req.method,
-            url: req.url,
-          });
-          return Response.json({ error: "Internal Server Error" }, { status: 500 });
-        }
-      },
+      fetch: async (req) => await this.handle(req),
     });
 
     logger.info("Server started", { port: this.port });

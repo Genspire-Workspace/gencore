@@ -2,7 +2,7 @@
 
 import type { Container } from "@genspire/core";
 import { LoggerFactory } from "@genspire/core";
-import { HttpContextItems, type HttpContext } from "../context/http-context.js";
+import { HttpContextItems, RequestContext, type HttpContext } from "../context/http-context.js";
 import type { HttpMethod, RouteHandler } from "../http/http-types.js";
 import type { HttpMiddleware } from "../middleware/middleware.js";
 import { toResponse } from "../responses/response-normalizer.js";
@@ -155,14 +155,14 @@ export class Router {
 
     const scope = this.container.createScope();
     const logger = this.container.resolve(LoggerFactory).createLogger("HttpRouter");
-    const ctx: HttpContext = {
+    const ctx: HttpContext = new RequestContext({
       req,
       url: match.url,
       params: match.params,
       query: match.url.searchParams,
       container: scope,
       items: new HttpContextItems(items),
-    };
+    });
     const startedAt = Date.now();
 
     try {

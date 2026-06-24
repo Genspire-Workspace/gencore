@@ -30,11 +30,47 @@ export class HttpContextItems {
   }
 }
 
-export interface HttpContext {
+export interface RequestContextInit {
   req: Request;
   url: URL;
   params: Record<string, string>;
   query: URLSearchParams;
   container: ScopedContainer;
-  items: HttpContextItems;
+  items?: HttpContextItems;
 }
+
+export class RequestContext {
+  public readonly req: Request;
+  public readonly url: URL;
+  public readonly params: Record<string, string>;
+  public readonly query: URLSearchParams;
+  public readonly container: ScopedContainer;
+  public readonly items: HttpContextItems;
+
+  constructor(init: RequestContextInit) {
+    this.req = init.req;
+    this.url = init.url;
+    this.params = init.params;
+    this.query = init.query;
+    this.container = init.container;
+    this.items = init.items ?? new HttpContextItems();
+  }
+
+  async json<T>(): Promise<T> {
+    return await this.req.json() as T;
+  }
+
+  async text(): Promise<string> {
+    return await this.req.text();
+  }
+
+  header(name: string): string | null {
+    return this.req.headers.get(name);
+  }
+
+  item<T = unknown>(key: string): T | undefined {
+    return this.items.get<T>(key);
+  }
+}
+
+export type HttpContext = RequestContext;

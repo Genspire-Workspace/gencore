@@ -1,5 +1,7 @@
 // file: packages\server\src\responses\response-normalizer.ts
 
+import { json, noContent, text } from "./response-helpers.js";
+
 export type ResponseLike = Response | string | object | null | undefined;
 
 export function toResponse(value: ResponseLike): Response {
@@ -8,14 +10,12 @@ export function toResponse(value: ResponseLike): Response {
   }
 
   if (typeof value === "string") {
-    return new Response(value, {
-      headers: { "content-type": "text/plain; charset=utf-8" },
-    });
+    return text(value);
   }
 
   if (value == null) {
-    return new Response(null, { status: 204 });
+    return noContent();
   }
 
-  return Response.json(value);
+  return json(value);
 }

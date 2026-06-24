@@ -67,7 +67,14 @@ export class GenApp {
     }
 
     this.extensions.set(extension.name, extension);
-    await extension.register?.(this);
+
+    try {
+      await extension.register?.(this);
+    } catch (error) {
+      this.extensions.delete(extension.name);
+      throw error;
+    }
+
     return this;
   }
 
