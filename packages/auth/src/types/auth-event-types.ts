@@ -1,3 +1,5 @@
+// file: packages\auth\src\types\auth-event-types.ts
+
 export type AuthEventType =
   | "register_success"
   | "register_failed"

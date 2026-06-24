@@ -1,3 +1,5 @@
+// file: packages\storage\src\contracts\storage-provider.ts
+
 import type {
   ICreateSignedUrlInput,
   IGetObjectResult,

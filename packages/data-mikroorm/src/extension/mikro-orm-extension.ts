@@ -1,3 +1,5 @@
+// file: packages\data-mikroorm\src\extension\mikro-orm-extension.ts
+
 import type { GenExtension } from "@genspire/core";
 import type { Options, EntityManager, MikroORM } from "@mikro-orm/core";
 import { MikroORM as MikroOrmLibsql } from "@mikro-orm/libsql";

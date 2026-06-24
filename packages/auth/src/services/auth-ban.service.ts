@@ -1,3 +1,5 @@
+// file: packages\auth\src\services\auth-ban.service.ts
+
 import { Scoped, GenError } from "@genspire/core";
 import { AuthDbContext } from "../context/auth-db-context.js";
 import { AuthBannedIpEntity } from "../entities/auth-banned-ip.entity.js";

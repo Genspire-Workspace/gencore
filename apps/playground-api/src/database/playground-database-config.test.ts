@@ -1,60 +1,49 @@
+// file: apps\playground-api\src\database\playground-database-config.test.ts
+
 import { describe, expect, test } from "bun:test";
 import path from "node:path";
+import { readPlaygroundEnv } from "../config/playground-env.js";
 import {
   createPlaygroundMikroOrmConfig,
-  resolveDefaultPlaygroundLibsqlDbPath,
-  resolvePlaygroundLibsqlDbPath,
   resolvePlaygroundMigrationsPath,
-  resolvePlaygroundSchemaMode,
 } from "./playground-database-config.js";
 
 describe("playground database config", () => {
-  const repoRoot = "C:\\Users\\PC\\Documents\\GitHub\\Gencore";
+  const repoRoot = path.resolve("C:\\Users\\PC\\Documents\\GitHub\\Gencore");
 
-  test("defaults to the playground libsql database path", () => {
-    expect(resolveDefaultPlaygroundLibsqlDbPath(repoRoot)).toBe(
-      path.resolve(repoRoot, "data", "playground-api.db"),
-    );
-  });
+  test("creates libsql config from defaults", async () => {
+    const env = readPlaygroundEnv({});
+    const config = await createPlaygroundMikroOrmConfig(env, repoRoot);
 
-  test("uses the environment override when provided", () => {
-    expect(
-      resolvePlaygroundLibsqlDbPath("C:\\repo", {
-        GENCORE_PLAYGROUND_LIBSQL_DB_PATH: "C:\\custom\\playground.db",
-      }),
-    ).toBe("C:\\custom\\playground.db");
-  });
-
-  test("resolves the playground migrations path", () => {
-    expect(resolvePlaygroundMigrationsPath(repoRoot)).toBe(
-      path.resolve(repoRoot, "apps", "playground-api", "src", "migrations"),
-    );
-  });
-
-  test("schema mode defaults to update", () => {
-    expect(resolvePlaygroundSchemaMode({})).toBe("update");
-  });
-
-  test("schema mode accepts supported values", () => {
-    expect(resolvePlaygroundSchemaMode({ GENCORE_PLAYGROUND_SCHEMA_MODE: "update" })).toBe("update");
-    expect(resolvePlaygroundSchemaMode({ GENCORE_PLAYGROUND_SCHEMA_MODE: "migrations" })).toBe("migrations");
-    expect(resolvePlaygroundSchemaMode({ GENCORE_PLAYGROUND_SCHEMA_MODE: "none" })).toBe("none");
-  });
-
-  test("schema mode rejects invalid values", () => {
-    expect(() => resolvePlaygroundSchemaMode({
-      GENCORE_PLAYGROUND_SCHEMA_MODE: "invalid",
-    })).toThrow("Invalid GENCORE_PLAYGROUND_SCHEMA_MODE");
-  });
-
-  test("mikro orm config includes app-owned migrations", async () => {
-    const config = await createPlaygroundMikroOrmConfig(repoRoot, {});
-
+    expect(config.runtimeDriver).toBe("libsql");
     expect(config.migrations).toBeDefined();
     expect(config.migrations?.path).toBe(
       path.resolve(repoRoot, "apps", "playground-api", "src", "migrations"),
     );
-    expect(config.migrations?.pathTs).toBe(
+  });
+
+  test("creates postgres config when provider is postgres", async () => {
+    const env = readPlaygroundEnv({
+      GENCORE_PLAYGROUND_DATABASE_PROVIDER: "postgres",
+      GENCORE_PLAYGROUND_POSTGRES_URL: "postgresql://u:p@h/db",
+    });
+    const config = await createPlaygroundMikroOrmConfig(env, repoRoot);
+
+    expect(config.runtimeDriver).toBe("postgresql");
+    expect(config.dbName).toBe("postgresql://u:p@h/db");
+  });
+
+  test("uses env override for libsql db path", async () => {
+    const env = readPlaygroundEnv({
+      GENCORE_PLAYGROUND_LIBSQL_DB_PATH: "C:\\custom\\playground.db",
+    });
+    const config = await createPlaygroundMikroOrmConfig(env, repoRoot);
+
+    expect(config.dbName).toBe(path.resolve(repoRoot, "C:\\custom\\playground.db"));
+  });
+
+  test("resolves the playground migrations path", () => {
+    expect(resolvePlaygroundMigrationsPath(repoRoot)).toBe(
       path.resolve(repoRoot, "apps", "playground-api", "src", "migrations"),
     );
   });

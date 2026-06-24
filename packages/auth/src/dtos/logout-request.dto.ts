@@ -1,3 +1,5 @@
+// file: packages\auth\src\dtos\logout-request.dto.ts
+
 import { ApiDto, ApiField } from "@genspire/server";
 
 @ApiDto({ description: "Logout and revoke refresh token" })

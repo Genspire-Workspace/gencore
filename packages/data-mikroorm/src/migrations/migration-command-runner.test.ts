@@ -1,3 +1,5 @@
+// file: packages\data-mikroorm\src\migrations\migration-command-runner.test.ts
+
 import { beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
 import { MikroORM as MikroOrmRuntime } from "@mikro-orm/postgresql";
 import type { MikroOrmExtensionOptions } from "../extension/mikro-orm-extension.js";

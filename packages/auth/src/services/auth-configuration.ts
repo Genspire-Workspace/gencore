@@ -1,3 +1,5 @@
+// file: packages\auth\src\services\auth-configuration.ts
+
 import type {
   IAuthExtensionOptions,
   RequiredAuthExtensionOptions,

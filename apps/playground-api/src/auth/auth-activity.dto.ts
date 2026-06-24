@@ -1,3 +1,5 @@
+// file: apps\playground-api\src\auth\auth-activity.dto.ts
+
 import { ApiDto, ApiField } from "@genspire/server";
 
 @ApiDto({

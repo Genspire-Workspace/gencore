@@ -1,3 +1,5 @@
+// file: packages\auth\src\entities\auth-banned-ip.entity.ts
+
 import { Entity, PrimaryKey, Property, Index } from "@mikro-orm/decorators";
 
 @Entity({ tableName: "auth_banned_ips" })

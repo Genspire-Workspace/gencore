@@ -1,3 +1,5 @@
+// file: apps\playground-api\src\auth\auth-activity.service.ts
+
 import { Scoped } from "@genspire/core";
 import { AuthDbContext } from "@genspire/auth";
 import type { AuthEventEntity } from "@genspire/auth";

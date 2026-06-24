@@ -1,3 +1,5 @@
+// file: packages\data\src\contracts\repository.ts
+
 import type { IPageRequest, IPageResult } from "./pagination.js";
 
 export interface IRepository<

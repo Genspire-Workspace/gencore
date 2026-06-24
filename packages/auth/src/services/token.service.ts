@@ -1,3 +1,5 @@
+// file: packages\auth\src\services\token.service.ts
+
 import { Singleton } from "@genspire/core";
 import { SignJWT } from "jose";
 import type { AuthUserBase } from "../entities/auth-user.entity.js";

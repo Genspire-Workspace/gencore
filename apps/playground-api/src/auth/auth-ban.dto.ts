@@ -1,3 +1,5 @@
+// file: apps\playground-api\src\auth\auth-ban.dto.ts
+
 import { ApiDto, ApiField } from "@genspire/server";
 
 @ApiDto({ description: "Request payload for banning a user" })

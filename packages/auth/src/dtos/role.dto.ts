@@ -1,3 +1,5 @@
+// file: packages\auth\src\dtos\role.dto.ts
+
 import { ApiDto, ApiField } from "@genspire/server";
 
 @ApiDto({ description: "A role" })

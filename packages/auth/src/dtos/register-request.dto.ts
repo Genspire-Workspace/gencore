@@ -1,3 +1,5 @@
+// file: packages\auth\src\dtos\register-request.dto.ts
+
 import { ApiDto, ApiField } from "@genspire/server";
 
 @ApiDto({ description: "Register a new user" })

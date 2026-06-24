@@ -1,3 +1,5 @@
+// file: packages\data\src\contracts\data-source.ts
+
 export interface IDataSource {
   name: string;
   connect?(): Promise<void>;

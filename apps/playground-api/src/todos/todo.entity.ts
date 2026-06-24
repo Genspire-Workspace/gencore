@@ -1,3 +1,5 @@
+// file: apps\playground-api\src\todos\todo.entity.ts
+
 import { Entity, PrimaryKey, Property } from "@mikro-orm/decorators";
 import type { IEntity } from "@genspire/data";
 

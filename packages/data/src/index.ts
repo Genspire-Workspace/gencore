@@ -1,3 +1,5 @@
+// file: packages\data\src\index.ts
+
 export type { DbContext } from "./context/db-context.js";
 export type { DbSet, ListOptions } from "./context/db-set.js";
 export type { IDataSource } from "./contracts/data-source.js";

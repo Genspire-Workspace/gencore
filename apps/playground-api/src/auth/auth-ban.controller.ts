@@ -1,3 +1,5 @@
+// file: apps\playground-api\src\auth\auth-ban.controller.ts
+
 import { Authorize, Controller, Delete, Get, Post, defineProblemDetailsType, json, problem } from "@genspire/server";
 import type { RequestContext } from "@genspire/server";
 import {

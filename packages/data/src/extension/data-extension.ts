@@ -1,3 +1,5 @@
+// file: packages\data\src\extension\data-extension.ts
+
 import type { GenExtension } from "@genspire/core";
 import { LoggerFactory } from "@genspire/core";
 import { DataSourceRegistry, type IDataSource } from "../contracts/data-source.js";

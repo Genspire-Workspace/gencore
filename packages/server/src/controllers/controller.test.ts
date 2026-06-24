@@ -1,3 +1,5 @@
+// file: packages\server\src\controllers\controller.test.ts
+
 import { describe, expect, test } from "bun:test";
 import { Container, LoggerFactory, LogStore, Singleton } from "@genspire/core";
 import { Controller, Get, getControllerMetadata } from "./controller.js";

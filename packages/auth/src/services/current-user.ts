@@ -1,3 +1,5 @@
+// file: packages\auth\src\services\current-user.ts
+
 import type { RequestContext } from "@genspire/server";
 import { GenError } from "@genspire/core";
 import { CURRENT_USER_KEY, type ICurrentUser } from "../types/current-user.js";

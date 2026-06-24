@@ -1,3 +1,5 @@
+// file: packages\auth\src\middleware\auth-guard.middleware.ts
+
 import type { HttpMiddleware } from "@genspire/server";
 import { problem } from "@genspire/server";
 import { CURRENT_USER_KEY, type ICurrentUser } from "../types/current-user.js";

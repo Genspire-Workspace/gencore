@@ -1,3 +1,5 @@
+// file: packages\data-mikroorm\src\migrations\migration-command-runner.ts
+
 import { createApp } from "@genspire/core";
 import { dataExtension } from "@genspire/data";
 import { mikroOrmExtension } from "../extension/mikro-orm-extension.js";

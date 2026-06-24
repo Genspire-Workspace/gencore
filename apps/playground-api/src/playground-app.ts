@@ -1,3 +1,5 @@
+// file: apps\playground-api\src\playground-app.ts
+
 import { createApp } from "@genspire/core";
 import { dataExtension } from "@genspire/data";
 import {
@@ -8,15 +10,16 @@ import {
 import { serverExtension, Server } from "@genspire/server";
 import { swaggerExtension } from "@genspire/swagger";
 import { authExtension, AuthConfiguration, AuthController, RoleController, bearerAuthMiddleware, authGuardMiddleware, ipBanMiddleware } from "@genspire/auth";
-import { storageExtension, localStorageProvider } from "@genspire/storage";
+import { storageExtension } from "@genspire/storage";
 import path from "node:path";
 import { mkdirSync } from "node:fs";
 import { PlaygroundAuthUserEntity } from "./auth/playground-auth-user.entity.js";
+import { createPlaygroundAuthSeeder } from "./auth/auth-seeder.js";
+import { readPlaygroundEnv, type IPlaygroundEnv } from "./config/playground-env.js";
 import {
   createPlaygroundMikroOrmConfig,
-  resolvePlaygroundSchemaMode,
 } from "./database/playground-database-config.js";
-import { adminUserSeeder } from "./auth/auth-seeder.js";
+import { createPlaygroundStorageProvider } from "./storage/playground-storage-provider.js";
 import { AuthActivityController } from "./auth/auth-activity.controller.js";
 import { AuthBanController } from "./auth/auth-ban.controller.js";
 import { FileController } from "./files/file.controller.js";
@@ -33,8 +36,7 @@ export async function createPlaygroundApp(
   options: PlaygroundAppOptions = {},
 ) {
   const app = createApp();
-  const env = options.env ?? process.env;
-  const schemaMode = resolvePlaygroundSchemaMode(env);
+  const playgroundEnv = readPlaygroundEnv(options.env ?? process.env as Record<string, string | undefined>);
 
   await app.use(
     dataExtension({
@@ -43,49 +45,47 @@ export async function createPlaygroundApp(
   );
 
   const repoRoot = options.repoRoot ?? process.cwd();
-  const storageDir = path.resolve(repoRoot, "data", "storage");
+  const storageDir = path.resolve(repoRoot, playgroundEnv.storage.localRoot);
   mkdirSync(storageDir, { recursive: true });
 
   await app.use(
     storageExtension({
-      provider: localStorageProvider({
-        rootDirectory: storageDir,
-        publicBaseUrl: "http://localhost:3000/files",
-      }),
-      defaultBucket: "default",
+      provider: createPlaygroundStorageProvider(playgroundEnv),
     }),
   );
 
   await app.use(
     mikroOrmExtension(
-      await createPlaygroundMikroOrmConfig(options.repoRoot, env),
+      await createPlaygroundMikroOrmConfig(playgroundEnv, repoRoot),
     ),
   );
 
   await app.use(
     authExtension({
       userEntity: PlaygroundAuthUserEntity,
-      jwtSecret: env.GENCORE_AUTH_JWT_SECRET ?? "dev-playground-secret-change-me",
-      issuer: "gencore-playground-api",
-      audience: "gencore-playground",
+      jwtSecret: playgroundEnv.auth.jwtSecret,
+      issuer: playgroundEnv.auth.issuer,
+      audience: playgroundEnv.auth.audience,
     }),
   );
 
-  if (schemaMode !== "none") {
+  if (playgroundEnv.database.schemaMode !== "none") {
+    const seeder = createPlaygroundAuthSeeder({ env: playgroundEnv });
+
     await app.use({
       name: "playground-schema",
       dependsOn: ["data-mikroorm", "auth"],
       async start(currentApp) {
         const orm = currentApp.get(MikroOrmService).getOrm();
 
-        if (schemaMode === "update") {
+        if (playgroundEnv.database.schemaMode === "update") {
           // Playground-only schema sync. Production deployments should use migrations.
           await orm.schema.update();
         } else {
           await currentApp.get(MikroOrmMigrationRunner).up();
         }
 
-        await adminUserSeeder.run(orm.em.fork());
+        await seeder.run(orm.em.fork());
       },
     });
   }
@@ -94,7 +94,7 @@ export async function createPlaygroundApp(
 
   await app.use(
     serverExtension({
-      port: options.port ?? 3000,
+      port: options.port ?? playgroundEnv.port,
       trustProxy: true,
       middlewares: [
         ipBanMiddleware(),

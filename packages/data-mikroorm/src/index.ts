@@ -1,3 +1,5 @@
+// file: packages\data-mikroorm\src\index.ts
+
 export { EntityManagerProvider } from "./context/entity-manager-provider.js";
 export { MikroOrmDbContext } from "./context/mikro-orm-db-context.js";
 export { MikroOrmDbSet } from "./context/mikro-orm-db-set.js";

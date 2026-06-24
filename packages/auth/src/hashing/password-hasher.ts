@@ -1,3 +1,5 @@
+// file: packages\auth\src\hashing\password-hasher.ts
+
 export class PasswordHasher {
   async hash(_password: string): Promise<string> {
     throw new Error(

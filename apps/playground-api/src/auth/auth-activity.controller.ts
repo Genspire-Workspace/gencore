@@ -1,3 +1,5 @@
+// file: apps\playground-api\src\auth\auth-activity.controller.ts
+
 import { Authorize, Controller, Get, defineProblemDetailsType, json, problem } from "@genspire/server";
 import type { RequestContext } from "@genspire/server";
 import { AuthActivityService } from "./auth-activity.service.js";

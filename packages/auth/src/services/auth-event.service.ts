@@ -1,3 +1,5 @@
+// file: packages\auth\src\services\auth-event.service.ts
+
 import { Scoped } from "@genspire/core";
 import { AuthDbContext } from "../context/auth-db-context.js";
 import { AuthEventEntity } from "../entities/auth-event.entity.js";

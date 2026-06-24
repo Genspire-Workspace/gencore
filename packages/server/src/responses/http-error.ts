@@ -1,3 +1,5 @@
+// file: packages\server\src\responses\http-error.ts
+
 export interface HttpErrorOptions {
   code?: string;
   detail?: string;

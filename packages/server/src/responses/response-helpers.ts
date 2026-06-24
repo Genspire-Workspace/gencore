@@ -1,3 +1,5 @@
+// file: packages\server\src\responses\response-helpers.ts
+
 import type { ProblemDetails } from "./problem-details.js";
 
 export interface ProblemDetailsOptions extends Partial<ProblemDetails> {

@@ -1,3 +1,5 @@
+// file: packages\auth\src\controllers\auth.controller.ts
+
 import { AllowAnonymous, Authorize, Controller, Get, Post } from "@genspire/server";
 import type { RequestContext } from "@genspire/server";
 import { problem, json } from "@genspire/server";

@@ -1,3 +1,5 @@
+// file: packages\storage\src\services\storage-service.ts
+
 import { Singleton } from "@genspire/core";
 import type { IStorageProvider } from "../contracts/storage-provider.js";
 import type {

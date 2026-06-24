@@ -1,3 +1,5 @@
+// file: packages\server\src\openapi\schema-helpers.ts
+
 import type { OpenApiSchema, OpenApiTypeDefinition } from "./openapi-types.js";
 
 export interface ApiArrayTypeDefinition {

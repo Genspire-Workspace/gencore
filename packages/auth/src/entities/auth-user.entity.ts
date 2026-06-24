@@ -1,3 +1,5 @@
+// file: packages\auth\src\entities\auth-user.entity.ts
+
 import { Entity, PrimaryKey, Property, Unique, Index } from "@mikro-orm/decorators";
 import type { AuthUserState } from "../types/auth-user-state.js";
 

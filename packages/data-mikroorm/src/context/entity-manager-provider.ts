@@ -1,3 +1,5 @@
+// file: packages\data-mikroorm\src\context\entity-manager-provider.ts
+
 import type { EntityManager } from "@mikro-orm/core";
 import { MikroOrmService } from "../extension/mikro-orm-extension.js";
 

@@ -1,3 +1,5 @@
+// file: packages\data-mikroorm\src\migrations\migration-options.ts
+
 import type { MigrateOptions, MigrationInfo, MigrationResult, MigrationRow } from "@mikro-orm/migrations";
 
 export type MikroOrmMigrationCreateOptions = {

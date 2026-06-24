@@ -1,3 +1,5 @@
+// file: packages\auth\src\types\auth-options.ts
+
 import type { EntityClass } from "@mikro-orm/core";
 import { AuthUserBase, AuthUserEntity } from "../entities/auth-user.entity.js";
 import { AuthRefreshTokenEntity } from "../entities/auth-refresh-token.entity.js";

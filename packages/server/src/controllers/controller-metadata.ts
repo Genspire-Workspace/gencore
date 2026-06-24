@@ -1,3 +1,5 @@
+// file: packages\server\src\controllers\controller-metadata.ts
+
 import type { Constructor } from "@genspire/core";
 import type { HttpMethod, HttpRouteDocs } from "../http/http-types.js";
 import type { IRouteAuthorizationMetadata } from "../auth/route-authorization.js";

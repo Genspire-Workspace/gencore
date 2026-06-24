@@ -1,3 +1,5 @@
+// file: apps\playground-api\src\files\file.service.ts
+
 import { GenError, Scoped } from "@genspire/core";
 import { StorageService } from "@genspire/storage";
 import { PlaygroundDbContext } from "../database/playground-db-context.js";

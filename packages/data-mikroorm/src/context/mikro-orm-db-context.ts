@@ -1,3 +1,5 @@
+// file: packages\data-mikroorm\src\context\mikro-orm-db-context.ts
+
 import type { DbContext } from "@genspire/data";
 import type { EntityClass, EntityManager } from "@mikro-orm/core";
 import { EntityManagerProvider } from "./entity-manager-provider.js";

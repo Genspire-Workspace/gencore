@@ -1,3 +1,5 @@
+// file: packages\server\src\controllers\controller-registration.ts
+
 import type { Container } from "@genspire/core";
 import type { HttpContext } from "../context/http-context.js";
 import type { HttpRouteDocs } from "../http/http-types.js";

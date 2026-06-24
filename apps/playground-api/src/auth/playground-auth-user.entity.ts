@@ -1,3 +1,5 @@
+// file: apps\playground-api\src\auth\playground-auth-user.entity.ts
+
 import { Entity, Property } from "@mikro-orm/decorators";
 import { AuthUserBase } from "@genspire/auth";
 

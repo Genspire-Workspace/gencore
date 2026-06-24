@@ -1,3 +1,5 @@
+// file: packages\server\src\server\server.test.ts
+
 import { describe, expect, test } from "bun:test";
 import { Container, GenError, LogStore, LoggerFactory } from "@genspire/core";
 import type { HttpMiddleware } from "../middleware/middleware.js";

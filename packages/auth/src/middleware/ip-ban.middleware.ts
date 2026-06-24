@@ -1,3 +1,5 @@
+// file: packages\auth\src\middleware\ip-ban.middleware.ts
+
 import type { HttpMiddleware } from "@genspire/server";
 import { problem } from "@genspire/server";
 import { AuthBanService } from "../services/auth-ban.service.js";

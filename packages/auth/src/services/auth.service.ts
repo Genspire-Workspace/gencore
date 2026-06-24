@@ -1,3 +1,5 @@
+// file: packages\auth\src\services\auth.service.ts
+
 import { Scoped, GenError } from "@genspire/core";
 import { AuthDbContext } from "../context/auth-db-context.js";
 import { PasswordHasher } from "../hashing/password-hasher.js";

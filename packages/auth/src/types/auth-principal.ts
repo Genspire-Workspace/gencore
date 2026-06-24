@@ -1,3 +1,5 @@
+// file: packages\auth\src\types\auth-principal.ts
+
 export interface AuthPrincipal {
   sub: string;
   email: string;

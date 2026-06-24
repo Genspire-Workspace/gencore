@@ -1,3 +1,5 @@
+// file: packages\swagger\src\extension\swagger-extension.ts
+
 import type { GenExtension } from "@genspire/core";
 import { Server, buildOpenApiDocument, text } from "@genspire/server";
 

@@ -1,3 +1,5 @@
+// file: packages\server\src\openapi\problem-details.ts
+
 import { defineApiType } from "./schema-helpers.js";
 import type { OpenApiTypeDefinition } from "./openapi-types.js";
 

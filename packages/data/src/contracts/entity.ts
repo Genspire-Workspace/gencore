@@ -1,3 +1,5 @@
+// file: packages\data\src\contracts\entity.ts
+
 export type EntityState = "active" | "inactive" | "archived" | "deleted";
 
 export interface IEntity<TId = string> {

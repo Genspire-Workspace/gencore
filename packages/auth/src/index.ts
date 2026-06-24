@@ -1,3 +1,5 @@
+// file: packages\auth\src\index.ts
+
 // Entities
 export { AuthUserBase, AuthUserEntity } from "./entities/auth-user.entity.js";
 export { AuthRefreshTokenEntity } from "./entities/auth-refresh-token.entity.js";

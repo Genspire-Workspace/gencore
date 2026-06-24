@@ -1,3 +1,5 @@
+// file: packages\data-mikroorm\src\migrations\migration-command-types.ts
+
 import type { MikroOrmExtensionOptions } from "../extension/mikro-orm-extension.js";
 
 export type MikroOrmMigrationCommand =

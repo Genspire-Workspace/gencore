@@ -1,3 +1,5 @@
+// file: packages\server\src\openapi\openapi-builder.ts
+
 import type {
   HttpResponseDoc,
   HttpRouteDocs,

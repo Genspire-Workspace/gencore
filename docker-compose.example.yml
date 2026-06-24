@@ -1,0 +1,64 @@
+# GenCore Playground — Docker Compose
+# Start the infrastructure services for Docker-based playground development.
+#
+# Usage:
+#   1. cp .env.local.docker.example .env
+#   2. docker compose -f docker-compose.example.yml up -d
+#   3. Wait for healthchecks to pass (docker compose ps)
+#   4. bun run db:playground:up
+#   5. bun run dev
+#
+#   Services:
+#     postgres  → PostgreSQL 16 on :5432
+#     minio     → MinIO S3-compatible storage on :9000 (API) :9001 (Console)
+#     minio-init→ Creates the "playground" bucket on startup
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: gencore
+      POSTGRES_PASSWORD: gencore
+      POSTGRES_DB: gencore_playground
+    ports:
+      - "5432:5432"
+    volumes:
+      - gencore_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gencore -d gencore_playground"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  minio:
+    image: minio/minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: gencore
+      MINIO_ROOT_PASSWORD: gencore-secret
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - gencore_minio_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  minio-init:
+    image: minio/mc
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: |
+      /bin/sh -c "
+      mc alias set local http://minio:9000 gencore gencore-secret &&
+      mc mb --ignore-existing local/playground &&
+      mc anonymous set download local/playground
+      "
+
+volumes:
+  gencore_postgres_data:
+  gencore_minio_data:

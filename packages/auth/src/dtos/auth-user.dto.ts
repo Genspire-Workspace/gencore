@@ -1,3 +1,5 @@
+// file: packages\auth\src\dtos\auth-user.dto.ts
+
 import { ApiDto, ApiField } from "@genspire/server";
 
 @ApiDto({ description: "Authenticated user information" })

@@ -1,3 +1,5 @@
+// file: packages\auth\src\entities\auth-refresh-token.entity.ts
+
 import {
   Entity,
   PrimaryKey,

@@ -1,3 +1,5 @@
+// file: apps\playground-api\src\database\playground-db-context.ts
+
 import { Scoped } from "@genspire/core";
 import { EntityManagerProvider, MikroOrmDbContext } from "@genspire/data-mikroorm";
 import { FileEntity } from "../files/file.entity.js";

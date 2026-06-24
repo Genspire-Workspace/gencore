@@ -1,3 +1,5 @@
+// file: packages\server\src\auth\route-authorization.ts
+
 export interface IAuthorizationRequirement {
   roles?: readonly string[];
 }

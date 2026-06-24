@@ -1,3 +1,5 @@
+// file: packages\server\src\openapi\api-dto.ts
+
 import type { OpenApiSchema, OpenApiTypeDefinition } from "./openapi-types.js";
 import { apiArrayOf as createApiArrayOf, type ApiArrayTypeDefinition, defineApiType } from "./schema-helpers.js";
 

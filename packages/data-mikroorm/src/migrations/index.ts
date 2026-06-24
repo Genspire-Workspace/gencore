@@ -1,3 +1,5 @@
+// file: packages\data-mikroorm\src\migrations\index.ts
+
 export {
   formatMikroOrmMigrationCommandResult,
   isMikroOrmMigrationCommand,

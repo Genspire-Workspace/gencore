@@ -1,3 +1,5 @@
+// file: apps\playground-api\src\database\playground-database-config.ts
+
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
 import type { MikroOrmExtensionOptions } from "@genspire/data-mikroorm";
@@ -6,6 +8,7 @@ import { AuthRefreshTokenEntity, AuthRoleEntity, AuthUserRoleEntity, AuthEventEn
 import { FileEntity } from "../files/file.entity.js";
 import { TodoEntity } from "../todos/todo.entity.js";
 import { PlaygroundAuthUserEntity } from "../auth/playground-auth-user.entity.js";
+import type { IPlaygroundEnv } from "../config/playground-env.js";
 
 export type PlaygroundSchemaMode = "update" | "migrations" | "none";
 
@@ -13,51 +16,30 @@ export function resolvePlaygroundDataDirectory(repoRoot = process.cwd()): string
   return path.resolve(repoRoot, "data");
 }
 
-export function resolveDefaultPlaygroundLibsqlDbPath(repoRoot = process.cwd()): string {
-  return path.resolve(resolvePlaygroundDataDirectory(repoRoot), "playground-api.db");
-}
-
-export async function ensurePlaygroundLibsqlDirectory(dbPath: string): Promise<void> {
-  await mkdir(path.dirname(dbPath), { recursive: true });
-}
-
-export function resolvePlaygroundLibsqlDbPath(
-  repoRoot = process.cwd(),
-  env = process.env,
-): string {
-  return env["GENCORE_PLAYGROUND_LIBSQL_DB_PATH"]?.trim()
-    || resolveDefaultPlaygroundLibsqlDbPath(repoRoot);
-}
-
 export function resolvePlaygroundMigrationsPath(repoRoot = process.cwd()): string {
   return path.resolve(repoRoot, "apps", "playground-api", "src", "migrations");
 }
 
-export function resolvePlaygroundSchemaMode(
-  env = process.env,
-): PlaygroundSchemaMode {
-  const value = env["GENCORE_PLAYGROUND_SCHEMA_MODE"]?.trim() ?? "update";
+export async function createPlaygroundMikroOrmConfig(
+  env: IPlaygroundEnv,
+  repoRoot = process.cwd(),
+): Promise<MikroOrmExtensionOptions> {
+  const dbConfig = env.database;
+  const runtimeDriver = dbConfig.provider === "postgres" ? "postgresql" as const : "libsql" as const;
 
-  if (value === "update" || value === "migrations" || value === "none") {
-    return value;
+  const dbName = runtimeDriver === "libsql"
+    ? path.resolve(repoRoot, dbConfig.libsqlDbPath)
+    : dbConfig.postgresUrl;
+
+  if (runtimeDriver === "libsql") {
+    await mkdir(path.dirname(dbName), { recursive: true });
   }
 
-  throw new Error(
-    `Invalid GENCORE_PLAYGROUND_SCHEMA_MODE: '${value}'. Expected one of: update, migrations, none.`,
-  );
-}
-
-export async function createPlaygroundMikroOrmConfig(
-  repoRoot = process.cwd(),
-  env = process.env,
-): Promise<MikroOrmExtensionOptions> {
-  const dbName = resolvePlaygroundLibsqlDbPath(repoRoot, env);
-  await ensurePlaygroundLibsqlDirectory(dbName);
   const migrationsPath = resolvePlaygroundMigrationsPath(repoRoot);
   await mkdir(migrationsPath, { recursive: true });
 
   return {
-    runtimeDriver: "libsql",
+    runtimeDriver,
     entities: [FileEntity, TodoEntity, PlaygroundAuthUserEntity, AuthRefreshTokenEntity, AuthRoleEntity, AuthUserRoleEntity, AuthEventEntity, AuthBannedIpEntity],
     dbName,
     allowGlobalContext: true,

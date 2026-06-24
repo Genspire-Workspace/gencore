@@ -1,3 +1,5 @@
+// file: apps\playground-api\src\health\health.controller.ts
+
 import { Controller, Get } from "@genspire/server";
 import { HealthResponse } from "./health.dto.js";
 

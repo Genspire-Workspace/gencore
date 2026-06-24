@@ -1,3 +1,5 @@
+// file: packages\auth\src\context\auth-db-context.ts
+
 import { Scoped } from "@genspire/core";
 import { EntityManagerProvider, MikroOrmDbContext } from "@genspire/data-mikroorm";
 import { AuthConfiguration } from "../services/auth-configuration.js";

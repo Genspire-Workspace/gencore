@@ -1,3 +1,5 @@
+// file: packages\auth\src\auth.test.ts
+
 import { describe, expect, test } from "bun:test";
 import { Argon2PasswordHasher } from "./hashing/argon2-password-hasher.js";
 import { TokenService } from "./services/token.service.js";

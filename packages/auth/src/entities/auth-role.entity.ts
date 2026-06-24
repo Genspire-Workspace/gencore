@@ -1,3 +1,5 @@
+// file: packages\auth\src\entities\auth-role.entity.ts
+
 import { Entity, PrimaryKey, Property, Unique, Index } from "@mikro-orm/decorators";
 
 @Entity({ tableName: "auth_roles" })

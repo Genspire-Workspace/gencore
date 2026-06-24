@@ -1,3 +1,5 @@
+// file: packages\server\src\openapi\openapi-types.ts
+
 export interface OpenApiSchema {
   type?: string;
   format?: string;

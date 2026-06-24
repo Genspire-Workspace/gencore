@@ -1,3 +1,5 @@
+// file: packages\core\src\app\gen-app.test.ts
+
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 import { createApp } from "./create-app.js";
 import type { IGenExtension } from "./gen-extension.js";

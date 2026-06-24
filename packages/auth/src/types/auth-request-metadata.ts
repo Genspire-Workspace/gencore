@@ -1,3 +1,5 @@
+// file: packages\auth\src\types\auth-request-metadata.ts
+
 import type { RequestContext } from "@genspire/server";
 
 export interface IAuthRequestMetadata {

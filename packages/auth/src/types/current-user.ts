@@ -1,3 +1,5 @@
+// file: packages\auth\src\types\current-user.ts
+
 export interface ICurrentUser {
   id: string;
   email: string;

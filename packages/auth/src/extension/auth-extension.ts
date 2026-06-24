@@ -1,3 +1,5 @@
+// file: packages\auth\src\extension\auth-extension.ts
+
 import type { GenExtension } from "@genspire/core";
 import { Argon2PasswordHasher } from "../hashing/argon2-password-hasher.js";
 import { TokenService } from "../services/token.service.js";

@@ -1,3 +1,5 @@
+// file: packages\core\src\container\container.test.ts
+
 import { describe, expect, test } from "bun:test";
 import { Container } from "./container.js";
 import { Scoped, Singleton, Transient } from "./decorators.js";

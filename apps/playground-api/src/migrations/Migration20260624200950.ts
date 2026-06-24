@@ -1,3 +1,5 @@
+// file: apps\playground-api\src\migrations\Migration20260624200950.ts
+
 import { Migration } from '@mikro-orm/migrations';
 
 export class Migration20260624200950 extends Migration {

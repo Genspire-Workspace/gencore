@@ -1,3 +1,5 @@
+// file: packages\auth\src\dtos\auth-response.dto.ts
+
 import { ApiDto, ApiField } from "@genspire/server";
 import { AuthUserResponseDto } from "./auth-user.dto.js";
 

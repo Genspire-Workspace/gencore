@@ -1,3 +1,5 @@
+// file: packages\auth\src\middleware\bearer-auth.middleware.ts
+
 import type { HttpMiddleware } from "@genspire/server";
 import { jwtVerify } from "jose";
 import { AuthConfiguration } from "../services/auth-configuration.js";

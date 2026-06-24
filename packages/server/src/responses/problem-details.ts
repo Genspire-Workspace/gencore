@@ -1,3 +1,5 @@
+// file: packages\server\src\responses\problem-details.ts
+
 export interface ProblemDetails {
   type?: string;
   title: string;

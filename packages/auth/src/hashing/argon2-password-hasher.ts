@@ -1,3 +1,5 @@
+// file: packages\auth\src\hashing\argon2-password-hasher.ts
+
 import { Singleton } from "@genspire/core";
 import { argon2id } from "hash-wasm";
 import { PasswordHasher } from "./password-hasher.js";
