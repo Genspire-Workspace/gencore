@@ -1,0 +1,22 @@
+{
+  "name": "gencore",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Bun-first TypeScript framework for AI-native APIs, CLIs, agents, and workspace backends.",
+  "type": "module",
+  "license": "AGPL-3.0-or-later",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "typecheck": "bunx tsc --noEmit",
+    "test": "bun test",
+    "dev": "bun run apps/playground-api/src/index.ts",
+    "clean": "rm -rf node_modules bun.lock packages/*/dist apps/*/dist"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "latest"
+  }
+}
