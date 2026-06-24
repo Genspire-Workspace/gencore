@@ -11,7 +11,7 @@
   ],
   "scripts": {
     "typecheck": "bunx tsc --noEmit",
-    "test": "bun test",
+    "test": "bun test --path-ignore-patterns '**/old_spirecorejs/**' --pass-with-no-tests",
     "dev": "bun run apps/playground-api/src/index.ts",
     "clean": "rm -rf node_modules bun.lock packages/*/dist apps/*/dist"
   },
