@@ -53,14 +53,14 @@ describe("playground auth api", () => {
     });
   }
 
-  test("POST /auth/register creates a user and returns tokens", async () => {
+  test("POST /register creates a user and returns tokens", async () => {
     const app = await createApp();
     await app.start();
 
     try {
       const server = app.get(Server);
       const response = await server.handle(
-        new Request("http://localhost/auth/register", {
+        new Request("http://localhost/register", {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({
@@ -85,14 +85,14 @@ describe("playground auth api", () => {
     }
   });
 
-  test("POST /auth/register rejects duplicate email", async () => {
+  test("POST /register rejects duplicate email", async () => {
     const app = await createApp();
     await app.start();
 
     try {
       const server = app.get(Server);
       await server.handle(
-        new Request("http://localhost/auth/register", {
+        new Request("http://localhost/register", {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({ email: "dup@example.com", password: "password123" }),
@@ -100,7 +100,7 @@ describe("playground auth api", () => {
       );
 
       const response2 = await server.handle(
-        new Request("http://localhost/auth/register", {
+        new Request("http://localhost/register", {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({ email: "DUP@example.com", password: "password123" }),
@@ -115,14 +115,14 @@ describe("playground auth api", () => {
     }
   });
 
-  test("POST /auth/register rejects short password", async () => {
+  test("POST /register rejects short password", async () => {
     const app = await createApp();
     await app.start();
 
     try {
       const server = app.get(Server);
       const response = await server.handle(
-        new Request("http://localhost/auth/register", {
+        new Request("http://localhost/register", {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({ email: "short@example.com", password: "123" }),
@@ -137,14 +137,14 @@ describe("playground auth api", () => {
     }
   });
 
-  test("POST /auth/login returns tokens for valid credentials", async () => {
+  test("POST /login returns tokens for valid credentials", async () => {
     const app = await createApp();
     await app.start();
 
     try {
       const server = app.get(Server);
       await server.handle(
-        new Request("http://localhost/auth/register", {
+        new Request("http://localhost/register", {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({ email: "bob@example.com", password: "password123" }),
@@ -152,7 +152,7 @@ describe("playground auth api", () => {
       );
 
       const loginResponse = await server.handle(
-        new Request("http://localhost/auth/login", {
+        new Request("http://localhost/login", {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({ email: "bob@example.com", password: "password123" }),
@@ -169,14 +169,14 @@ describe("playground auth api", () => {
     }
   });
 
-  test("POST /auth/login rejects wrong password", async () => {
+  test("POST /login rejects wrong password", async () => {
     const app = await createApp();
     await app.start();
 
     try {
       const server = app.get(Server);
       await server.handle(
-        new Request("http://localhost/auth/register", {
+        new Request("http://localhost/register", {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({ email: "wrong@example.com", password: "password123" }),
@@ -184,7 +184,7 @@ describe("playground auth api", () => {
       );
 
       const loginResponse = await server.handle(
-        new Request("http://localhost/auth/login", {
+        new Request("http://localhost/login", {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({ email: "wrong@example.com", password: "wrongpassword" }),
@@ -199,14 +199,14 @@ describe("playground auth api", () => {
     }
   });
 
-  test("POST /auth/refresh rotates the refresh token", async () => {
+  test("POST /refresh rotates the refresh token", async () => {
     const app = await createApp();
     await app.start();
 
     try {
       const server = app.get(Server);
       const registerResponse = await server.handle(
-        new Request("http://localhost/auth/register", {
+        new Request("http://localhost/register", {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({ email: "refresh@example.com", password: "password123" }),
@@ -217,7 +217,7 @@ describe("playground auth api", () => {
       const originalRefreshToken = registerBody.refreshToken as string;
 
       const refreshResponse = await server.handle(
-        new Request("http://localhost/auth/refresh", {
+        new Request("http://localhost/refresh", {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({ refreshToken: originalRefreshToken }),
@@ -232,7 +232,7 @@ describe("playground auth api", () => {
       expect((refreshBody.user as Record<string, unknown>).email).toBe("refresh@example.com");
 
       const reuseResponse = await server.handle(
-        new Request("http://localhost/auth/refresh", {
+        new Request("http://localhost/refresh", {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({ refreshToken: originalRefreshToken }),
@@ -245,14 +245,14 @@ describe("playground auth api", () => {
     }
   });
 
-  test("POST /auth/logout revokes the refresh token", async () => {
+  test("POST /logout revokes the refresh token", async () => {
     const app = await createApp();
     await app.start();
 
     try {
       const server = app.get(Server);
       const registerResponse = await server.handle(
-        new Request("http://localhost/auth/register", {
+        new Request("http://localhost/register", {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({ email: "logout@example.com", password: "password123" }),
@@ -263,7 +263,7 @@ describe("playground auth api", () => {
       const refreshToken = registerBody.refreshToken as string;
 
       const logoutResponse = await server.handle(
-        new Request("http://localhost/auth/logout", {
+        new Request("http://localhost/logout", {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({ refreshToken }),
@@ -274,7 +274,7 @@ describe("playground auth api", () => {
       expect(await logoutResponse.json()).toEqual({ loggedOut: true });
 
       const refreshAfterLogout = await server.handle(
-        new Request("http://localhost/auth/refresh", {
+        new Request("http://localhost/refresh", {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({ refreshToken }),
@@ -287,14 +287,14 @@ describe("playground auth api", () => {
     }
   });
 
-  test("GET /auth/me returns current user with valid Bearer token", async () => {
+  test("GET /me returns current user with valid Bearer token", async () => {
     const app = await createApp();
     await app.start();
 
     try {
       const server = app.get(Server);
       const registerResponse = await server.handle(
-        new Request("http://localhost/auth/register", {
+        new Request("http://localhost/register", {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({ email: "me@example.com", password: "password123" }),
@@ -305,7 +305,7 @@ describe("playground auth api", () => {
       const accessToken = registerBody.accessToken as string;
 
       const meResponse = await server.handle(
-        new Request("http://localhost/auth/me", {
+        new Request("http://localhost/me", {
           headers: { authorization: `Bearer ${accessToken}` },
         }),
       );
@@ -318,13 +318,13 @@ describe("playground auth api", () => {
     }
   });
 
-  test("GET /auth/me returns 401 without token", async () => {
+  test("GET /me returns 401 without token", async () => {
     const app = await createApp();
     await app.start();
 
     try {
       const server = app.get(Server);
-      const response = await server.handle(new Request("http://localhost/auth/me"));
+      const response = await server.handle(new Request("http://localhost/me"));
       expect(response.status).toBe(401);
     } finally {
       await app.stop();
@@ -346,11 +346,11 @@ describe("playground auth api", () => {
         paths: Record<string, unknown>;
       };
 
-      expect(swaggerDocument.paths["/auth/register"]).toBeDefined();
-      expect(swaggerDocument.paths["/auth/login"]).toBeDefined();
-      expect(swaggerDocument.paths["/auth/refresh"]).toBeDefined();
-      expect(swaggerDocument.paths["/auth/logout"]).toBeDefined();
-      expect(swaggerDocument.paths["/auth/me"]).toBeDefined();
+      expect(swaggerDocument.paths["/register"]).toBeDefined();
+      expect(swaggerDocument.paths["/login"]).toBeDefined();
+      expect(swaggerDocument.paths["/refresh"]).toBeDefined();
+      expect(swaggerDocument.paths["/logout"]).toBeDefined();
+      expect(swaggerDocument.paths["/me"]).toBeDefined();
     } finally {
       await app.stop();
     }

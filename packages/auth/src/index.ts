@@ -22,6 +22,11 @@ export { RefreshRequestDto as RefreshRequest } from "./dtos/refresh-request.dto.
 export { LogoutRequestDto as LogoutRequest } from "./dtos/logout-request.dto.js";
 export { AuthUserResponseDto as AuthUserResponse } from "./dtos/auth-user.dto.js";
 export { AuthResponseDto as AuthResponse } from "./dtos/auth-response.dto.js";
+export { RoleResponseDto } from "./dtos/role.dto.js";
+export { CreateRoleRequestDto } from "./dtos/role.dto.js";
+export { UpdateRoleRequestDto } from "./dtos/role.dto.js";
+export { AssignRoleRequestDto } from "./dtos/role.dto.js";
+export { UserRolesResponseDto } from "./dtos/role.dto.js";
 
 // Services
 export { AuthService } from "./services/auth.service.js";
@@ -48,6 +53,7 @@ export { AuthDbContext } from "./context/auth-db-context.js";
 
 // Controller
 export { AuthController } from "./controllers/auth.controller.js";
+export { RoleController } from "./controllers/role.controller.js";
 
 // Extension
 export { authExtension } from "./extension/auth-extension.js";

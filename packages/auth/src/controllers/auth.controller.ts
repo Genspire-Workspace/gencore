@@ -27,7 +27,7 @@ const errorResponse = {
   },
 } as const;
 
-@Controller("/auth", {
+@Controller("/", {
   tag: "Auth",
   description: "Authentication endpoints",
 })

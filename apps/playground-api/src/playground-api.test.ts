@@ -12,7 +12,7 @@ async function registerAndGetToken(
   password = "password123",
 ): Promise<{ accessToken: string; userId: string }> {
   const res = await server.handle(
-    new Request("http://localhost/auth/register", {
+    new Request("http://localhost/register", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ email, password }),

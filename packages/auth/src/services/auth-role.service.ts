@@ -91,4 +91,76 @@ export class AuthRoleService {
     const entries = await this.db.userRoles.list({ where: { userId } as Partial<AuthUserRoleEntity> });
     return entries.some((e) => normalizedRoles.includes(e.roleName));
   }
+
+  async listRoles(): Promise<AuthRoleEntity[]> {
+    return await this.db.roles.list({ orderBy: "normalizedName" as keyof AuthRoleEntity & string, direction: "asc" });
+  }
+
+  async getRoleById(id: string): Promise<AuthRoleEntity | null> {
+    return await this.db.roles.findById(id);
+  }
+
+  async getRoleByName(name: string): Promise<AuthRoleEntity | null> {
+    const normalized = name.trim().toLowerCase();
+    return await this.db.roles.findOne({ normalizedName: normalized } as Partial<AuthRoleEntity>);
+  }
+
+  async updateRole(id: string, input: { name?: string; description?: string | null }): Promise<AuthRoleEntity | null> {
+    const role = await this.db.roles.findById(id);
+    if (!role) {
+      return null;
+    }
+
+    if (input.name !== undefined) {
+      const newName = input.name.trim();
+      if (!newName) {
+        throw new GenError("Role name is required.", "AUTH_VALIDATION_ERROR");
+      }
+      const normalized = newName.toLowerCase();
+      if (normalized !== role.normalizedName) {
+        const conflict = await this.db.roles.findOne({ normalizedName: normalized } as Partial<AuthRoleEntity>);
+        if (conflict) {
+          throw new GenError("A role with this name already exists.", "AUTH_VALIDATION_CONFLICT");
+        }
+        role.normalizedName = normalized;
+      }
+      role.name = newName;
+    }
+
+    if (input.description !== undefined) {
+      role.description = input.description ?? null;
+    }
+
+    role.updatedAt = new Date();
+    await this.db.roles.update(role);
+    await this.db.saveChanges();
+    return role;
+  }
+
+  async deleteRole(id: string): Promise<boolean> {
+    const role = await this.db.roles.findById(id);
+    if (!role) {
+      return false;
+    }
+
+    const userRoles = await this.db.userRoles.list({
+      where: { roleId: id } as Partial<AuthUserRoleEntity>,
+    });
+
+    for (const ur of userRoles) {
+      await this.db.userRoles.remove(ur);
+    }
+
+    await this.db.roles.remove(role);
+    await this.db.saveChanges();
+    return true;
+  }
+
+  async getUsersWithRole(roleName: string): Promise<string[]> {
+    const normalized = roleName.trim().toLowerCase();
+    const entries = await this.db.userRoles.list({
+      where: { roleName: normalized } as Partial<AuthUserRoleEntity>,
+    });
+    return entries.map((e) => e.userId);
+  }
 }
