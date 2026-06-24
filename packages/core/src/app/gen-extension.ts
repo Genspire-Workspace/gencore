@@ -1,3 +1,5 @@
+// file: packages\core\src\app\gen-extension.ts
+
 export interface GenExtension {
   name: string;
   dependsOn?: readonly string[];

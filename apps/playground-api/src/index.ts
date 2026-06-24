@@ -1,3 +1,5 @@
+// file: apps\playground-api\src\index.ts
+
 import { createApp } from "@genspire/core";
 import { serverExtension, Server } from "@genspire/server";
 

@@ -1,3 +1,5 @@
+// file: packages\core\src\result\result.ts
+
 import { GenError } from "./gen-error.js";
 
 export type Result<T, E = GenError> =

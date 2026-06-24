@@ -1,3 +1,5 @@
+// file: packages\server\src\context\http-context.ts
+
 import type { ScopedContainer } from "@genspire/core";
 
 export class HttpContextItems {

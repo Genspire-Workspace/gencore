@@ -1,3 +1,5 @@
+// file: packages\core\src\index.ts
+
 export { createApp } from "./app/create-app.js";
 export type { GenAppOptions } from "./app/gen-app-options.js";
 export { GenApp } from "./app/gen-app.js";

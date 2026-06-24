@@ -1,3 +1,5 @@
+// file: packages\core\src\logging\log-store.ts
+
 import { Singleton } from "../container/decorators.js";
 
 export type LogLevel = "debug" | "info" | "warn" | "error";

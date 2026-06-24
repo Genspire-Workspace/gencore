@@ -1,3 +1,5 @@
+// file: packages\core\src\events\event-bus.ts
+
 import type { Constructor, Container } from "../container/container.js";
 import type { ScopedContainer } from "../container/scoped-container.js";
 import { Singleton } from "../container/decorators.js";

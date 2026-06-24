@@ -1,3 +1,5 @@
+// file: packages\core\src\app\gen-app.ts
+
 import { EnvService } from "../config/env-service.js";
 import { Container, type Constructor, type ServiceToken } from "../container/container.js";
 import type { ScopedContainer } from "../container/scoped-container.js";

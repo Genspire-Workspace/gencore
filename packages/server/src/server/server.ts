@@ -1,3 +1,5 @@
+// file: packages\server\src\server\server.ts
+
 import type { Container } from "@genspire/core";
 import { EnvService, LoggerFactory } from "@genspire/core";
 import type { HttpMiddleware } from "../middleware/middleware.js";

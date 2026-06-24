@@ -1,3 +1,5 @@
+// file: packages\core\src\container\decorators.ts
+
 import type { Constructor, Lifetime } from "./container.js";
 export { inject } from "./injection-context.js";
 

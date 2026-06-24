@@ -1,3 +1,5 @@
+// file: packages\core\src\runtime\runtime-paths.ts
+
 import { existsSync } from "node:fs";
 import { basename, dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";

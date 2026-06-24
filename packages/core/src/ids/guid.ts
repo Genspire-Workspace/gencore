@@ -1,3 +1,5 @@
+// file: packages\core\src\ids\guid.ts
+
 import { createHash, randomUUID } from "node:crypto";
 
 function bytesToUuid(bytes: Uint8Array): string {

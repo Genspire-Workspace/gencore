@@ -1,3 +1,5 @@
+// file: packages\core\src\config\env-service.ts
+
 export class EnvService {
   get(key: string, defaultValue?: string): string | undefined {
     return process.env[key] ?? defaultValue;

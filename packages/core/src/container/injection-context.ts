@@ -1,3 +1,5 @@
+// file: packages\core\src\container\injection-context.ts
+
 import type { ServiceToken } from "./container.js";
 
 type InjectionResolver = <T>(token: ServiceToken<T>) => T;

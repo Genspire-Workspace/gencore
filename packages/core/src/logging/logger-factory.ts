@@ -1,3 +1,5 @@
+// file: packages\core\src\logging\logger-factory.ts
+
 import { Singleton, inject } from "../container/decorators.js";
 import { Logger, normalizeLogColors, normalizeLogFormat, normalizeLogLevel } from "./logger.js";
 import { LogStore } from "./log-store.js";

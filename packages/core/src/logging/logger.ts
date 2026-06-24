@@ -1,3 +1,5 @@
+// file: packages\core\src\logging\logger.ts
+
 import path from "node:path";
 import type { LogEntry, LogLevel, LogStore } from "./log-store.js";
 

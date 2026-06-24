@@ -1,3 +1,5 @@
+// file: packages\server\src\extension\server-extension.ts
+
 import type { GenExtension } from "@genspire/core";
 import { LoggerFactory } from "@genspire/core";
 import { Server, type ServerOptions } from "../server/server.js";

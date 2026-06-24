@@ -1,3 +1,5 @@
+// file: packages\server\src\websocket\websocket-types.ts
+
 import type { ServerWebSocket } from "bun";
 import type { ScopedContainer } from "@genspire/core";
 

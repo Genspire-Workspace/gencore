@@ -1,3 +1,5 @@
+// file: packages\core\src\result\gen-error.ts
+
 export class GenError extends Error {
   constructor(
     message: string,

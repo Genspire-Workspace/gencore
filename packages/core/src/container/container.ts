@@ -1,3 +1,5 @@
+// file: packages\core\src\container\container.ts
+
 import { hasOnDestroy, hasOnInit } from "../lifecycle/lifecycle.js";
 import { getLifetime } from "./decorators.js";
 import { runInInjectionContext } from "./injection-context.js";

@@ -1,3 +1,5 @@
+// file: packages\core\src\lifecycle\lifecycle.ts
+
 export interface OnInit {
   onInit(): void | Promise<void>;
 }

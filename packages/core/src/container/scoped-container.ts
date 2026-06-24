@@ -1,3 +1,5 @@
+// file: packages\core\src\container\scoped-container.ts
+
 import { hasOnDestroy } from "../lifecycle/lifecycle.js";
 import type { Container, ServiceToken } from "./container.js";
 

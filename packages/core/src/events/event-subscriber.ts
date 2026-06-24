@@ -1,3 +1,5 @@
+// file: packages\core\src\events\event-subscriber.ts
+
 import { Singleton } from "../container/decorators.js";
 import type { Constructor } from "../container/container.js";
 
