@@ -60,3 +60,14 @@ export class TodoListResponse {
   })
   items!: TodoResponse[];
 }
+
+@ApiDto({
+  description: "Delete todo response",
+})
+export class DeleteTodoResponse {
+  @ApiField({
+    type: "boolean",
+    description: "Whether the todo was deleted.",
+  })
+  deleted!: boolean;
+}

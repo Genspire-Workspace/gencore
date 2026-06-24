@@ -30,6 +30,13 @@ export interface HttpRouteDocs {
   requestBody?: unknown;
   request?: unknown;
   response?: unknown;
+  responses?: Record<string | number, unknown | HttpResponseDoc>;
+}
+
+export interface HttpResponseDoc {
+  description?: string;
+  body?: unknown;
+  contentType?: string;
 }
 
 export interface HttpRouteDefinition {

@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
-import { Container, LogStore, LoggerFactory } from "@genspire/core";
+import { Container, GenError, LogStore, LoggerFactory } from "@genspire/core";
 import type { HttpMiddleware } from "../middleware/middleware.js";
+import { HttpError } from "../responses/http-error.js";
 import { json, noContent, problem, redirect, text } from "../responses/response-helpers.js";
 import { Server } from "./server.js";
 
@@ -131,6 +132,68 @@ describe("@genspire/server", () => {
     });
   });
 
+  test("thrown GenError validation error returns 400", async () => {
+    const server = createServer();
+    server.post("/validate", () => {
+      throw new GenError("Title is required.", "TODO_VALIDATION_ERROR");
+    });
+
+    const response = await server.handle(
+      new Request("http://localhost/validate", {
+        method: "POST",
+      }),
+    );
+
+    expect(response.status).toBe(400);
+    expect(response.headers.get("content-type")).toContain("application/problem+json");
+    expect(await response.json()).toEqual({
+      type: "about:blank",
+      title: "Bad Request",
+      status: 400,
+      detail: "Title is required.",
+      code: "TODO_VALIDATION_ERROR",
+    });
+  });
+
+  test("thrown HttpError uses explicit status", async () => {
+    const server = createServer();
+    server.get("/missing", () => {
+      throw new HttpError(404, "Todo not found", {
+        code: "TODO_NOT_FOUND",
+      });
+    });
+
+    const response = await server.handle(new Request("http://localhost/missing"));
+
+    expect(response.status).toBe(404);
+    expect(await response.json()).toEqual({
+      type: "about:blank",
+      title: "Todo not found",
+      status: 404,
+      detail: "Todo not found",
+      code: "TODO_NOT_FOUND",
+    });
+  });
+
+  test("unexpected thrown error does not leak stack traces", async () => {
+    const server = createServer();
+    server.get("/secret", () => {
+      throw new Error("database exploded");
+    });
+
+    const response = await server.handle(new Request("http://localhost/secret"));
+    const body = await response.json() as Record<string, unknown>;
+
+    expect(response.status).toBe(500);
+    expect(body).toEqual({
+      type: "about:blank",
+      title: "Internal Server Error",
+      status: 500,
+    });
+    expect(body["stack"]).toBeUndefined();
+    expect(body["detail"]).toBeUndefined();
+  });
+
   test("request helpers work", async () => {
     const server = createServer([
       async ({ ctx }, next) => {
@@ -201,7 +264,10 @@ describe("@genspire/server", () => {
       status: 400,
       title: "Bad Request",
       detail: "Missing field",
-      extensions: { field: "name" },
+      code: "VALIDATION_ERROR",
+      errors: {
+        name: ["Required"],
+      },
     });
 
     expect(jsonResponse.status).toBe(201);
@@ -223,7 +289,10 @@ describe("@genspire/server", () => {
       title: "Bad Request",
       status: 400,
       detail: "Missing field",
-      field: "name",
+      code: "VALIDATION_ERROR",
+      errors: {
+        name: ["Required"],
+      },
     });
   });
 });

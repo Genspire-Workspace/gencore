@@ -53,6 +53,7 @@ export type { ServerExtensionOptions } from "./extension/server-extension.js";
 
 export type {
   HttpMethod,
+  HttpResponseDoc,
   HttpRouteDefinition,
   HttpRouteDocs,
   RouteHandler,
@@ -61,6 +62,10 @@ export type {
 
 export type { HttpMiddleware, HttpMiddlewareContext, NextHttpMiddleware } from "./middleware/middleware.js";
 
+export { HttpError } from "./responses/http-error.js";
+export type { HttpErrorOptions } from "./responses/http-error.js";
+export type { ProblemDetails } from "./responses/problem-details.js";
+export { defineProblemDetailsType } from "./openapi/problem-details.js";
 export { json, noContent, problem, redirect, text } from "./responses/response-helpers.js";
 export type { ProblemDetailsOptions } from "./responses/response-helpers.js";
 export { toResponse } from "./responses/response-normalizer.js";

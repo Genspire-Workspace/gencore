@@ -1,6 +1,12 @@
-import { Controller, Delete, Get, Patch, Post, json, problem } from "@genspire/server";
+import { Controller, Delete, Get, Patch, Post, defineProblemDetailsType, json, problem } from "@genspire/server";
 import type { RequestContext } from "@genspire/server";
-import { CreateTodoRequest, TodoListResponse, TodoResponse, UpdateTodoRequest } from "./todo.dto.js";
+import {
+  CreateTodoRequest,
+  DeleteTodoResponse,
+  TodoListResponse,
+  TodoResponse,
+  UpdateTodoRequest,
+} from "./todo.dto.js";
 import { TodoService } from "./todo.service.js";
 
 @Controller("/todo", {
@@ -23,6 +29,16 @@ export class TodoController {
   @Get("/:id", {
     summary: "Get todo by id",
     response: TodoResponse,
+    responses: {
+      400: {
+        description: "Missing todo id",
+        body: defineProblemDetailsType("Missing todo id problem response"),
+      },
+      404: {
+        description: "Todo not found",
+        body: defineProblemDetailsType("Todo not found problem response"),
+      },
+    },
   })
   async getById(ctx: RequestContext) {
     const id = ctx.params.id;
@@ -49,6 +65,16 @@ export class TodoController {
     summary: "Create todo",
     request: CreateTodoRequest,
     response: TodoResponse,
+    responses: {
+      400: {
+        description: "Validation error",
+        body: defineProblemDetailsType("Validation error problem response"),
+      },
+      500: {
+        description: "Internal server error",
+        body: defineProblemDetailsType("Internal server error problem response"),
+      },
+    },
   })
   async create(ctx: RequestContext) {
     return json(await this.service.create(await ctx.json<CreateTodoRequest>()), {
@@ -60,6 +86,20 @@ export class TodoController {
     summary: "Update todo",
     request: UpdateTodoRequest,
     response: TodoResponse,
+    responses: {
+      400: {
+        description: "Validation error",
+        body: defineProblemDetailsType("Validation error problem response"),
+      },
+      404: {
+        description: "Todo not found",
+        body: defineProblemDetailsType("Todo not found problem response"),
+      },
+      500: {
+        description: "Internal server error",
+        body: defineProblemDetailsType("Internal server error problem response"),
+      },
+    },
   })
   async updateById(ctx: RequestContext) {
     const id = ctx.params.id;
@@ -87,8 +127,16 @@ export class TodoController {
 
   @Delete("/:id", {
     summary: "Delete todo",
-    response: class DeleteTodoResponse {
-      deleted!: boolean;
+    response: DeleteTodoResponse,
+    responses: {
+      400: {
+        description: "Missing todo id",
+        body: defineProblemDetailsType("Missing todo id problem response"),
+      },
+      404: {
+        description: "Todo not found",
+        body: defineProblemDetailsType("Todo not found problem response"),
+      },
     },
   })
   async deleteById(ctx: RequestContext) {

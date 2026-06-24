@@ -1,9 +1,6 @@
-export interface ProblemDetailsOptions {
-  type?: string;
-  title?: string;
-  detail?: string;
-  instance?: string;
-  status?: number;
+import type { ProblemDetails } from "./problem-details.js";
+
+export interface ProblemDetailsOptions extends Partial<ProblemDetails> {
   extensions?: Record<string, unknown>;
 }
 
@@ -62,6 +59,8 @@ export function problem(options: ProblemDetailsOptions = {}): Response {
     status,
     ...(options.detail ? { detail: options.detail } : {}),
     ...(options.instance ? { instance: options.instance } : {}),
+    ...(options.code ? { code: options.code } : {}),
+    ...(options.errors ? { errors: options.errors } : {}),
     ...(options.extensions ?? {}),
   };
 

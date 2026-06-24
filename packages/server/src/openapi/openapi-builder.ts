@@ -1,4 +1,5 @@
 import type {
+  HttpResponseDoc,
   HttpRouteDocs,
 } from "../http/http-types.js";
 import type { ControllerClass, ControllerOptions } from "../controllers/controller-metadata.js";
@@ -133,28 +134,60 @@ function buildRequestBody(input?: unknown): Record<string, unknown> | undefined 
   };
 }
 
-function buildResponses(route: RegisteredRoute): Record<string, unknown> {
-  const defaultStatus = inferDefaultStatus(route.method);
+function isHttpResponseDoc(value: unknown): value is HttpResponseDoc {
+  return Boolean(value && typeof value === "object" && ("body" in value || "description" in value || "contentType" in value));
+}
 
-  if (!route.docs?.response) {
+function buildResponseEntry(
+  input: unknown,
+  fallbackDescription: string,
+): Record<string, unknown> {
+  if (isHttpResponseDoc(input)) {
+    if (!input.body) {
+      return {
+        description: input.description ?? fallbackDescription,
+      };
+    }
+
+    const definition = apiTypeToOpenApiDefinition(input.body as never);
     return {
-      [defaultStatus]: {
-        description: "Success",
+      description: input.description ?? definition.description ?? fallbackDescription,
+      content: {
+        [input.contentType ?? definition.contentType ?? "application/json"]: {
+          schema: definition.schema,
+        },
       },
     };
   }
 
-  const definition = apiTypeToOpenApiDefinition(route.docs.response as never);
+  const definition = apiTypeToOpenApiDefinition(input as never);
   return {
-    [defaultStatus]: {
-      description: definition.description ?? "Success",
-      content: {
-        [definition.contentType ?? "application/json"]: {
-          schema: definition.schema,
-        },
+    description: definition.description ?? fallbackDescription,
+    content: {
+      [definition.contentType ?? "application/json"]: {
+        schema: definition.schema,
       },
     },
   };
+}
+
+function buildResponses(route: RegisteredRoute): Record<string, unknown> {
+  const defaultStatus = inferDefaultStatus(route.method);
+  const responses: Record<string, unknown> = {};
+
+  if (route.docs?.response) {
+    responses[defaultStatus] = buildResponseEntry(route.docs.response, "Success");
+  } else {
+    responses[defaultStatus] = {
+      description: "Success",
+    };
+  }
+
+  for (const [status, responseDoc] of Object.entries(route.docs?.responses ?? {})) {
+    responses[String(status)] = buildResponseEntry(responseDoc, "Response");
+  }
+
+  return responses;
 }
 
 export function buildOpenApiDocument(

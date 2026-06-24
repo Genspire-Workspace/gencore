@@ -1,4 +1,5 @@
 import { Controller, Get } from "@genspire/server";
+import { HealthResponse } from "./health.dto.js";
 
 @Controller("/health", {
   tag: "Health",
@@ -7,9 +8,7 @@ import { Controller, Get } from "@genspire/server";
 export class HealthController {
   @Get("/", {
     summary: "Health check",
-    response: class HealthResponse {
-      ok!: boolean;
-    },
+    response: HealthResponse,
   })
   getHealth() {
     return { ok: true };

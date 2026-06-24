@@ -1,12 +1,13 @@
 // file: packages\server\src\server\server.ts
 
 import type { Container } from "@genspire/core";
-import { EnvService, LoggerFactory } from "@genspire/core";
+import { EnvService, GenError, LoggerFactory } from "@genspire/core";
 import type { ControllerClass } from "../controllers/controller-metadata.js";
 import { registerControllerRoutes, registerControllers as registerControllerGroup } from "../controllers/controller-registration.js";
 import { InvalidJsonBodyError } from "../context/http-context.js";
 import type { HttpRouteDocs, RouteHandler } from "../http/http-types.js";
 import type { HttpMiddleware } from "../middleware/middleware.js";
+import { HttpError } from "../responses/http-error.js";
 import { problem } from "../responses/response-helpers.js";
 import { Router } from "../routing/router.js";
 import type { RegisteredRoute, RouteRegistrationOptions } from "../routing/router.js";
@@ -157,15 +158,124 @@ export class Server {
         });
       }
 
+      const mappedError = this.mapErrorToProblemDetails(error);
+
       logger.error("Unhandled request failure", error, {
         method: req.method,
         url: req.url,
       });
-      return problem({
-        status: 500,
-        title: "Internal Server Error",
-      });
+      return problem(mappedError);
     }
+  }
+
+  private isValidationLikeCode(code: string | undefined): boolean {
+    if (!code) {
+      return false;
+    }
+
+    const normalized = code.toUpperCase();
+    return normalized.includes("VALIDATION") || normalized.includes("INVALID");
+  }
+
+  private readNumericStatus(error: unknown): number | undefined {
+    if (!error || typeof error !== "object") {
+      return undefined;
+    }
+
+    const candidate = (error as { status?: unknown; statusCode?: unknown }).status
+      ?? (error as { status?: unknown; statusCode?: unknown }).statusCode;
+
+    return typeof candidate === "number" && Number.isFinite(candidate)
+      ? candidate
+      : undefined;
+  }
+
+  private mapErrorToProblemDetails(error: unknown): {
+    status: number;
+    title: string;
+    detail?: string;
+    code?: string;
+    errors?: Record<string, string[]>;
+  } {
+    if (error instanceof GenError && this.isValidationLikeCode(error.code)) {
+      return {
+        status: 400,
+        title: "Bad Request",
+        detail: error.message,
+        code: error.code,
+        errors: this.extractValidationErrors(error.details),
+      };
+    }
+
+    if (error instanceof HttpError) {
+      return {
+        status: error.status,
+        title: error.message,
+        detail: error.detail ?? error.message,
+        code: error.code,
+        errors: error.errors,
+      };
+    }
+
+    const explicitStatus = this.readNumericStatus(error);
+    if (explicitStatus !== undefined) {
+      const message = error instanceof Error ? error.message : "Request failed";
+      const title = explicitStatus >= 500 ? "Internal Server Error" : message;
+
+      return {
+        status: explicitStatus,
+        title,
+        ...(explicitStatus >= 500 ? {} : { detail: message }),
+        ...(this.readErrorCode(error) ? { code: this.readErrorCode(error) } : {}),
+        ...(this.extractValidationErrors(this.readErrorDetails(error)) ? {
+          errors: this.extractValidationErrors(this.readErrorDetails(error)),
+        } : {}),
+      };
+    }
+
+    return {
+      status: 500,
+      title: "Internal Server Error",
+    };
+  }
+
+  private readErrorCode(error: unknown): string | undefined {
+    if (!error || typeof error !== "object") {
+      return undefined;
+    }
+
+    const code = (error as { code?: unknown }).code;
+    return typeof code === "string" ? code : undefined;
+  }
+
+  private readErrorDetails(error: unknown): Record<string, unknown> | undefined {
+    if (!error || typeof error !== "object") {
+      return undefined;
+    }
+
+    const details = (error as { details?: unknown }).details;
+    return details && typeof details === "object"
+      ? details as Record<string, unknown>
+      : undefined;
+  }
+
+  private extractValidationErrors(
+    details: Record<string, unknown> | undefined,
+  ): Record<string, string[]> | undefined {
+    const candidate = details?.["errors"];
+    if (!candidate || typeof candidate !== "object") {
+      return undefined;
+    }
+
+    const normalized: Record<string, string[]> = {};
+
+    for (const [key, value] of Object.entries(candidate as Record<string, unknown>)) {
+      if (Array.isArray(value)) {
+        normalized[key] = value.filter((entry): entry is string => typeof entry === "string");
+      }
+    }
+
+    return Object.keys(normalized).length > 0 ? normalized : undefined;
   }
 
   async start(): Promise<void> {

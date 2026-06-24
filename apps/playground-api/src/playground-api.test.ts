@@ -131,6 +131,17 @@ describe("playground api", () => {
       expect(swaggerResponse.status).toBe(200);
       const swaggerDocument = await swaggerResponse.json() as {
         paths: Record<string, {
+          get?: {
+            responses?: Record<string, {
+              content?: {
+                "application/json"?: {
+                  schema?: {
+                    properties?: Record<string, unknown>;
+                  };
+                };
+              };
+            }>;
+          };
           post?: {
             requestBody?: {
               content?: {
@@ -142,6 +153,26 @@ describe("playground api", () => {
                 };
               };
             };
+            responses?: Record<string, {
+              content?: {
+                "application/problem+json"?: {
+                  schema?: {
+                    properties?: Record<string, unknown>;
+                  };
+                };
+              };
+            }>;
+          };
+          delete?: {
+            responses?: Record<string, {
+              content?: {
+                "application/json"?: {
+                  schema?: {
+                    properties?: Record<string, unknown>;
+                  };
+                };
+              };
+            }>;
           };
         }>;
       };
@@ -160,10 +191,35 @@ describe("playground api", () => {
         swaggerDocument.paths["/todo"]?.post?.requestBody?.content?.["application/json"]?.schema
           ?.required,
       ).toEqual(["title"]);
+      expect(
+        swaggerDocument.paths["/health"]?.get?.responses?.["200"]?.content?.["application/json"]
+          ?.schema?.properties,
+      ).toEqual({
+        ok: {
+          type: "boolean",
+          description: "Whether the API is healthy.",
+        },
+      });
+      expect(
+        swaggerDocument.paths["/todo/{id}"]?.delete?.responses?.["200"]?.content?.["application/json"]
+          ?.schema?.properties,
+      ).toEqual({
+        deleted: {
+          type: "boolean",
+          description: "Whether the todo was deleted.",
+        },
+      });
+      expect(
+        swaggerDocument.paths["/todo"]?.post?.responses?.["400"]?.content?.["application/problem+json"]
+          ?.schema?.properties,
+      ).toBeDefined();
 
       const docsResponse = await server.handle(new Request("http://localhost/docs"));
       expect(docsResponse.status).toBe(200);
       expect(await docsResponse.text()).toContain("SwaggerUIBundle");
+      expect(
+        swaggerDocument.paths["/health"],
+      ).toBeDefined();
 
       const deleteResponse = await server.handle(
         new Request(`http://localhost/todo/${created.id as string}`, {
@@ -177,6 +233,68 @@ describe("playground api", () => {
         new Request(`http://localhost/todo/${created.id as string}`),
       );
       expect(missingResponse.status).toBe(404);
+    } finally {
+      await app.stop();
+    }
+  });
+
+  test("validation errors return 400 problem responses", async () => {
+    const app = await createPlaygroundApp({
+      port: 0,
+      env: {
+        ...process.env,
+        GENCORE_PLAYGROUND_LIBSQL_DB_PATH: dbPath,
+      },
+    });
+
+    await app.start();
+
+    try {
+      const server = app.get(Server);
+
+      const createResponse = await server.handle(
+        new Request("http://localhost/todo", {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+          },
+          body: JSON.stringify({
+            title: "   ",
+          }),
+        }),
+      );
+
+      expect(createResponse.status).toBe(400);
+      expect(createResponse.headers.get("content-type")).toContain("application/problem+json");
+      expect(await createResponse.json()).toEqual({
+        type: "about:blank",
+        title: "Bad Request",
+        status: 400,
+        detail: "Title is required.",
+        code: "TODO_VALIDATION_ERROR",
+      });
+
+      const patchResponse = await server.handle(
+        new Request("http://localhost/todo/some-id", {
+          method: "PATCH",
+          headers: {
+            "content-type": "application/json",
+          },
+          body: JSON.stringify({
+            title: "   ",
+          }),
+        }),
+      );
+
+      expect(patchResponse.status).toBe(400);
+      expect(patchResponse.headers.get("content-type")).toContain("application/problem+json");
+      expect(await patchResponse.json()).toEqual({
+        type: "about:blank",
+        title: "Bad Request",
+        status: 400,
+        detail: "Title cannot be empty.",
+        code: "TODO_VALIDATION_ERROR",
+      });
     } finally {
       await app.stop();
     }
