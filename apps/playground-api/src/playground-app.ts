@@ -13,6 +13,7 @@ import {
   createPlaygroundMikroOrmConfig,
   resolvePlaygroundSchemaMode,
 } from "./database/playground-database-config.js";
+import { adminUserSeeder } from "./auth/auth-seeder.js";
 import { HealthController } from "./health/health.controller.js";
 import { TodoController } from "./todos/todo.controller.js";
 
@@ -55,13 +56,16 @@ export async function createPlaygroundApp(
       name: "playground-schema",
       dependsOn: ["data-mikroorm", "auth"],
       async start(currentApp) {
+        const orm = currentApp.get(MikroOrmService).getOrm();
+
         if (schemaMode === "update") {
           // Playground-only schema sync. Production deployments should use migrations.
-          await currentApp.get(MikroOrmService).getOrm().schema.update();
-          return;
+          await orm.schema.update();
+        } else {
+          await currentApp.get(MikroOrmMigrationRunner).up();
         }
 
-        await currentApp.get(MikroOrmMigrationRunner).up();
+        await adminUserSeeder.run(orm.em.fork());
       },
     });
   }
