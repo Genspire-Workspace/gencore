@@ -1,0 +1,212 @@
+import type {
+  ControllerClass,
+  ControllerOptions,
+  HttpRouteDocs,
+  RegisteredRoute,
+} from "@genspire/server";
+import { apiTypeToOpenApiDefinition } from "../schema/api-dto.js";
+import type { OpenApiDocument, OpenApiSchema } from "./openapi-types.js";
+
+export interface OpenApiBuilderOptions {
+  title: string;
+  version: string;
+  description?: string;
+  jsonPath?: string;
+  docsPath?: string;
+}
+
+function humanize(value: string): string {
+  return value
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+    .replace(/[_-]+/g, " ")
+    .trim()
+    .replace(/^./, (char) => char.toUpperCase());
+}
+
+export function toOpenApiPath(path: string): string {
+  return path.replace(/:([A-Za-z0-9_]+)/g, "{$1}");
+}
+
+export function inferPathParameters(path: string): Array<Record<string, unknown>> {
+  return [...path.matchAll(/:([A-Za-z0-9_]+)/g)].map((match) => ({
+    name: match[1],
+    in: "path",
+    required: true,
+    schema: { type: "string" },
+  }));
+}
+
+function inferTags(route: RegisteredRoute): readonly string[] {
+  if (route.docs?.tags && route.docs.tags.length > 0) {
+    return route.docs.tags;
+  }
+
+  if (route.controllerOptions?.tag) {
+    return [route.controllerOptions.tag];
+  }
+
+  if (route.controllerClass) {
+    return [route.controllerClass.name.replace(/Controller$/, "")];
+  }
+
+  return ["Default"];
+}
+
+function inferSummary(route: RegisteredRoute): string {
+  if (route.docs?.summary) {
+    return route.docs.summary;
+  }
+
+  if (route.handlerName) {
+    return humanize(route.handlerName);
+  }
+
+  return `${route.method} ${route.path}`;
+}
+
+function inferDescription(route: RegisteredRoute): string | undefined {
+  return route.docs?.description ?? route.controllerOptions?.description;
+}
+
+function inferDefaultStatus(method: string): string {
+  switch (method) {
+    case "POST":
+      return "201";
+    case "DELETE":
+      return "200";
+    default:
+      return "200";
+  }
+}
+
+function normalizeQuerySchema(schema: OpenApiSchema): OpenApiSchema {
+  if (schema.type === "array") {
+    return {
+      type: "array",
+      items: schema.items ?? { type: "string" },
+      description: schema.description,
+      example: schema.example,
+    };
+  }
+
+  return {
+    type: schema.type ?? "string",
+    format: schema.format,
+    description: schema.description,
+    nullable: schema.nullable,
+    enum: schema.enum,
+    example: schema.example,
+  };
+}
+
+function buildQueryParameters(query?: unknown): Array<Record<string, unknown>> {
+  if (!query) {
+    return [];
+  }
+
+  const definition = apiTypeToOpenApiDefinition(query as never);
+  const properties = definition.schema.properties ?? {};
+  const required = new Set(definition.schema.required ?? []);
+
+  return Object.entries(properties).map(([name, schema]) => ({
+    name,
+    in: "query",
+    required: required.has(name),
+    description: schema.description,
+    schema: normalizeQuerySchema(schema),
+  }));
+}
+
+function buildRequestBody(input?: unknown): Record<string, unknown> | undefined {
+  if (!input) {
+    return undefined;
+  }
+
+  const definition = apiTypeToOpenApiDefinition(input as never);
+  return {
+    content: {
+      [definition.contentType ?? "application/json"]: {
+        schema: definition.schema,
+      },
+    },
+    required: true,
+    description: definition.description,
+  };
+}
+
+function buildResponses(route: RegisteredRoute): Record<string, unknown> {
+  const defaultStatus = inferDefaultStatus(route.method);
+
+  if (!route.docs?.response) {
+    return {
+      [defaultStatus]: {
+        description: "Success",
+      },
+    };
+  }
+
+  const definition = apiTypeToOpenApiDefinition(route.docs.response as never);
+  return {
+    [defaultStatus]: {
+      description: definition.description ?? "Success",
+      content: {
+        [definition.contentType ?? "application/json"]: {
+          schema: definition.schema,
+        },
+      },
+    },
+  };
+}
+
+export function buildOpenApiDocument(
+  routes: readonly RegisteredRoute[],
+  options: OpenApiBuilderOptions,
+): OpenApiDocument {
+  const paths: Record<string, Record<string, unknown>> = {};
+
+  for (const route of routes) {
+    if (route.hidden) {
+      continue;
+    }
+
+    if (options.jsonPath && route.path === options.jsonPath) {
+      continue;
+    }
+
+    if (options.docsPath && route.path === options.docsPath) {
+      continue;
+    }
+
+    const openApiPath = toOpenApiPath(route.path);
+    const method = route.method.toLowerCase();
+
+    if (!paths[openApiPath]) {
+      paths[openApiPath] = {};
+    }
+
+    paths[openApiPath]![method] = {
+      tags: inferTags(route),
+      summary: inferSummary(route),
+      description: inferDescription(route),
+      deprecated: route.docs?.deprecated ?? false,
+      parameters: [
+        ...inferPathParameters(route.path),
+        ...buildQueryParameters(route.docs?.query),
+      ],
+      ...(buildRequestBody(route.docs?.requestBody ?? route.docs?.request)
+        ? { requestBody: buildRequestBody(route.docs?.requestBody ?? route.docs?.request) }
+        : {}),
+      responses: buildResponses(route),
+    };
+  }
+
+  return {
+    openapi: "3.0.3",
+    info: {
+      title: options.title,
+      version: options.version,
+      description: options.description,
+    },
+    paths,
+  };
+}

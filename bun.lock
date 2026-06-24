@@ -23,6 +23,20 @@
         "reflect-metadata": "^0.2.2",
       },
     },
+    "apps/playground-api": {
+      "name": "@genspire/playground-api",
+      "version": "0.0.0",
+      "dependencies": {
+        "@genspire/core": "workspace:*",
+        "@genspire/data": "workspace:*",
+        "@genspire/data-mikroorm": "workspace:*",
+        "@genspire/server": "workspace:*",
+        "@genspire/swagger": "workspace:*",
+        "@mikro-orm/core": "^7.1.4",
+        "@mikro-orm/decorators": "^7.1.4",
+        "reflect-metadata": "^0.2.2",
+      },
+    },
     "packages/core": {
       "name": "@genspire/core",
       "version": "0.0.0",
@@ -52,6 +66,14 @@
         "@genspire/core": "workspace:*",
       },
     },
+    "packages/swagger": {
+      "name": "@genspire/swagger",
+      "version": "0.0.0",
+      "dependencies": {
+        "@genspire/core": "workspace:*",
+        "@genspire/server": "workspace:*",
+      },
+    },
   },
   "packages": {
     "@genspire/core": ["@genspire/core@workspace:packages/core"],
@@ -62,7 +84,11 @@
 
     "@genspire/person-api": ["@genspire/person-api@workspace:apps/person-api"],
 
+    "@genspire/playground-api": ["@genspire/playground-api@workspace:apps/playground-api"],
+
     "@genspire/server": ["@genspire/server@workspace:packages/server"],
+
+    "@genspire/swagger": ["@genspire/swagger@workspace:packages/swagger"],
 
     "@libsql/darwin-arm64": ["@libsql/darwin-arm64@0.5.29", "", { "os": "darwin", "cpu": "arm64" }, "sha512-K+2RIB1OGFPYQbfay48GakLhqf3ArcbHqPFu7EZiaUcRgFcdw8RoltsMyvbj5ix2fY0HV3Q3Ioa/ByvQdaSM0A=="],
 

@@ -32,7 +32,8 @@
       "@genspire/core": ["./packages/core/src/index.ts"],
       "@genspire/server": ["./packages/server/src/index.ts"],
       "@genspire/data": ["./packages/data/src/index.ts"],
-      "@genspire/data-mikroorm": ["./packages/data-mikroorm/src/index.ts"]
+      "@genspire/data-mikroorm": ["./packages/data-mikroorm/src/index.ts"],
+      "@genspire/swagger": ["./packages/swagger/src/index.ts"]
     }
   },
   "include": [

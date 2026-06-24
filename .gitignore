@@ -144,3 +144,6 @@ vite.config.ts.timestamp-*
 
 # Old archived project
 old_spirecorejs/
+
+# Local development databases
+data/

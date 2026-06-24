@@ -1,0 +1,13 @@
+{
+  "name": "@genspire/swagger",
+  "version": "0.0.0",
+  "type": "module",
+  "main": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@genspire/core": "workspace:*",
+    "@genspire/server": "workspace:*"
+  }
+}

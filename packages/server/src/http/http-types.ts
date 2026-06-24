@@ -21,8 +21,20 @@ export type RouteHandlerResult =
 
 export type RouteHandler = (ctx: HttpContext) => RouteHandlerResult;
 
+export interface HttpRouteDocs {
+  summary?: string;
+  description?: string;
+  tags?: readonly string[];
+  deprecated?: boolean;
+  query?: unknown;
+  requestBody?: unknown;
+  request?: unknown;
+  response?: unknown;
+}
+
 export interface HttpRouteDefinition {
   method: HttpMethod;
   path: string;
   handler: RouteHandler;
+  docs?: HttpRouteDocs;
 }

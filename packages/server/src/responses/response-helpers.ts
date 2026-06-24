@@ -32,11 +32,13 @@ export function json<T>(body: T, init?: ResponseInit): Response {
 }
 
 export function text(body: string, init?: ResponseInit): Response {
+  const headers = toHeaderRecord(init?.headers);
+
   return new Response(body, {
     ...init,
     headers: {
-      ...toHeaderRecord(init?.headers),
-      "content-type": "text/plain; charset=utf-8",
+      ...headers,
+      "content-type": headers["content-type"] ?? "text/plain; charset=utf-8",
     },
   });
 }

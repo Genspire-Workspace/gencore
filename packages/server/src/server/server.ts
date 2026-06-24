@@ -2,11 +2,14 @@
 
 import type { Container } from "@genspire/core";
 import { EnvService, LoggerFactory } from "@genspire/core";
+import type { ControllerClass } from "../controllers/controller-metadata.js";
+import { registerControllerRoutes, registerControllers as registerControllerGroup } from "../controllers/controller-registration.js";
 import { InvalidJsonBodyError } from "../context/http-context.js";
+import type { HttpRouteDocs, RouteHandler } from "../http/http-types.js";
 import type { HttpMiddleware } from "../middleware/middleware.js";
 import { problem } from "../responses/response-helpers.js";
 import { Router } from "../routing/router.js";
-import type { RegisteredRoute } from "../routing/router.js";
+import type { RegisteredRoute, RouteRegistrationOptions } from "../routing/router.js";
 
 export interface ServerOptions {
   port?: number;
@@ -30,32 +33,91 @@ export class Server {
     this.port = config.port ?? env.getNumber("PORT", 3000) ?? 3000;
   }
 
-  get(path: string, handler: Parameters<Router["get"]>[1]): void {
-    this.router.get(path, handler);
+  private normalizeRouteOptions(
+    options?: HttpRouteDocs | RouteRegistrationOptions,
+  ): RouteRegistrationOptions | undefined {
+    if (!options) {
+      return undefined;
+    }
+
+    if (
+      "controllerClass" in options ||
+      "controllerOptions" in options ||
+      "handlerName" in options ||
+      "hidden" in options ||
+      "docs" in options
+    ) {
+      return options as RouteRegistrationOptions;
+    }
+
+    return {
+      docs: options as HttpRouteDocs,
+    };
   }
 
-  post(path: string, handler: Parameters<Router["post"]>[1]): void {
-    this.router.post(path, handler);
+  private registerRoute(
+    method: "get" | "post" | "put" | "patch" | "delete" | "options" | "head",
+    path: string,
+    handler: RouteHandler,
+    options?: HttpRouteDocs | RouteRegistrationOptions,
+  ): void {
+    this.router[method](path, handler, this.normalizeRouteOptions(options));
   }
 
-  put(path: string, handler: Parameters<Router["put"]>[1]): void {
-    this.router.put(path, handler);
+  get(
+    path: string,
+    handler: Parameters<Router["get"]>[1],
+    options?: HttpRouteDocs | RouteRegistrationOptions,
+  ): void {
+    this.registerRoute("get", path, handler, options);
   }
 
-  patch(path: string, handler: Parameters<Router["patch"]>[1]): void {
-    this.router.patch(path, handler);
+  post(
+    path: string,
+    handler: Parameters<Router["post"]>[1],
+    options?: HttpRouteDocs | RouteRegistrationOptions,
+  ): void {
+    this.registerRoute("post", path, handler, options);
   }
 
-  delete(path: string, handler: Parameters<Router["delete"]>[1]): void {
-    this.router.delete(path, handler);
+  put(
+    path: string,
+    handler: Parameters<Router["put"]>[1],
+    options?: HttpRouteDocs | RouteRegistrationOptions,
+  ): void {
+    this.registerRoute("put", path, handler, options);
   }
 
-  options(path: string, handler: Parameters<Router["options"]>[1]): void {
-    this.router.options(path, handler);
+  patch(
+    path: string,
+    handler: Parameters<Router["patch"]>[1],
+    options?: HttpRouteDocs | RouteRegistrationOptions,
+  ): void {
+    this.registerRoute("patch", path, handler, options);
   }
 
-  head(path: string, handler: Parameters<Router["head"]>[1]): void {
-    this.router.head(path, handler);
+  delete(
+    path: string,
+    handler: Parameters<Router["delete"]>[1],
+    options?: HttpRouteDocs | RouteRegistrationOptions,
+  ): void {
+    this.registerRoute("delete", path, handler, options);
+  }
+
+  options(
+    path: string,
+    handler: Parameters<Router["options"]>[1],
+    options?: HttpRouteDocs | RouteRegistrationOptions,
+  ): void {
+    this.registerRoute("options", path, handler, options);
+  }
+
+  head(
+    path: string,
+    handler: Parameters<Router["head"]>[1],
+    options?: HttpRouteDocs | RouteRegistrationOptions,
+  ): void {
+    this.registerRoute("head", path, handler, options);
   }
 
   group(prefix: string, register: Parameters<Router["group"]>[1]): void {
@@ -64,6 +126,18 @@ export class Server {
 
   listRoutes(): readonly RegisteredRoute[] {
     return this.router.list();
+  }
+
+  private findRoute(method: RegisteredRoute["method"], path: string): RegisteredRoute | undefined {
+    return this.router.list().find((route) => route.method === method && route.path === path);
+  }
+
+  registerController(controller: ControllerClass): void {
+    registerControllerRoutes(this.router, this.config.container, controller);
+  }
+
+  registerControllers(...controllers: ControllerClass[]): void {
+    registerControllerGroup(this.router, this.config.container, ...controllers);
   }
 
   async handle(req: Request): Promise<Response> {
@@ -106,7 +180,24 @@ export class Server {
       fetch: async (req) => await this.handle(req),
     });
 
-    logger.info("Server started", { port: this.port });
+    const actualPort = this.bunServer.port;
+    const baseUrl = `http://localhost:${actualPort}`;
+    const swaggerUiRoute = this.findRoute("GET", "/docs");
+    const swaggerJsonRoute = this.findRoute("GET", "/swagger.json");
+
+    logger.info("Server started", { port: actualPort });
+
+    if (swaggerUiRoute) {
+      logger.info("Swagger UI available", {
+        url: `${baseUrl}${swaggerUiRoute.path}`,
+      });
+    }
+
+    if (swaggerJsonRoute) {
+      logger.info("OpenAPI document available", {
+        url: `${baseUrl}${swaggerJsonRoute.path}`,
+      });
+    }
   }
 
   async stop(closeActiveConnections = true): Promise<void> {

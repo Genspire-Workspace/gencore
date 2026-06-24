@@ -1,0 +1,17 @@
+{
+  "name": "@genspire/playground-api",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "dependencies": {
+    "@genspire/core": "workspace:*",
+    "@genspire/data": "workspace:*",
+    "@genspire/data-mikroorm": "workspace:*",
+    "@genspire/server": "workspace:*",
+    "@genspire/swagger": "workspace:*",
+    "@mikro-orm/core": "^7.1.4",
+    "@mikro-orm/decorators": "^7.1.4",
+    "reflect-metadata": "^0.2.2"
+  }
+}

@@ -3,14 +3,28 @@
 import type { Container } from "@genspire/core";
 import { LoggerFactory } from "@genspire/core";
 import { HttpContextItems, RequestContext, type HttpContext } from "../context/http-context.js";
-import type { HttpMethod, RouteHandler } from "../http/http-types.js";
+import type { HttpMethod, HttpRouteDocs, RouteHandler } from "../http/http-types.js";
 import type { HttpMiddleware } from "../middleware/middleware.js";
 import { toResponse } from "../responses/response-normalizer.js";
+import type { ControllerClass, ControllerOptions } from "../controllers/controller-metadata.js";
 
 export interface RegisteredRoute {
   method: HttpMethod;
   path: string;
   handler: RouteHandler;
+  docs?: HttpRouteDocs;
+  controllerClass?: ControllerClass;
+  controllerOptions?: ControllerOptions;
+  handlerName?: string;
+  hidden?: boolean;
+}
+
+export interface RouteRegistrationOptions {
+  docs?: HttpRouteDocs;
+  controllerClass?: ControllerClass;
+  controllerOptions?: ControllerOptions;
+  handlerName?: string;
+  hidden?: boolean;
 }
 
 interface RouteMatch {
@@ -80,41 +94,51 @@ export class Router {
 
   constructor(private readonly container: Container) {}
 
-  add(method: HttpMethod, path: string, handler: RouteHandler): void {
+  add(
+    method: HttpMethod,
+    path: string,
+    handler: RouteHandler,
+    options?: RouteRegistrationOptions,
+  ): void {
     this.routes.push({
       method,
       path: normalizePath(path),
       handler,
+      docs: options?.docs,
+      controllerClass: options?.controllerClass,
+      controllerOptions: options?.controllerOptions,
+      handlerName: options?.handlerName,
+      hidden: options?.hidden,
     });
     this.routes.sort(compareSpecificity);
   }
 
-  get(path: string, handler: RouteHandler): void {
-    this.add("GET", path, handler);
+  get(path: string, handler: RouteHandler, options?: RouteRegistrationOptions): void {
+    this.add("GET", path, handler, options);
   }
 
-  post(path: string, handler: RouteHandler): void {
-    this.add("POST", path, handler);
+  post(path: string, handler: RouteHandler, options?: RouteRegistrationOptions): void {
+    this.add("POST", path, handler, options);
   }
 
-  put(path: string, handler: RouteHandler): void {
-    this.add("PUT", path, handler);
+  put(path: string, handler: RouteHandler, options?: RouteRegistrationOptions): void {
+    this.add("PUT", path, handler, options);
   }
 
-  patch(path: string, handler: RouteHandler): void {
-    this.add("PATCH", path, handler);
+  patch(path: string, handler: RouteHandler, options?: RouteRegistrationOptions): void {
+    this.add("PATCH", path, handler, options);
   }
 
-  delete(path: string, handler: RouteHandler): void {
-    this.add("DELETE", path, handler);
+  delete(path: string, handler: RouteHandler, options?: RouteRegistrationOptions): void {
+    this.add("DELETE", path, handler, options);
   }
 
-  options(path: string, handler: RouteHandler): void {
-    this.add("OPTIONS", path, handler);
+  options(path: string, handler: RouteHandler, options?: RouteRegistrationOptions): void {
+    this.add("OPTIONS", path, handler, options);
   }
 
-  head(path: string, handler: RouteHandler): void {
-    this.add("HEAD", path, handler);
+  head(path: string, handler: RouteHandler, options?: RouteRegistrationOptions): void {
+    this.add("HEAD", path, handler, options);
   }
 
   group(prefix: string, register: (routes: RouterGroup) => void): void {
@@ -204,31 +228,31 @@ export class RouterGroup {
     private readonly prefix: string,
   ) {}
 
-  get(path: string, handler: RouteHandler): void {
-    this.router.get(joinPaths(this.prefix, path), handler);
+  get(path: string, handler: RouteHandler, options?: RouteRegistrationOptions): void {
+    this.router.get(joinPaths(this.prefix, path), handler, options);
   }
 
-  post(path: string, handler: RouteHandler): void {
-    this.router.post(joinPaths(this.prefix, path), handler);
+  post(path: string, handler: RouteHandler, options?: RouteRegistrationOptions): void {
+    this.router.post(joinPaths(this.prefix, path), handler, options);
   }
 
-  put(path: string, handler: RouteHandler): void {
-    this.router.put(joinPaths(this.prefix, path), handler);
+  put(path: string, handler: RouteHandler, options?: RouteRegistrationOptions): void {
+    this.router.put(joinPaths(this.prefix, path), handler, options);
   }
 
-  patch(path: string, handler: RouteHandler): void {
-    this.router.patch(joinPaths(this.prefix, path), handler);
+  patch(path: string, handler: RouteHandler, options?: RouteRegistrationOptions): void {
+    this.router.patch(joinPaths(this.prefix, path), handler, options);
   }
 
-  delete(path: string, handler: RouteHandler): void {
-    this.router.delete(joinPaths(this.prefix, path), handler);
+  delete(path: string, handler: RouteHandler, options?: RouteRegistrationOptions): void {
+    this.router.delete(joinPaths(this.prefix, path), handler, options);
   }
 
-  options(path: string, handler: RouteHandler): void {
-    this.router.options(joinPaths(this.prefix, path), handler);
+  options(path: string, handler: RouteHandler, options?: RouteRegistrationOptions): void {
+    this.router.options(joinPaths(this.prefix, path), handler, options);
   }
 
-  head(path: string, handler: RouteHandler): void {
-    this.router.head(joinPaths(this.prefix, path), handler);
+  head(path: string, handler: RouteHandler, options?: RouteRegistrationOptions): void {
+    this.router.head(joinPaths(this.prefix, path), handler, options);
   }
 }
