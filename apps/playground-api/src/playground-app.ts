@@ -14,6 +14,8 @@ import {
   resolvePlaygroundSchemaMode,
 } from "./database/playground-database-config.js";
 import { adminUserSeeder } from "./auth/auth-seeder.js";
+import { AuthActivityController } from "./auth/auth-activity.controller.js";
+import { AuthBanController } from "./auth/auth-ban.controller.js";
 import { HealthController } from "./health/health.controller.js";
 import { TodoController } from "./todos/todo.controller.js";
 
@@ -92,7 +94,7 @@ export async function createPlaygroundApp(
     }),
   );
 
-  app.get(Server).registerControllers(HealthController, AuthController, RoleController, TodoController);
+  app.get(Server).registerControllers(HealthController, AuthController, RoleController, AuthActivityController, AuthBanController, TodoController);
 
   return app;
 }
