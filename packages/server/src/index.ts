@@ -1,7 +1,7 @@
 // file: packages\server\src\index.ts
 
 export type { HttpContext, RequestContextInit } from "./context/http-context.js";
-export { HttpContextItems, RequestContext } from "./context/http-context.js";
+export { HttpContextItems, InvalidJsonBodyError, RequestContext } from "./context/http-context.js";
 
 export type { ControllerOptions } from "./controllers/controller.js";
 

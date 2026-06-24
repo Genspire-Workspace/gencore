@@ -2,6 +2,16 @@
 
 import type { ScopedContainer } from "@genspire/core";
 
+export class InvalidJsonBodyError extends Error {
+  public override readonly cause?: unknown;
+
+  constructor(message = "Invalid JSON body", cause?: unknown) {
+    super(message, cause === undefined ? undefined : { cause });
+    this.name = "InvalidJsonBodyError";
+    this.cause = cause;
+  }
+}
+
 export class HttpContextItems {
   private readonly values: Record<string, unknown>;
 
@@ -57,7 +67,11 @@ export class RequestContext {
   }
 
   async json<T>(): Promise<T> {
-    return await this.req.json() as T;
+    try {
+      return await this.req.json() as T;
+    } catch (error) {
+      throw new InvalidJsonBodyError("Invalid JSON body", error);
+    }
   }
 
   async text(): Promise<string> {

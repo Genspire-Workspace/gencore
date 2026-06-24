@@ -166,6 +166,32 @@ describe("@genspire/server", () => {
     });
   });
 
+  test("malformed JSON body returns 400 problem response", async () => {
+    const server = createServer();
+    server.post("/echo", async (ctx) => {
+      const body = await ctx.json<{ ok: boolean }>();
+      return body;
+    });
+
+    const response = await server.handle(
+      new Request("http://localhost/echo", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+        },
+        body: '{"firstName":"Ada"',
+      }),
+    );
+
+    expect(response.status).toBe(400);
+    expect(response.headers.get("content-type")).toContain("application/problem+json");
+    expect(await response.json()).toEqual({
+      type: "about:blank",
+      title: "Invalid JSON body",
+      status: 400,
+    });
+  });
+
   test("response helpers produce expected responses", async () => {
     const jsonResponse = json({ ok: true }, { status: 201 });
     const textResponse = text("hello");

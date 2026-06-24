@@ -2,6 +2,7 @@
 
 import type { Container } from "@genspire/core";
 import { EnvService, LoggerFactory } from "@genspire/core";
+import { InvalidJsonBodyError } from "../context/http-context.js";
 import type { HttpMiddleware } from "../middleware/middleware.js";
 import { problem } from "../responses/response-helpers.js";
 import { Router } from "../routing/router.js";
@@ -71,6 +72,17 @@ export class Server {
     try {
       return await this.router.handle(req, this.middlewares);
     } catch (error) {
+      if (error instanceof InvalidJsonBodyError) {
+        logger.warn("Invalid JSON request body", {
+          method: req.method,
+          url: req.url,
+        });
+        return problem({
+          status: 400,
+          title: "Invalid JSON body",
+        });
+      }
+
       logger.error("Unhandled request failure", error, {
         method: req.method,
         url: req.url,
