@@ -39,12 +39,12 @@ export class S3StorageProvider implements IStorageProvider {
   }
 
   async putObject(input: IPutObjectInput): Promise<IStoredObject> {
-    const body = this.toPutBody(input.body);
+    const bytes = await this.bodyToBytes(input.body);
 
     const command = new PutObjectCommand({
       Bucket: input.bucket,
       Key: input.key,
-      Body: body,
+      Body: bytes,
       ContentType: input.contentType,
       Metadata: input.metadata
         ? Object.fromEntries(
@@ -58,7 +58,7 @@ export class S3StorageProvider implements IStorageProvider {
     return {
       bucket: input.bucket,
       key: input.key,
-      size: body instanceof Uint8Array ? body.byteLength : undefined,
+      size: bytes.byteLength,
       contentType: input.contentType,
       etag: result.ETag?.replace(/^"|"$/g, "") ?? undefined,
       metadata: input.metadata,
@@ -203,11 +203,11 @@ export class S3StorageProvider implements IStorageProvider {
     });
   }
 
-  private toPutBody(
+  private async bodyToBytes(
     body: Blob | ArrayBuffer | Uint8Array | ReadableStream<Uint8Array> | string,
-  ): Uint8Array | ReadableStream<Uint8Array> | string {
+  ): Promise<Uint8Array> {
     if (typeof body === "string") {
-      return body;
+      return new TextEncoder().encode(body);
     }
 
     if (body instanceof Uint8Array) {
@@ -219,10 +219,31 @@ export class S3StorageProvider implements IStorageProvider {
     }
 
     if (typeof Blob !== "undefined" && body instanceof Blob) {
-      return body.stream() as ReadableStream<Uint8Array>;
+      return new Uint8Array(await body.arrayBuffer());
     }
 
-    return body as ReadableStream<Uint8Array>;
+    return this.readStream(body as ReadableStream<Uint8Array>);
+  }
+
+  private async readStream(stream: ReadableStream<Uint8Array>): Promise<Uint8Array> {
+    const reader = stream.getReader();
+    const chunks: Uint8Array[] = [];
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value);
+    }
+
+    const totalLength = chunks.reduce((sum, c) => sum + c.length, 0);
+    const result = new Uint8Array(totalLength);
+    let offset = 0;
+    for (const chunk of chunks) {
+      result.set(chunk, offset);
+      offset += chunk.length;
+    }
+
+    return result;
   }
 }
 

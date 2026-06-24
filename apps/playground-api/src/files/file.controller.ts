@@ -77,7 +77,8 @@ export class FileController {
     const result = await this.service.upload({
       file: fileField,
       originalName,
-      bucket: currentUser.id,
+      bucket: "playground",
+      userId: currentUser.id,
       uploadedBy: currentUser.id,
       uploaderIp: ctx.clientIp,
     });

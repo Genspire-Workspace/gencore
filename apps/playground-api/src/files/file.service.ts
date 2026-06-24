@@ -39,6 +39,7 @@ export interface UploadFileInput {
   file: Blob;
   originalName: string;
   bucket: string;
+  userId: string;
   metadata?: Record<string, string>;
   uploadedBy?: string;
   uploaderIp?: string | null;
@@ -69,7 +70,7 @@ export class FileService {
       : "";
 
     const id = crypto.randomUUID();
-    const key = `${id}${ext}`;
+    const key = `${input.userId}/${id}${ext}`;
 
     const contentType = input.file.type || undefined;
     const now = new Date();
