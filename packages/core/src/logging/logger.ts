@@ -12,6 +12,31 @@ const LOG_LEVEL_PRIORITY: Record<LogLevel, number> = {
   error: 40,
 };
 
+const LOG_LEVEL_COLORS: Record<
+  LogLevel,
+  {
+    foreground: string;
+    background: string;
+  }
+> = {
+  debug: {
+    foreground: "90",
+    background: "100",
+  },
+  info: {
+    foreground: "34",
+    background: "44",
+  },
+  warn: {
+    foreground: "33",
+    background: "43",
+  },
+  error: {
+    foreground: "31",
+    background: "41",
+  },
+};
+
 function isSensitiveKey(key: string): boolean {
   const normalized = key
     .trim()
@@ -129,9 +154,29 @@ function supportsAnsiColors(): boolean {
     return false;
   }
 
+  if (process.env["FORCE_COLOR"]) {
+    return true;
+  }
+
+  if (process.env["COLORTERM"]) {
+    return true;
+  }
+
+  if (process.env["TERM_PROGRAM"] === "vscode") {
+    return true;
+  }
+
+  if (process.env["WT_SESSION"]) {
+    return true;
+  }
+
+  if (process.env["ANSICON"]) {
+    return true;
+  }
+
   const term = process.env["TERM"]?.trim().toLowerCase() ?? "";
-  if (!term || term === "dumb") {
-    return false;
+  if (term && term !== "dumb") {
+    return true;
   }
 
   return Boolean(process.stdout?.isTTY);
@@ -141,17 +186,18 @@ function colorize(value: string, code: string, enabled: boolean): string {
   return enabled ? `\u001b[${code}m${value}\u001b[0m` : value;
 }
 
+function formatTimestamp(timestamp: string, level: LogLevel, enabled: boolean): string {
+  return colorize(timestamp, LOG_LEVEL_COLORS[level].foreground, enabled);
+}
+
 function formatLevel(level: LogLevel, enabled: boolean): string {
-  switch (level) {
-    case "debug":
-      return colorize(level, "90", enabled);
-    case "info":
-      return colorize(level, "36", enabled);
-    case "warn":
-      return colorize(level, "33", enabled);
-    case "error":
-      return colorize(level, "31", enabled);
-  }
+  const { background } = LOG_LEVEL_COLORS[level];
+
+  return colorize(` ${level.toUpperCase()} `, `1;37;${background}`, enabled);
+}
+
+function formatLogPrefix(entry: LogEntry, enabled: boolean): string {
+  return `${formatTimestamp(entry.timestamp, entry.level, enabled)} ${formatLevel(entry.level, enabled)}: `;
 }
 
 function formatData(data?: Record<string, unknown>): string[] {
@@ -169,7 +215,7 @@ function formatData(data?: Record<string, unknown>): string[] {
 
 function formatConsoleEntry(entry: LogEntry, colorsEnabled: boolean): string {
   return [
-    `${entry.timestamp} ${formatLevel(entry.level, colorsEnabled)}: ${colorize(entry.category, "1", colorsEnabled)}${entry.source ? ` ${colorize(`[${entry.source}]`, "90", colorsEnabled)}` : ""}`,
+    `${formatLogPrefix(entry, colorsEnabled)}${colorize(entry.category, "1", colorsEnabled)}${entry.source ? ` ${colorize(`[${entry.source}]`, "90", colorsEnabled)}` : ""}`,
     `      ${entry.message}`,
     ...formatData(entry.data),
   ].join("\n");
