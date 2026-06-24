@@ -1,3 +1,5 @@
+export type { DbContext } from "./context/db-context.js";
+export type { DbSet, ListOptions } from "./context/db-set.js";
 export type { DataSource } from "./contracts/data-source.js";
 export { DataSourceRegistry } from "./contracts/data-source.js";
 export type { AuditableEntity, Entity, EntityState, StatefulEntity } from "./contracts/entity.js";

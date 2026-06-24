@@ -1,6 +1,6 @@
-import { Singleton } from "@genspire/core";
-import { GenError } from "@genspire/core";
-import { TodoRepository } from "./todo.repository.js";
+import { GenError, Scoped } from "@genspire/core";
+import { PlaygroundDbContext } from "../database/playground-db-context.js";
+import { TodoEntity } from "./todo.entity.js";
 import type { CreateTodoRequest, TodoListResponse, TodoResponse, UpdateTodoRequest } from "./todo.dto.js";
 
 function toTodoResponse(todo: {
@@ -19,21 +19,25 @@ function toTodoResponse(todo: {
   };
 }
 
-@Singleton()
+@Scoped()
 export class TodoService {
-  static inject = [TodoRepository];
+  static inject = [PlaygroundDbContext];
 
-  constructor(private readonly repository: TodoRepository) {}
+  constructor(private readonly db: PlaygroundDbContext) {}
 
   async list(): Promise<TodoListResponse> {
-    const todos = await this.repository.list();
+    const todos = await this.db.todos.list({
+      orderBy: "createdAt",
+      direction: "desc",
+    });
+
     return {
       items: todos.map(toTodoResponse),
     };
   }
 
   async getById(id: string): Promise<TodoResponse | null> {
-    const todo = await this.repository.getById(id);
+    const todo = await this.db.todos.findById(id);
     return todo ? toTodoResponse(todo) : null;
   }
 
@@ -45,13 +49,15 @@ export class TodoService {
     }
 
     const now = new Date();
-    const todo = await this.repository.create({
-      id: crypto.randomUUID(),
-      title,
-      completed: false,
-      createdAt: now,
-      updatedAt: now,
-    });
+    const todo = new TodoEntity();
+    todo.id = crypto.randomUUID();
+    todo.title = title;
+    todo.completed = false;
+    todo.createdAt = now;
+    todo.updatedAt = now;
+
+    await this.db.todos.add(todo);
+    await this.db.saveChanges();
 
     return toTodoResponse(todo);
   }
@@ -63,15 +69,35 @@ export class TodoService {
       throw new GenError("Title cannot be empty.", "TODO_VALIDATION_ERROR");
     }
 
-    const todo = await this.repository.updateById(id, {
-      title,
-      completed: input.completed,
-    });
+    const todo = await this.db.todos.findById(id);
 
-    return todo ? toTodoResponse(todo) : null;
+    if (!todo) {
+      return null;
+    }
+
+    if (title !== undefined) {
+      todo.title = title;
+    }
+
+    if (input.completed !== undefined) {
+      todo.completed = input.completed;
+    }
+
+    todo.updatedAt = new Date();
+
+    await this.db.todos.update(todo);
+    await this.db.saveChanges();
+
+    return toTodoResponse(todo);
   }
 
   async deleteById(id: string): Promise<boolean> {
-    return await this.repository.deleteById(id);
+    const deleted = await this.db.todos.removeById(id);
+
+    if (deleted) {
+      await this.db.saveChanges();
+    }
+
+    return deleted;
   }
 }

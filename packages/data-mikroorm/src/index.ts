@@ -1,4 +1,6 @@
 export { EntityManagerProvider } from "./context/entity-manager-provider.js";
+export { MikroOrmDbContext } from "./context/mikro-orm-db-context.js";
+export { MikroOrmDbSet } from "./context/mikro-orm-db-set.js";
 export { runInMikroOrmRequestContext } from "./context/mikro-orm-request-context.js";
 export { MikroOrmService, mikroOrmExtension } from "./extension/mikro-orm-extension.js";
 export type { MikroOrmDriver, MikroOrmExtensionOptions } from "./extension/mikro-orm-extension.js";
