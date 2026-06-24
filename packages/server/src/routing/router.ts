@@ -7,6 +7,7 @@ import type { HttpMethod, HttpRouteDocs, RouteHandler } from "../http/http-types
 import type { HttpMiddleware } from "../middleware/middleware.js";
 import { toResponse } from "../responses/response-normalizer.js";
 import type { ControllerClass, ControllerOptions } from "../controllers/controller-metadata.js";
+import type { IRouteAuthorizationMetadata } from "../auth/route-authorization.js";
 
 export interface RegisteredRoute {
   method: HttpMethod;
@@ -17,6 +18,7 @@ export interface RegisteredRoute {
   controllerOptions?: ControllerOptions;
   handlerName?: string;
   hidden?: boolean;
+  authorization?: IRouteAuthorizationMetadata;
 }
 
 export interface RouteRegistrationOptions {
@@ -100,6 +102,10 @@ export class Router {
     handler: RouteHandler,
     options?: RouteRegistrationOptions,
   ): void {
+    const classAuth = options?.controllerOptions?.authorization;
+    const methodAuth = options?.docs?.authorization;
+    const authorization = methodAuth ?? classAuth;
+
     this.routes.push({
       method,
       path: normalizePath(path),
@@ -109,6 +115,7 @@ export class Router {
       controllerOptions: options?.controllerOptions,
       handlerName: options?.handlerName,
       hidden: options?.hidden,
+      authorization,
     });
     this.routes.sort(compareSpecificity);
   }

@@ -1,4 +1,4 @@
-import { Controller, Delete, Get, Patch, Post, defineProblemDetailsType, json, problem } from "@genspire/server";
+import { Authorize, Controller, Delete, Get, Patch, Post, defineProblemDetailsType, json, problem } from "@genspire/server";
 import type { RequestContext } from "@genspire/server";
 import {
   CreateTodoRequestDto,
@@ -9,6 +9,7 @@ import {
 } from "./todo.dto.js";
 import { TodoService } from "./todo.service.js";
 
+@Authorize()
 @Controller("/todo", {
   tag: "Todo",
   description: "Todo management endpoints backed by libSQL",
@@ -125,6 +126,7 @@ export class TodoController {
     return todo;
   }
 
+  @Authorize({ roles: ["admin"] })
   @Delete("/:id", {
     summary: "Delete todo",
     response: DeleteTodoResponseDto,

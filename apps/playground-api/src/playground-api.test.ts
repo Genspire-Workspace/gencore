@@ -3,7 +3,34 @@ import { mkdtemp, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { Server } from "@genspire/server";
+import { AuthRoleService } from "@genspire/auth";
 import { createPlaygroundApp } from "./playground-app.js";
+
+async function registerAndGetToken(
+  server: Server,
+  email = "test@example.com",
+  password = "password123",
+): Promise<{ accessToken: string; userId: string }> {
+  const res = await server.handle(
+    new Request("http://localhost/auth/register", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    }),
+  );
+  const body = await res.json() as Record<string, unknown>;
+  return {
+    accessToken: body.accessToken as string,
+    userId: (body.user as Record<string, unknown>).id as string,
+  };
+}
+
+function authHeaders(token: string): Record<string, string> {
+  return {
+    "content-type": "application/json",
+    authorization: `Bearer ${token}`,
+  };
+}
 
 async function cleanupDirectory(target: string): Promise<void> {
   for (let attempt = 0; attempt < 10; attempt += 1) {
@@ -78,13 +105,12 @@ describe("playground api", () => {
 
     try {
       const server = app.get(Server);
+      const { accessToken, userId } = await registerAndGetToken(server);
 
       const createdResponse = await server.handle(
         new Request("http://localhost/todo", {
           method: "POST",
-          headers: {
-            "content-type": "application/json",
-          },
+          headers: authHeaders(accessToken),
           body: JSON.stringify({
             title: " Test Swagger with libSQL ",
           }),
@@ -97,14 +123,20 @@ describe("playground api", () => {
       expect(created.completed).toBe(false);
       expect(typeof created.id).toBe("string");
 
-      const listResponse = await server.handle(new Request("http://localhost/todo"));
+      const listResponse = await server.handle(
+        new Request("http://localhost/todo", {
+          headers: { authorization: `Bearer ${accessToken}` },
+        }),
+      );
       expect(listResponse.status).toBe(200);
       const listBody = await listResponse.json() as { items: Array<Record<string, unknown>> };
       expect(listBody.items).toHaveLength(1);
       expect(listBody.items[0]?.id).toBe(created.id);
 
       const getResponse = await server.handle(
-        new Request(`http://localhost/todo/${created.id as string}`),
+        new Request(`http://localhost/todo/${created.id as string}`, {
+          headers: { authorization: `Bearer ${accessToken}` },
+        }),
       );
       expect(getResponse.status).toBe(200);
       expect((await getResponse.json() as Record<string, unknown>).id).toBe(created.id);
@@ -112,9 +144,7 @@ describe("playground api", () => {
       const patchResponse = await server.handle(
         new Request(`http://localhost/todo/${created.id as string}`, {
           method: "PATCH",
-          headers: {
-            "content-type": "application/json",
-          },
+          headers: authHeaders(accessToken),
           body: JSON.stringify({
             title: "Updated title",
             completed: true,
@@ -132,49 +162,17 @@ describe("playground api", () => {
       const swaggerDocument = await swaggerResponse.json() as {
         paths: Record<string, {
           get?: {
-            responses?: Record<string, {
-              content?: {
-                "application/json"?: {
-                  schema?: {
-                    properties?: Record<string, unknown>;
-                  };
-                };
-              };
-            }>;
+            responses?: Record<string, { content?: { "application/json"?: { schema?: { properties?: Record<string, unknown>; }; }; }; }>;
           };
           post?: {
-            requestBody?: {
-              content?: {
-                "application/json"?: {
-                  schema?: {
-                    properties?: Record<string, unknown>;
-                    required?: string[];
-                  };
-                };
-              };
-            };
-            responses?: Record<string, {
-              content?: {
-                "application/problem+json"?: {
-                  schema?: {
-                    properties?: Record<string, unknown>;
-                  };
-                };
-              };
-            }>;
+            requestBody?: { content?: { "application/json"?: { schema?: { properties?: Record<string, unknown>; required?: string[]; }; }; }; };
+            responses?: Record<string, { content?: { "application/problem+json"?: { schema?: { properties?: Record<string, unknown>; }; }; }; }>;
           };
           delete?: {
-            responses?: Record<string, {
-              content?: {
-                "application/json"?: {
-                  schema?: {
-                    properties?: Record<string, unknown>;
-                  };
-                };
-              };
-            }>;
+            responses?: Record<string, { content?: { "application/json"?: { schema?: { properties?: Record<string, unknown>; }; }; }; }>;
           };
         }>;
+        components?: { securitySchemes?: Record<string, unknown> };
       };
       expect(swaggerDocument.paths["/todo"]).toBeDefined();
       expect(swaggerDocument.paths["/todo/{id}"]).toBeDefined();
@@ -213,6 +211,7 @@ describe("playground api", () => {
         swaggerDocument.paths["/todo"]?.post?.responses?.["400"]?.content?.["application/problem+json"]
           ?.schema?.properties,
       ).toBeDefined();
+      expect(swaggerDocument.components?.securitySchemes?.bearerAuth).toBeDefined();
 
       const docsResponse = await server.handle(new Request("http://localhost/docs"));
       expect(docsResponse.status).toBe(200);
@@ -221,16 +220,25 @@ describe("playground api", () => {
         swaggerDocument.paths["/health"],
       ).toBeDefined();
 
+      const authScope = app.createScope();
+      const roleService = authScope.resolve(AuthRoleService);
+      await roleService.createRole({ name: "admin" });
+      await roleService.assignRoleToUser(userId, "admin");
+      await authScope.destroy();
+
       const deleteResponse = await server.handle(
         new Request(`http://localhost/todo/${created.id as string}`, {
           method: "DELETE",
+          headers: { authorization: `Bearer ${accessToken}` },
         }),
       );
       expect(deleteResponse.status).toBe(200);
       expect(await deleteResponse.json()).toEqual({ deleted: true });
 
       const missingResponse = await server.handle(
-        new Request(`http://localhost/todo/${created.id as string}`),
+        new Request(`http://localhost/todo/${created.id as string}`, {
+          headers: { authorization: `Bearer ${accessToken}` },
+        }),
       );
       expect(missingResponse.status).toBe(404);
     } finally {
@@ -251,13 +259,12 @@ describe("playground api", () => {
 
     try {
       const server = app.get(Server);
+      const { accessToken } = await registerAndGetToken(server);
 
       const createResponse = await server.handle(
         new Request("http://localhost/todo", {
           method: "POST",
-          headers: {
-            "content-type": "application/json",
-          },
+          headers: authHeaders(accessToken),
           body: JSON.stringify({
             title: "   ",
           }),
@@ -277,9 +284,7 @@ describe("playground api", () => {
       const patchResponse = await server.handle(
         new Request("http://localhost/todo/some-id", {
           method: "PATCH",
-          headers: {
-            "content-type": "application/json",
-          },
+          headers: authHeaders(accessToken),
           body: JSON.stringify({
             title: "   ",
           }),

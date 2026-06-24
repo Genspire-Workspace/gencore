@@ -195,6 +195,7 @@ export function buildOpenApiDocument(
   options: OpenApiBuilderOptions,
 ): OpenApiDocument {
   const paths: Record<string, Record<string, unknown>> = {};
+  let hasProtectedRoute = false;
 
   for (const route of routes) {
     if (route.hidden) {
@@ -216,7 +217,7 @@ export function buildOpenApiDocument(
       paths[openApiPath] = {};
     }
 
-    paths[openApiPath]![method] = {
+    const operation: Record<string, unknown> = {
       tags: inferTags(route),
       summary: inferSummary(route),
       description: inferDescription(route),
@@ -230,9 +231,22 @@ export function buildOpenApiDocument(
         : {}),
       responses: buildResponses(route),
     };
+
+    if (route.authorization && !route.authorization.allowAnonymous) {
+      if (route.authorization.requiresAuthentication || route.authorization.authorize) {
+        hasProtectedRoute = true;
+        operation.security = [{ bearerAuth: [] }];
+
+        if (route.authorization.authorize?.roles && route.authorization.authorize.roles.length > 0) {
+          operation["x-roles"] = route.authorization.authorize.roles;
+        }
+      }
+    }
+
+    paths[openApiPath]![method] = operation;
   }
 
-  return {
+  const document: OpenApiDocument = {
     openapi: "3.0.3",
     info: {
       title: options.title,
@@ -241,4 +255,18 @@ export function buildOpenApiDocument(
     },
     paths,
   };
+
+  if (hasProtectedRoute) {
+    document.components = {
+      securitySchemes: {
+        bearerAuth: {
+          type: "http",
+          scheme: "bearer",
+          bearerFormat: "JWT",
+        },
+      },
+    };
+  }
+
+  return document;
 }

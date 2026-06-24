@@ -7,7 +7,7 @@ import {
 } from "@genspire/data-mikroorm";
 import { serverExtension, Server } from "@genspire/server";
 import { swaggerExtension } from "@genspire/swagger";
-import { authExtension, AuthController } from "@genspire/auth";
+import { authExtension, AuthConfiguration, AuthController, bearerAuthMiddleware, authGuardMiddleware } from "@genspire/auth";
 import { PlaygroundAuthUserEntity } from "./auth/playground-auth-user.entity.js";
 import {
   createPlaygroundMikroOrmConfig,
@@ -66,9 +66,15 @@ export async function createPlaygroundApp(
     });
   }
 
+  const authConfig = app.get(AuthConfiguration);
+
   await app.use(
     serverExtension({
       port: options.port ?? 3000,
+      middlewares: [
+        bearerAuthMiddleware(authConfig),
+        authGuardMiddleware(),
+      ],
     }),
   );
 

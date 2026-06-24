@@ -24,9 +24,12 @@ export { arrayOf, defineApiType } from "./openapi/schema-helpers.js";
 export type { OpenApiDocument, OpenApiSchema, OpenApiTypeDefinition } from "./openapi/openapi-types.js";
 
 export {
+  AllowAnonymous,
+  Authorize,
   Controller,
   Delete,
   Get,
+  getMethodAuthMetadata,
   Patch,
   Post,
   Put,
@@ -59,6 +62,11 @@ export type {
   RouteHandler,
   RouteHandlerResult,
 } from "./http/http-types.js";
+
+export type {
+  IAuthorizationRequirement,
+  IRouteAuthorizationMetadata,
+} from "./auth/route-authorization.js";
 
 export type { HttpMiddleware, HttpMiddlewareContext, NextHttpMiddleware } from "./middleware/middleware.js";
 

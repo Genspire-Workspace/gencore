@@ -4,6 +4,7 @@ import { TokenService } from "../services/token.service.js";
 import { AuthConfiguration } from "../services/auth-configuration.js";
 import { AuthDbContext } from "../context/auth-db-context.js";
 import { AuthService } from "../services/auth.service.js";
+import { AuthRoleService } from "../services/auth-role.service.js";
 import { PasswordHasher } from "../hashing/password-hasher.js";
 import type { IAuthExtensionOptions } from "../types/auth-options.js";
 
@@ -25,6 +26,7 @@ export function authExtension(options: IAuthExtensionOptions): GenExtension {
       app.registerSingleton(PasswordHasher, Argon2PasswordHasher);
       app.registerScoped(AuthDbContext);
       app.registerScoped(AuthService);
+      app.registerScoped(AuthRoleService);
     },
   };
 }

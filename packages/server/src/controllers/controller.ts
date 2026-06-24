@@ -12,8 +12,10 @@ import {
   getControllerStage3Metadata,
   setControllerLifetime,
 } from "./controller-metadata.js";
+import type { IAuthorizationRequirement, IRouteAuthorizationMetadata } from "../auth/route-authorization.js";
 
 const CONTROLLER_ROUTE_METADATA = Symbol.for("genspire.server.controller.route");
+const METHOD_AUTH_METADATA = Symbol.for("genspire.server.method.authorization");
 
 function addHttpRoute(
   metadata: ControllerMetadata,
@@ -145,6 +147,94 @@ export const Post = createHttpMethodDecorator("POST");
 export const Put = createHttpMethodDecorator("PUT");
 export const Patch = createHttpMethodDecorator("PATCH");
 export const Delete = createHttpMethodDecorator("DELETE");
+
+function setMethodAuthMetadata(
+  target: object,
+  handlerName: string,
+  auth: IRouteAuthorizationMetadata,
+): void {
+  const map = (target as Record<symbol, Record<string, IRouteAuthorizationMetadata>>)[METHOD_AUTH_METADATA] ??= {};
+  map[handlerName] = auth;
+}
+
+export function getMethodAuthMetadata(
+  target: object,
+  handlerName: string,
+): IRouteAuthorizationMetadata | undefined {
+  return (target as Record<symbol, Record<string, IRouteAuthorizationMetadata> | undefined>)[METHOD_AUTH_METADATA]?.[handlerName];
+}
+
+export function Authorize(requirement?: IAuthorizationRequirement): ClassDecorator & MethodDecorator {
+  const auth: IRouteAuthorizationMetadata = requirement
+    ? { requiresAuthentication: true, authorize: requirement }
+    : { requiresAuthentication: true };
+
+  const decorator = (...args: unknown[]) => {
+    if (args.length === 3) {
+      const [prototype, propertyKey] = args as [object, string | symbol];
+      setMethodAuthMetadata(prototype, String(propertyKey), auth);
+      return;
+    }
+
+    if (args.length === 2) {
+      const [value, context] = args as [object, ClassDecoratorContext | ClassMethodDecoratorContext | undefined];
+      if (context && typeof context === "object" && "kind" in context) {
+        if (context.kind === "class") {
+          const metadata = ensureControllerMetadata(value as ControllerClass);
+          metadata.options ??= {};
+          metadata.options.authorization = auth;
+          return value;
+        }
+        if (context.kind === "method") {
+          setMethodAuthMetadata(value as object, String(context.name), auth);
+          return;
+        }
+      }
+    }
+
+    const [value] = args as [ControllerClass];
+    const metadata = ensureControllerMetadata(value);
+    metadata.options ??= {};
+    metadata.options.authorization = auth;
+  };
+
+  return decorator as unknown as ClassDecorator & MethodDecorator;
+}
+
+export function AllowAnonymous(): ClassDecorator & MethodDecorator {
+  const auth: IRouteAuthorizationMetadata = { allowAnonymous: true };
+
+  const decorator = (...args: unknown[]) => {
+    if (args.length === 3) {
+      const [prototype, propertyKey] = args as [object, string | symbol];
+      setMethodAuthMetadata(prototype, String(propertyKey), auth);
+      return;
+    }
+
+    if (args.length === 2) {
+      const [value, context] = args as [object, ClassDecoratorContext | ClassMethodDecoratorContext | undefined];
+      if (context && typeof context === "object" && "kind" in context) {
+        if (context.kind === "class") {
+          const metadata = ensureControllerMetadata(value as ControllerClass);
+          metadata.options ??= {};
+          metadata.options.authorization = auth;
+          return value;
+        }
+        if (context.kind === "method") {
+          setMethodAuthMetadata(value as object, String(context.name), auth);
+          return;
+        }
+      }
+    }
+
+    const [value] = args as [ControllerClass];
+    const metadata = ensureControllerMetadata(value);
+    metadata.options ??= {};
+    metadata.options.authorization = auth;
+  };
+
+  return decorator as unknown as ClassDecorator & MethodDecorator;
+}
 
 export { getControllerMetadata };
 export type { ControllerClass, ControllerMetadata, ControllerOptions };

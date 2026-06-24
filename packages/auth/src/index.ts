@@ -1,10 +1,13 @@
 // Entities
 export { AuthUserBase, AuthUserEntity } from "./entities/auth-user.entity.js";
 export { AuthRefreshTokenEntity } from "./entities/auth-refresh-token.entity.js";
+export { AuthRoleEntity } from "./entities/auth-role.entity.js";
+export { AuthUserRoleEntity } from "./entities/auth-user-role.entity.js";
 
 // Types
 export type { IAuthExtensionOptions as AuthExtensionOptions, RequiredAuthExtensionOptions } from "./types/auth-options.js";
 export type { AuthPrincipal } from "./types/auth-principal.js";
+export type { ICurrentUser } from "./types/current-user.js";
 
 // DTOs
 export { RegisterRequestDto as RegisterRequest } from "./dtos/register-request.dto.js";
@@ -16,8 +19,16 @@ export { AuthResponseDto as AuthResponse } from "./dtos/auth-response.dto.js";
 
 // Services
 export { AuthService } from "./services/auth.service.js";
+export { AuthRoleService } from "./services/auth-role.service.js";
 export { TokenService } from "./services/token.service.js";
 export { AuthConfiguration } from "./services/auth-configuration.js";
+
+// Current user
+export { getCurrentUser, requireCurrentUser } from "./services/current-user.js";
+
+// Middleware
+export { bearerAuthMiddleware } from "./middleware/bearer-auth.middleware.js";
+export { authGuardMiddleware } from "./middleware/auth-guard.middleware.js";
 
 // Hashing
 export { PasswordHasher } from "./hashing/password-hasher.js";

@@ -25,4 +25,5 @@ export interface OpenApiDocument {
     description?: string;
   };
   paths: Record<string, Record<string, unknown>>;
+  components?: Record<string, unknown>;
 }

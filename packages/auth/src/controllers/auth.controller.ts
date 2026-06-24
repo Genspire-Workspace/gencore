@@ -1,4 +1,4 @@
-import { Controller, Get, Post } from "@genspire/server";
+import { AllowAnonymous, Authorize, Controller, Get, Post } from "@genspire/server";
 import type { RequestContext } from "@genspire/server";
 import { problem, json } from "@genspire/server";
 import { defineProblemDetailsType } from "@genspire/server";
@@ -34,6 +34,7 @@ export class AuthController {
 
   constructor(private readonly authService: AuthService) {}
 
+  @AllowAnonymous()
   @Post("/register", {
     summary: "Register a new user",
     requestBody: RegisterRequestDto,
@@ -46,6 +47,7 @@ export class AuthController {
     return json(result, { status: 201 });
   }
 
+  @AllowAnonymous()
   @Post("/login", {
     summary: "Login with email and password",
     requestBody: LoginRequestDto,
@@ -63,6 +65,7 @@ export class AuthController {
     return json(result);
   }
 
+  @AllowAnonymous()
   @Post("/refresh", {
     summary: "Refresh access token",
     requestBody: RefreshRequestDto,
@@ -75,6 +78,7 @@ export class AuthController {
     return json(result);
   }
 
+  @AllowAnonymous()
   @Post("/logout", {
     summary: "Logout and revoke refresh token",
     requestBody: LogoutRequestDto,
@@ -90,6 +94,7 @@ export class AuthController {
     return json(result);
   }
 
+  @Authorize()
   @Get("/me", {
     summary: "Get current user from access token",
     response: AuthUserResponseDto,

@@ -4,6 +4,7 @@ import type { HttpRouteDocs } from "../http/http-types.js";
 import { Router } from "../routing/router.js";
 import type { ControllerClass } from "./controller-metadata.js";
 import { getControllerMetadata } from "./controller-metadata.js";
+import { getMethodAuthMetadata } from "./controller.js";
 
 function normalizePath(path: string): string {
   const normalized = `/${path}`.replace(/\/+/g, "/");
@@ -16,17 +17,22 @@ function joinPaths(basePath: string, path: string): string {
 
 function resolveRouteDocs(
   controller: ControllerClass,
+  handlerName: string,
   docs?: HttpRouteDocs,
 ): HttpRouteDocs | undefined {
   const metadata = getControllerMetadata(controller);
+  const methodAuth = getMethodAuthMetadata(controller.prototype, handlerName);
 
-  if (!docs && !metadata.options?.tag) {
+  const mergedAuth = methodAuth ?? docs?.authorization;
+
+  if (!docs && !metadata.options?.tag && !mergedAuth) {
     return undefined;
   }
 
   return {
     tags: docs?.tags ?? (metadata.options?.tag ? [metadata.options.tag] : undefined),
     ...docs,
+    ...(mergedAuth ? { authorization: mergedAuth } : {}),
   };
 }
 
@@ -61,7 +67,7 @@ export function registerControllerRoutes(
         controllerClass: controller,
         controllerOptions: metadata.options,
         handlerName: route.handlerName,
-        docs: resolveRouteDocs(controller, route.docs),
+        docs: resolveRouteDocs(controller, route.handlerName, route.docs),
         hidden: metadata.options?.hide ?? false,
       },
     );

@@ -1,6 +1,7 @@
 // file: packages\server\src\http\http-types.ts
 
 import type { HttpContext } from "../context/http-context.js";
+import type { IRouteAuthorizationMetadata } from "../auth/route-authorization.js";
 
 export type HttpMethod =
   | "GET"
@@ -31,6 +32,7 @@ export interface HttpRouteDocs {
   request?: unknown;
   response?: unknown;
   responses?: Record<string | number, unknown | HttpResponseDoc>;
+  authorization?: IRouteAuthorizationMetadata;
 }
 
 export interface HttpResponseDoc {
