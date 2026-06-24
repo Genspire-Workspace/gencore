@@ -4,6 +4,26 @@ export type { HttpContext, RequestContextInit } from "./context/http-context.js"
 export { HttpContextItems, InvalidJsonBodyError, RequestContext } from "./context/http-context.js";
 
 export {
+  ApiDto,
+  ApiField,
+  apiArrayOf,
+  apiDtoToTypeDefinition,
+  apiTypeToOpenApiDefinition,
+} from "./openapi/api-dto.js";
+export { buildOpenApiDocument, inferPathParameters, toOpenApiPath } from "./openapi/openapi-builder.js";
+export { createOpenApiDocument } from "./openapi/openapi-document.js";
+export type {
+  ApiDtoClass,
+  ApiDtoFieldOptions,
+  ApiDtoOptions,
+  ApiSchemaInput,
+  ApiSchemaThunk,
+} from "./openapi/api-dto.js";
+export type { ApiArrayTypeDefinition } from "./openapi/schema-helpers.js";
+export { arrayOf, defineApiType } from "./openapi/schema-helpers.js";
+export type { OpenApiDocument, OpenApiSchema, OpenApiTypeDefinition } from "./openapi/openapi-types.js";
+
+export {
   Controller,
   Delete,
   Get,

@@ -1,4 +1,4 @@
-import type { OpenApiSchema, OpenApiTypeDefinition } from "../openapi/openapi-types.js";
+import type { OpenApiSchema, OpenApiTypeDefinition } from "./openapi-types.js";
 import { apiArrayOf as createApiArrayOf, type ApiArrayTypeDefinition, defineApiType } from "./schema-helpers.js";
 
 export interface ApiDtoOptions {
@@ -28,7 +28,6 @@ const SYMBOL_METADATA =
   (Symbol as typeof Symbol & { metadata?: symbol }).metadata ??
   Symbol.for("Symbol.metadata");
 const API_DTO_STAGE3_METADATA_KEY = Symbol.for("genspire.api-dto.stage3");
-const API_DTO_FIELD_INITIALIZER_KEY = Symbol.for("genspire.api-dto.field-initializer");
 
 type DecoratorContextLike = {
   metadata?: Record<PropertyKey, unknown>;
@@ -74,11 +73,36 @@ function getStage3DtoMetadata(target: ApiDtoClass | DecoratorContextLike): ApiDt
   return created;
 }
 
+function getClassMetadataContainer(
+  target: ApiDtoClass,
+): Record<PropertyKey, unknown> | undefined {
+  const direct = (
+    target as ApiDtoClass & { [SYMBOL_METADATA]?: Record<PropertyKey, unknown> }
+  )[SYMBOL_METADATA];
+
+  if (direct) {
+    return direct;
+  }
+
+  const metadataSymbol = Object.getOwnPropertySymbols(target).find(
+    (symbol) => symbol.toString() === "Symbol(Symbol.metadata)",
+  );
+
+  if (!metadataSymbol) {
+    return undefined;
+  }
+
+  return (target as unknown as Record<PropertyKey, unknown>)[metadataSymbol] as
+    | Record<PropertyKey, unknown>
+    | undefined;
+}
+
 function getMergedDtoMetadata(target: ApiDtoClass): ApiDtoMetadata {
   const metadata = ensureDtoMetadata(target);
-  const symbolMetadata = (
-    target as ApiDtoClass & { [SYMBOL_METADATA]?: Record<PropertyKey, unknown> }
-  )[SYMBOL_METADATA]?.[API_DTO_STAGE3_METADATA_KEY] as ApiDtoMetadata | undefined;
+  const symbolMetadataContainer = getClassMetadataContainer(target);
+  const symbolMetadata = symbolMetadataContainer?.[
+    API_DTO_STAGE3_METADATA_KEY
+  ] as ApiDtoMetadata | undefined;
 
   if (!symbolMetadata) {
     return metadata;
@@ -174,13 +198,6 @@ export function ApiField(options: ApiDtoFieldOptions = {}) {
     if (typeof context === "object" && context !== null) {
       const metadata = getStage3DtoMetadata(context);
       metadata.fields[String(context.name)] = options;
-
-      context.addInitializer?.(
-        (function (this: { constructor: ApiDtoClass }) {
-          const dtoMetadata = ensureDtoMetadata(this.constructor);
-          dtoMetadata.fields[String(context.name)] = options;
-        }) as (this: unknown) => void,
-      );
       return;
     }
 
@@ -212,15 +229,6 @@ function apiDtoToTypeDefinitionInternal(
 
   seen.add(dto);
   const metadata = getMergedDtoMetadata(dto);
-
-  if (Object.keys(metadata.fields).length === 0) {
-    try {
-      new dto();
-    } catch {
-      // DTO field initializers are only used to capture metadata when needed.
-    }
-  }
-
   const properties: Record<string, OpenApiSchema> = {};
   const required: string[] = [];
 

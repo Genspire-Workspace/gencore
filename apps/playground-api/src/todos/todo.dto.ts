@@ -1,4 +1,4 @@
-import { ApiDto, ApiField, apiArrayOf } from "@genspire/swagger";
+import { ApiDto, ApiField } from "@genspire/server";
 
 @ApiDto({
   description: "Request payload for creating a todo",

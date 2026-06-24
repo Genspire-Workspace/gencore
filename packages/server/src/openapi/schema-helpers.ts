@@ -1,4 +1,4 @@
-import type { OpenApiSchema, OpenApiTypeDefinition } from "../openapi/openapi-types.js";
+import type { OpenApiSchema, OpenApiTypeDefinition } from "./openapi-types.js";
 
 export interface ApiArrayTypeDefinition {
   item: import("./api-dto.js").ApiSchemaInput;

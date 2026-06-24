@@ -1,11 +1,10 @@
 import type {
-  ControllerClass,
-  ControllerOptions,
   HttpRouteDocs,
-  RegisteredRoute,
-} from "@genspire/server";
-import { apiTypeToOpenApiDefinition } from "../schema/api-dto.js";
+} from "../http/http-types.js";
+import type { ControllerClass, ControllerOptions } from "../controllers/controller-metadata.js";
+import { apiTypeToOpenApiDefinition } from "./api-dto.js";
 import type { OpenApiDocument, OpenApiSchema } from "./openapi-types.js";
+import type { RegisteredRoute } from "../routing/router.js";
 
 export interface OpenApiBuilderOptions {
   title: string;

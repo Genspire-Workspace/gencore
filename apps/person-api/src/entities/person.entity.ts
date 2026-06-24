@@ -1,4 +1,4 @@
-import { Entity, PrimaryKey, Property, Unique } from "@mikro-orm/decorators/es";
+import { Entity, PrimaryKey, Property, Unique } from "@mikro-orm/decorators";
 
 @Entity({ tableName: "people" })
 export class PersonEntity {

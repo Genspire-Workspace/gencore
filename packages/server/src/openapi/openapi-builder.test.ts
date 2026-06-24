@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { RegisteredRoute } from "@genspire/server";
+import type { RegisteredRoute } from "../routing/router.js";
 import { buildOpenApiDocument, inferPathParameters, toOpenApiPath } from "./openapi-builder.js";
 
 describe("openapi builder", () => {

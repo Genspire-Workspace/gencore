@@ -130,10 +130,36 @@ describe("playground api", () => {
       const swaggerResponse = await server.handle(new Request("http://localhost/swagger.json"));
       expect(swaggerResponse.status).toBe(200);
       const swaggerDocument = await swaggerResponse.json() as {
-        paths: Record<string, unknown>;
+        paths: Record<string, {
+          post?: {
+            requestBody?: {
+              content?: {
+                "application/json"?: {
+                  schema?: {
+                    properties?: Record<string, unknown>;
+                    required?: string[];
+                  };
+                };
+              };
+            };
+          };
+        }>;
       };
       expect(swaggerDocument.paths["/todo"]).toBeDefined();
       expect(swaggerDocument.paths["/todo/{id}"]).toBeDefined();
+      expect(
+        swaggerDocument.paths["/todo"]?.post?.requestBody?.content?.["application/json"]?.schema
+          ?.properties,
+      ).toEqual({
+        title: {
+          type: "string",
+          description: "Todo title",
+        },
+      });
+      expect(
+        swaggerDocument.paths["/todo"]?.post?.requestBody?.content?.["application/json"]?.schema
+          ?.required,
+      ).toEqual(["title"]);
 
       const docsResponse = await server.handle(new Request("http://localhost/docs"));
       expect(docsResponse.status).toBe(200);

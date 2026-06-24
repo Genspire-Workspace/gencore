@@ -1,6 +1,5 @@
 import type { GenExtension } from "@genspire/core";
-import { Server, text } from "@genspire/server";
-import { buildOpenApiDocument } from "../openapi/openapi-builder.js";
+import { Server, buildOpenApiDocument, text } from "@genspire/server";
 
 export interface SwaggerExtensionOptions {
   enabled?: boolean;
