@@ -1,0 +1,16 @@
+{
+  "name": "@genspire/data-mikroorm",
+  "version": "0.0.0",
+  "type": "module",
+  "main": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@genspire/core": "workspace:*",
+    "@genspire/data": "workspace:*",
+    "@mikro-orm/core": "^7.1.4",
+    "@mikro-orm/libsql": "^7.1.4",
+    "@mikro-orm/postgresql": "^7.1.4"
+  }
+}
