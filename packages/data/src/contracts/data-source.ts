@@ -1,13 +1,13 @@
-export interface DataSource {
+export interface IDataSource {
   name: string;
   connect?(): Promise<void>;
   disconnect?(): Promise<void>;
 }
 
 export class DataSourceRegistry {
-  constructor(private readonly sources: readonly DataSource[] = []) {}
+  constructor(private readonly sources: readonly IDataSource[] = []) {}
 
-  list(): readonly DataSource[] {
+  list(): readonly IDataSource[] {
     return this.sources;
   }
 }

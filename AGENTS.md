@@ -32,6 +32,12 @@ That directory is synced by script and local edits there will be overwritten. Wh
 - Then run `bun run sync:cli-template` from the repository root.
 - Review the generated changes under `packages/cli/template/**` only as build output.
 
+## Naming Conventions
+
+- All interfaces must use the `I` prefix (e.g., `IEntity`, `IDataSource`, `IPageRequest`).
+- All DTO classes must use the `Dto` suffix (e.g., `ListResponseDto`, `CreateTodoRequestDto`).
+- Type aliases (not interfaces) do not require a prefix (e.g., `EntityState`, `SortDirection`).
+
 ## Repository Practices
 
 Do not edit files under `packages/cli/template/**` directly.

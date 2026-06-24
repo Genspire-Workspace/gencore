@@ -2,10 +2,9 @@ import { Singleton } from "@genspire/core";
 import { SignJWT } from "jose";
 import type { AuthUserBase } from "../entities/auth-user.entity.js";
 import type { AuthPrincipal } from "../types/auth-principal.js";
-import type { RequiredAuthExtensionOptions } from "../types/auth-options.js";
 import { AuthConfiguration } from "./auth-configuration.js";
 
-export interface AuthTokenPair {
+export interface IAuthTokenPair {
   accessToken: string;
   refreshToken: string;
   expiresIn: number;

@@ -3,12 +3,12 @@ import type { RequestContext } from "@genspire/server";
 import { problem, json } from "@genspire/server";
 import { defineProblemDetailsType } from "@genspire/server";
 import { AuthService } from "../services/auth.service.js";
-import { RegisterRequest } from "../dtos/register-request.dto.js";
-import { LoginRequest } from "../dtos/login-request.dto.js";
-import { RefreshRequest } from "../dtos/refresh-request.dto.js";
-import { LogoutRequest } from "../dtos/logout-request.dto.js";
-import { AuthResponse } from "../dtos/auth-response.dto.js";
-import { AuthUserResponse } from "../dtos/auth-user.dto.js";
+import { RegisterRequestDto } from "../dtos/register-request.dto.js";
+import { LoginRequestDto } from "../dtos/login-request.dto.js";
+import { RefreshRequestDto } from "../dtos/refresh-request.dto.js";
+import { LogoutRequestDto } from "../dtos/logout-request.dto.js";
+import { AuthResponseDto } from "../dtos/auth-response.dto.js";
+import { AuthUserResponseDto } from "../dtos/auth-user.dto.js";
 
 const errorResponse = {
   400: {
@@ -36,20 +36,20 @@ export class AuthController {
 
   @Post("/register", {
     summary: "Register a new user",
-    requestBody: RegisterRequest,
-    response: AuthResponse,
+    requestBody: RegisterRequestDto,
+    response: AuthResponseDto,
     responses: errorResponse,
   })
   async register(ctx: RequestContext): Promise<Response> {
-    const body = await ctx.json<RegisterRequest>();
+    const body = await ctx.json<RegisterRequestDto>();
     const result = await this.authService.register(body);
     return json(result, { status: 201 });
   }
 
   @Post("/login", {
     summary: "Login with email and password",
-    requestBody: LoginRequest,
-    response: AuthResponse,
+    requestBody: LoginRequestDto,
+    response: AuthResponseDto,
     responses: {
       401: {
         description: "Invalid credentials",
@@ -58,26 +58,26 @@ export class AuthController {
     },
   })
   async login(ctx: RequestContext): Promise<Response> {
-    const body = await ctx.json<LoginRequest>();
+    const body = await ctx.json<LoginRequestDto>();
     const result = await this.authService.login(body);
     return json(result);
   }
 
   @Post("/refresh", {
     summary: "Refresh access token",
-    requestBody: RefreshRequest,
-    response: AuthResponse,
+    requestBody: RefreshRequestDto,
+    response: AuthResponseDto,
     responses: errorResponse,
   })
   async refresh(ctx: RequestContext): Promise<Response> {
-    const body = await ctx.json<RefreshRequest>();
+    const body = await ctx.json<RefreshRequestDto>();
     const result = await this.authService.refresh(body);
     return json(result);
   }
 
   @Post("/logout", {
     summary: "Logout and revoke refresh token",
-    requestBody: LogoutRequest,
+    requestBody: LogoutRequestDto,
     responses: {
       200: {
         description: "Logged out successfully",
@@ -85,14 +85,14 @@ export class AuthController {
     },
   })
   async logout(ctx: RequestContext): Promise<Response> {
-    const body = await ctx.json<LogoutRequest>();
+    const body = await ctx.json<LogoutRequestDto>();
     const result = await this.authService.logout(body);
     return json(result);
   }
 
   @Get("/me", {
     summary: "Get current user from access token",
-    response: AuthUserResponse,
+    response: AuthUserResponseDto,
     responses: {
       401: {
         description: "Unauthorized",

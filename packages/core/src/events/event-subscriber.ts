@@ -3,22 +3,22 @@
 import { Singleton } from "../container/decorators.js";
 import type { Constructor } from "../container/container.js";
 
-export interface EventHandlerMetadata {
+export interface IEventHandlerMetadata {
   eventName: string;
   handlerName: string;
 }
 
 type EventSubscriberConstructor<T = unknown> = Constructor<T> & {
   __isEventSubscriber?: boolean;
-  __eventHandlerMetadata?: EventHandlerMetadata[];
+  __eventHandlerMetadata?: IEventHandlerMetadata[];
 };
 
-function ensureMetadata(target: EventSubscriberConstructor): EventHandlerMetadata[] {
+function ensureMetadata(target: EventSubscriberConstructor): IEventHandlerMetadata[] {
   if (!Object.prototype.hasOwnProperty.call(target, "__eventHandlerMetadata")) {
     target.__eventHandlerMetadata = [];
   }
 
-  return target.__eventHandlerMetadata as EventHandlerMetadata[];
+  return target.__eventHandlerMetadata as IEventHandlerMetadata[];
 }
 
 export function EventSubscriber(): <T extends Constructor>(target: T) => void {
@@ -42,6 +42,6 @@ export function isEventSubscriber(target: unknown): target is EventSubscriberCon
   return typeof target === "function" && Boolean((target as EventSubscriberConstructor).__isEventSubscriber);
 }
 
-export function getEventHandlerMetadata(target: Constructor): readonly EventHandlerMetadata[] {
+export function getEventHandlerMetadata(target: Constructor): readonly IEventHandlerMetadata[] {
   return (target as EventSubscriberConstructor).__eventHandlerMetadata ?? [];
 }

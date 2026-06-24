@@ -5,9 +5,9 @@ import { AuthConfiguration } from "../services/auth-configuration.js";
 import { AuthDbContext } from "../context/auth-db-context.js";
 import { AuthService } from "../services/auth.service.js";
 import { PasswordHasher } from "../hashing/password-hasher.js";
-import type { AuthExtensionOptions } from "../types/auth-options.js";
+import type { IAuthExtensionOptions } from "../types/auth-options.js";
 
-export function authExtension(options: AuthExtensionOptions): GenExtension {
+export function authExtension(options: IAuthExtensionOptions): GenExtension {
   return {
     name: "auth",
     dependsOn: ["data", "data-mikroorm"] as const,

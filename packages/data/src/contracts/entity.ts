@@ -1,14 +1,8 @@
-export interface Entity<TId = string> {
-  id: TId;
-}
+export type EntityState = "active" | "inactive" | "archived" | "deleted";
 
-export interface AuditableEntity<TId = string> extends Entity<TId> {
+export interface IEntity<TId = string> {
+  id: TId;
+  state?: EntityState;
   createdAt: Date;
   updatedAt?: Date;
-}
-
-export type EntityState = "active" | "inactive" | "deleted";
-
-export interface StatefulEntity {
-  state: EntityState;
 }

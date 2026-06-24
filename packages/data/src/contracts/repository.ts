@@ -1,6 +1,6 @@
-import type { PageRequest, PageResult } from "./pagination.js";
+import type { IPageRequest, IPageResult } from "./pagination.js";
 
-export interface Repository<
+export interface IRepository<
   TEntity,
   TId = string,
   TCreate = unknown,
@@ -8,7 +8,7 @@ export interface Repository<
 > {
   findById(id: TId): Promise<TEntity | null>;
   list(input?: unknown): Promise<TEntity[]>;
-  page?(input?: PageRequest<TEntity>): Promise<PageResult<TEntity>>;
+  page?(input?: IPageRequest<TEntity>): Promise<IPageResult<TEntity>>;
   create(input: TCreate): Promise<TEntity>;
   updateById(id: TId, input: TUpdate): Promise<TEntity | null>;
   deleteById(id: TId): Promise<boolean>;

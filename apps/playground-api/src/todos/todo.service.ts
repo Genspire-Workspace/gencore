@@ -1,7 +1,7 @@
 import { GenError, Scoped } from "@genspire/core";
 import { PlaygroundDbContext } from "../database/playground-db-context.js";
 import { TodoEntity } from "./todo.entity.js";
-import type { CreateTodoRequest, TodoListResponse, TodoResponse, UpdateTodoRequest } from "./todo.dto.js";
+import type { CreateTodoRequestDto, TodoListResponseDto, TodoResponseDto, UpdateTodoRequestDto } from "./todo.dto.js";
 
 function toTodoResponse(todo: {
   id: string;
@@ -9,7 +9,7 @@ function toTodoResponse(todo: {
   completed: boolean;
   createdAt: Date;
   updatedAt: Date;
-}): TodoResponse {
+}): TodoResponseDto {
   return {
     id: todo.id,
     title: todo.title,
@@ -25,7 +25,7 @@ export class TodoService {
 
   constructor(private readonly db: PlaygroundDbContext) {}
 
-  async list(): Promise<TodoListResponse> {
+  async list(): Promise<TodoListResponseDto> {
     const todos = await this.db.todos.list({
       orderBy: "createdAt",
       direction: "desc",
@@ -36,12 +36,12 @@ export class TodoService {
     };
   }
 
-  async getById(id: string): Promise<TodoResponse | null> {
+  async getById(id: string): Promise<TodoResponseDto | null> {
     const todo = await this.db.todos.findById(id);
     return todo ? toTodoResponse(todo) : null;
   }
 
-  async create(input: CreateTodoRequest): Promise<TodoResponse> {
+  async create(input: CreateTodoRequestDto): Promise<TodoResponseDto> {
     const title = input.title?.trim();
 
     if (!title) {
@@ -62,7 +62,7 @@ export class TodoService {
     return toTodoResponse(todo);
   }
 
-  async updateById(id: string, input: UpdateTodoRequest): Promise<TodoResponse | null> {
+  async updateById(id: string, input: UpdateTodoRequestDto): Promise<TodoResponseDto | null> {
     const title = input.title === undefined ? undefined : input.title.trim();
 
     if (input.title !== undefined && !title) {

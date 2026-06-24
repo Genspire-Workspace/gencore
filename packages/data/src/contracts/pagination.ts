@@ -1,16 +1,16 @@
 export type SortDirection = "asc" | "desc";
 
-export interface SortRequest<TEntity = unknown> {
+export interface ISortRequest<TEntity = unknown> {
   orderBy?: keyof TEntity & string;
   direction?: SortDirection;
 }
 
-export interface PageRequest<TEntity = unknown> extends SortRequest<TEntity> {
+export interface IPageRequest<TEntity = unknown> extends ISortRequest<TEntity> {
   page?: number;
   pageSize?: number;
 }
 
-export interface PageResult<TEntity> {
+export interface IPageResult<TEntity> {
   items: TEntity[];
   total: number;
   page: number;

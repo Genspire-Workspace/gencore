@@ -5,9 +5,10 @@ import {
   Unique,
   Index,
 } from "@mikro-orm/decorators";
+import type { IEntity } from "@genspire/data";
 
 @Entity({ tableName: "auth_refresh_tokens" })
-export class AuthRefreshTokenEntity {
+export class AuthRefreshTokenEntity implements IEntity<string> {
   @PrimaryKey({ type: "string" })
   id!: string;
 

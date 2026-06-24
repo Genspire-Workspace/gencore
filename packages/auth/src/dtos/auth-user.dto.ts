@@ -1,7 +1,7 @@
 import { ApiDto, ApiField } from "@genspire/server";
 
 @ApiDto({ description: "Authenticated user information" })
-export class AuthUserResponse {
+export class AuthUserResponseDto {
   @ApiField({ type: "string", description: "User ID" })
   id!: string;
 

@@ -1,7 +1,8 @@
 import { Entity, PrimaryKey, Property } from "@mikro-orm/decorators";
+import type { IEntity } from "@genspire/data";
 
 @Entity({ tableName: "todos" })
-export class TodoEntity {
+export class TodoEntity implements IEntity<string> {
   @PrimaryKey({ type: "string" })
   id!: string;
 

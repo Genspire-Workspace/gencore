@@ -1,33 +1,33 @@
 // file: packages\core\src\lifecycle\lifecycle.ts
 
-export interface OnInit {
+export interface IOnInit {
   onInit(): void | Promise<void>;
 }
 
-export interface OnDestroy {
+export interface IOnDestroy {
   onDestroy(): void | Promise<void>;
 }
 
-export interface OnStart {
+export interface IOnStart {
   onStart(): void | Promise<void>;
 }
 
-export interface OnStop {
+export interface IOnStop {
   onStop(): void | Promise<void>;
 }
 
-export function hasOnInit(value: unknown): value is OnInit {
-  return typeof (value as OnInit | undefined)?.onInit === "function";
+export function hasOnInit(value: unknown): value is IOnInit {
+  return typeof (value as IOnInit | undefined)?.onInit === "function";
 }
 
-export function hasOnDestroy(value: unknown): value is OnDestroy {
-  return typeof (value as OnDestroy | undefined)?.onDestroy === "function";
+export function hasOnDestroy(value: unknown): value is IOnDestroy {
+  return typeof (value as IOnDestroy | undefined)?.onDestroy === "function";
 }
 
-export function hasOnStart(value: unknown): value is OnStart {
-  return typeof (value as OnStart | undefined)?.onStart === "function";
+export function hasOnStart(value: unknown): value is IOnStart {
+  return typeof (value as IOnStart | undefined)?.onStart === "function";
 }
 
-export function hasOnStop(value: unknown): value is OnStop {
-  return typeof (value as OnStop | undefined)?.onStop === "function";
+export function hasOnStop(value: unknown): value is IOnStop {
+  return typeof (value as IOnStop | undefined)?.onStop === "function";
 }

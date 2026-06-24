@@ -1,6 +1,6 @@
 import type { EntityManager } from "@mikro-orm/core";
 
-export interface MikroOrmSeeder {
+export interface IMikroOrmSeeder {
   name: string;
   run(entityManager: EntityManager): Promise<void> | void;
 }

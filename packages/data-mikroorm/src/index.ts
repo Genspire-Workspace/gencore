@@ -22,4 +22,4 @@ export type {
   MikroOrmMigrationUpDownOptions,
   RunMikroOrmMigrationCommandOptions,
 } from "./migrations/index.js";
-export type { MikroOrmSeeder } from "./seeding/mikro-orm-seeder.js";
+export type { IMikroOrmSeeder as MikroOrmSeeder } from "./seeding/mikro-orm-seeder.js";

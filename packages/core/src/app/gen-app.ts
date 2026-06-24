@@ -6,16 +6,16 @@ import type { ScopedContainer } from "../container/scoped-container.js";
 import { EventBus } from "../events/event-bus.js";
 import { LogStore } from "../logging/log-store.js";
 import { LoggerFactory } from "../logging/logger-factory.js";
-import type { GenAppOptions } from "./gen-app-options.js";
-import type { GenExtension } from "./gen-extension.js";
+import type { IGenAppOptions } from "./gen-app-options.js";
+import type { IGenExtension } from "./gen-extension.js";
 
 export class GenApp {
   public readonly container: Container;
-  private readonly extensions = new Map<string, GenExtension>();
+  private readonly extensions = new Map<string, IGenExtension>();
   private started = false;
   private stopping = false;
 
-  constructor(options: GenAppOptions = {}) {
+  constructor(options: IGenAppOptions = {}) {
     this.container = new Container();
 
     this.container.registerInstance(EnvService, new EnvService());
@@ -49,7 +49,7 @@ export class GenApp {
     }
   }
 
-  async use(extension: GenExtension): Promise<this> {
+  async use(extension: IGenExtension): Promise<this> {
     if (this.started) {
       throw new Error(`Cannot register extension '${extension.name}' after app.start().`);
     }

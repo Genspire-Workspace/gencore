@@ -1,11 +1,11 @@
 export type { DbContext } from "./context/db-context.js";
 export type { DbSet, ListOptions } from "./context/db-set.js";
-export type { DataSource } from "./contracts/data-source.js";
+export type { IDataSource } from "./contracts/data-source.js";
 export { DataSourceRegistry } from "./contracts/data-source.js";
-export type { AuditableEntity, Entity, EntityState, StatefulEntity } from "./contracts/entity.js";
-export type { PageRequest, PageResult, SortDirection, SortRequest } from "./contracts/pagination.js";
-export type { Repository } from "./contracts/repository.js";
-export type { UnitOfWork } from "./contracts/unit-of-work.js";
+export type { IEntity, EntityState } from "./contracts/entity.js";
+export type { IPageRequest, IPageResult, SortDirection, ISortRequest } from "./contracts/pagination.js";
+export type { IRepository } from "./contracts/repository.js";
+export type { IUnitOfWork } from "./contracts/unit-of-work.js";
 export { dataExtension } from "./extension/data-extension.js";
 export type { DataExtensionOptions } from "./extension/data-extension.js";
 export type { Seeder } from "./seeding/seeder.js";

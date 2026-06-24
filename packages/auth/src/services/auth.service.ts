@@ -3,12 +3,12 @@ import { AuthDbContext } from "../context/auth-db-context.js";
 import { PasswordHasher } from "../hashing/password-hasher.js";
 import { TokenService } from "./token.service.js";
 import { AuthConfiguration } from "./auth-configuration.js";
-import type { RegisterRequest } from "../dtos/register-request.dto.js";
-import type { LoginRequest } from "../dtos/login-request.dto.js";
-import type { RefreshRequest } from "../dtos/refresh-request.dto.js";
-import type { LogoutRequest } from "../dtos/logout-request.dto.js";
-import type { AuthResponse } from "../dtos/auth-response.dto.js";
-import type { AuthUserResponse } from "../dtos/auth-user.dto.js";
+import type { RegisterRequestDto } from "../dtos/register-request.dto.js";
+import type { LoginRequestDto } from "../dtos/login-request.dto.js";
+import type { RefreshRequestDto } from "../dtos/refresh-request.dto.js";
+import type { LogoutRequestDto } from "../dtos/logout-request.dto.js";
+import type { AuthResponseDto } from "../dtos/auth-response.dto.js";
+import type { AuthUserResponseDto } from "../dtos/auth-user.dto.js";
 import { AuthRefreshTokenEntity } from "../entities/auth-refresh-token.entity.js";
 import { AuthUserBase } from "../entities/auth-user.entity.js";
 import { jwtVerify } from "jose";
@@ -24,7 +24,7 @@ export class AuthService {
     private readonly config: AuthConfiguration,
   ) {}
 
-  async register(input: RegisterRequest): Promise<AuthResponse> {
+  async register(input: RegisterRequestDto): Promise<AuthResponseDto> {
     const email = input.email.trim().toLowerCase();
     if (!email) {
       throw new GenError("Email is required.", "AUTH_VALIDATION_ERROR");
@@ -58,7 +58,7 @@ export class AuthService {
     return await this.issueTokens(user);
   }
 
-  async login(input: LoginRequest): Promise<AuthResponse> {
+  async login(input: LoginRequestDto): Promise<AuthResponseDto> {
     const email = input.email.trim().toLowerCase();
     if (!email) {
       throw new GenError("Email is required.", "AUTH_VALIDATION_ERROR");
@@ -92,7 +92,7 @@ export class AuthService {
     return await this.issueTokens(user);
   }
 
-  async refresh(input: RefreshRequest): Promise<AuthResponse> {
+  async refresh(input: RefreshRequestDto): Promise<AuthResponseDto> {
     if (!input.refreshToken) {
       throw new GenError("Refresh token is required.", "AUTH_VALIDATION_ERROR");
     }
@@ -125,7 +125,7 @@ export class AuthService {
     return await this.issueTokens(user, storedToken);
   }
 
-  async logout(input: LogoutRequest): Promise<{ loggedOut: boolean }> {
+  async logout(input: LogoutRequestDto): Promise<{ loggedOut: boolean }> {
     if (!input.refreshToken) {
       return { loggedOut: true };
     }
@@ -150,7 +150,7 @@ export class AuthService {
 
   async getCurrentUserFromAccessToken(
     accessToken: string,
-  ): Promise<AuthUserResponse | null> {
+  ): Promise<AuthUserResponseDto | null> {
     if (!accessToken) {
       return null;
     }
@@ -181,7 +181,7 @@ export class AuthService {
   private async issueTokens(
     user: AuthUserBase,
     replacedToken?: AuthRefreshTokenEntity,
-  ): Promise<AuthResponse> {
+  ): Promise<AuthResponseDto> {
     const accessToken = await this.tokenService.createAccessToken(user);
     const rawRefreshToken = this.tokenService.createRefreshToken();
     const refreshTokenHash = await this.tokenService.hashRefreshToken(rawRefreshToken);
@@ -219,7 +219,7 @@ export class AuthService {
     };
   }
 
-  private toUserResponse(user: AuthUserBase): AuthUserResponse {
+  private toUserResponse(user: AuthUserBase): AuthUserResponseDto {
     return {
       id: user.id,
       email: user.email,

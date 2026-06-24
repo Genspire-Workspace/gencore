@@ -1,10 +1,10 @@
 import { ApiDto, ApiField } from "@genspire/server";
-import { AuthUserResponse } from "./auth-user.dto.js";
+import { AuthUserResponseDto } from "./auth-user.dto.js";
 
 @ApiDto({ description: "Authentication response with tokens and user" })
-export class AuthResponse {
-  @ApiField({ dto: AuthUserResponse, description: "Authenticated user" })
-  user!: AuthUserResponse;
+export class AuthResponseDto {
+  @ApiField({ dto: AuthUserResponseDto, description: "Authenticated user" })
+  user!: AuthUserResponseDto;
 
   @ApiField({ type: "string", description: "JWT access token" })
   accessToken!: string;

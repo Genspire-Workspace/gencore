@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { Container } from "./container.js";
 import { Scoped, Singleton, Transient } from "./decorators.js";
-import type { OnDestroy, OnInit } from "../lifecycle/lifecycle.js";
+import type { IOnDestroy, IOnInit } from "../lifecycle/lifecycle.js";
 
 describe("Container and ScopedContainer", () => {
   test("singleton returns same instance", () => {
@@ -59,7 +59,7 @@ describe("Container and ScopedContainer", () => {
     const calls: string[] = [];
 
     @Singleton()
-    class SingletonHooked implements OnInit, OnDestroy {
+    class SingletonHooked implements IOnInit, IOnDestroy {
       onInit(): void {
         calls.push("singleton:init");
       }
@@ -70,7 +70,7 @@ describe("Container and ScopedContainer", () => {
     }
 
     @Scoped()
-    class ScopedHooked implements OnInit, OnDestroy {
+    class ScopedHooked implements IOnInit, IOnDestroy {
       onInit(): void {
         calls.push("scoped:init");
       }

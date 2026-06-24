@@ -1,11 +1,11 @@
 import type { GenExtension } from "@genspire/core";
 import { LoggerFactory } from "@genspire/core";
-import { DataSourceRegistry, type DataSource } from "../contracts/data-source.js";
+import { DataSourceRegistry, type IDataSource } from "../contracts/data-source.js";
 import type { Seeder } from "../seeding/seeder.js";
 import { SeederRunner } from "../seeding/seeder-runner.js";
 
 export interface DataExtensionOptions {
-  sources?: readonly DataSource[];
+  sources?: readonly IDataSource[];
   seeders?: readonly Seeder[];
   runSeedersOnStart?: boolean;
 }

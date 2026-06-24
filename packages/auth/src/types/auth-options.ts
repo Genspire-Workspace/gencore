@@ -2,7 +2,7 @@ import type { EntityClass } from "@mikro-orm/core";
 import { AuthUserBase, AuthUserEntity } from "../entities/auth-user.entity.js";
 import { AuthRefreshTokenEntity } from "../entities/auth-refresh-token.entity.js";
 
-export interface AuthExtensionOptions<
+export interface IAuthExtensionOptions<
   TUser extends AuthUserBase = AuthUserEntity,
 > {
   userEntity?: EntityClass<TUser>;
@@ -16,11 +16,11 @@ export interface AuthExtensionOptions<
 
 export type RequiredAuthExtensionOptions<
   TUser extends AuthUserBase = AuthUserEntity,
-> = Required<AuthExtensionOptions<TUser>>;
+> = Required<IAuthExtensionOptions<TUser>>;
 
 export function resolveAuthExtensionOptions<
   TUser extends AuthUserBase = AuthUserEntity,
->(options: AuthExtensionOptions<TUser>): RequiredAuthExtensionOptions<TUser> {
+>(options: IAuthExtensionOptions<TUser>): RequiredAuthExtensionOptions<TUser> {
   if (!options.jwtSecret) {
     throw new Error("jwtSecret is required for auth extension");
   }

@@ -1,7 +1,7 @@
 import { ApiDto, ApiField } from "@genspire/server";
 
 @ApiDto({ description: "Login with email and password" })
-export class LoginRequest {
+export class LoginRequestDto {
   @ApiField({ type: "string", description: "Email address" })
   email!: string;
 

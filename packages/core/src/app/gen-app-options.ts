@@ -1,7 +1,7 @@
 // file: packages\core\src\app\gen-app-options.ts
 
-import type { GenExtension } from "./gen-extension.js";
+import type { IGenExtension } from "./gen-extension.js";
 
-export interface GenAppOptions {
-  extensions?: readonly GenExtension[];
+export interface IGenAppOptions {
+  extensions?: readonly IGenExtension[];
 }

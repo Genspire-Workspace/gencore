@@ -1,6 +1,7 @@
 import { Entity, PrimaryKey, Property, Unique, Index } from "@mikro-orm/decorators";
+import type { EntityState, IEntity } from "@genspire/data";
 
-export abstract class AuthUserBase {
+export abstract class AuthUserBase implements IEntity<string> {
   @PrimaryKey({ type: "string" })
   id!: string;
 
@@ -23,7 +24,7 @@ export abstract class AuthUserBase {
   emailConfirmed = false;
 
   @Property({ type: "string" })
-  state: "active" | "disabled" | "deleted" = "active";
+  state: EntityState = "active";
 
   @Property({ type: "datetime" })
   createdAt: Date = new Date();

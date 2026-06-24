@@ -6,7 +6,7 @@ import { Singleton } from "../container/decorators.js";
 import { LoggerFactory } from "../logging/logger-factory.js";
 import { getEventHandlerMetadata } from "./event-subscriber.js";
 
-export interface AppEvent<TPayload = unknown> {
+export interface IAppEvent<TPayload = unknown> {
   name: string;
   payload: TPayload;
   occurredAt: string;
@@ -14,7 +14,7 @@ export interface AppEvent<TPayload = unknown> {
 }
 
 export type AppEventHandler<TPayload = unknown> = (
-  event: AppEvent<TPayload>,
+  event: IAppEvent<TPayload>,
 ) => void | Promise<void>;
 
 export interface EventSubscription {
@@ -62,7 +62,7 @@ export class EventBus {
     payload: TPayload,
     metadata?: Record<string, unknown>,
   ): Promise<void> {
-    const event: AppEvent<TPayload> = {
+    const event: IAppEvent<TPayload> = {
       name: eventName,
       payload,
       occurredAt: new Date().toISOString(),

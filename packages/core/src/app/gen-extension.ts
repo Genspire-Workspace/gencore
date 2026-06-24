@@ -1,6 +1,6 @@
 // file: packages\core\src\app\gen-extension.ts
 
-export interface GenExtension {
+export interface IGenExtension {
   name: string;
   dependsOn?: readonly string[];
   register?(app: import("./gen-app.js").GenApp): void | Promise<void>;

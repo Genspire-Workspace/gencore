@@ -3,16 +3,16 @@ export { AuthUserBase, AuthUserEntity } from "./entities/auth-user.entity.js";
 export { AuthRefreshTokenEntity } from "./entities/auth-refresh-token.entity.js";
 
 // Types
-export type { AuthExtensionOptions, RequiredAuthExtensionOptions } from "./types/auth-options.js";
+export type { IAuthExtensionOptions as AuthExtensionOptions, RequiredAuthExtensionOptions } from "./types/auth-options.js";
 export type { AuthPrincipal } from "./types/auth-principal.js";
 
 // DTOs
-export { RegisterRequest } from "./dtos/register-request.dto.js";
-export { LoginRequest } from "./dtos/login-request.dto.js";
-export { RefreshRequest } from "./dtos/refresh-request.dto.js";
-export { LogoutRequest } from "./dtos/logout-request.dto.js";
-export { AuthUserResponse } from "./dtos/auth-user.dto.js";
-export { AuthResponse } from "./dtos/auth-response.dto.js";
+export { RegisterRequestDto as RegisterRequest } from "./dtos/register-request.dto.js";
+export { LoginRequestDto as LoginRequest } from "./dtos/login-request.dto.js";
+export { RefreshRequestDto as RefreshRequest } from "./dtos/refresh-request.dto.js";
+export { LogoutRequestDto as LogoutRequest } from "./dtos/logout-request.dto.js";
+export { AuthUserResponseDto as AuthUserResponse } from "./dtos/auth-user.dto.js";
+export { AuthResponseDto as AuthResponse } from "./dtos/auth-response.dto.js";
 
 // Services
 export { AuthService } from "./services/auth.service.js";

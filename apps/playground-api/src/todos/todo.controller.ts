@@ -1,11 +1,11 @@
 import { Controller, Delete, Get, Patch, Post, defineProblemDetailsType, json, problem } from "@genspire/server";
 import type { RequestContext } from "@genspire/server";
 import {
-  CreateTodoRequest,
-  DeleteTodoResponse,
-  TodoListResponse,
-  TodoResponse,
-  UpdateTodoRequest,
+  CreateTodoRequestDto,
+  DeleteTodoResponseDto,
+  TodoListResponseDto,
+  TodoResponseDto,
+  UpdateTodoRequestDto,
 } from "./todo.dto.js";
 import { TodoService } from "./todo.service.js";
 
@@ -20,7 +20,7 @@ export class TodoController {
 
   @Get("/", {
     summary: "List todos",
-    response: TodoListResponse,
+    response: TodoListResponseDto,
   })
   async list() {
     return await this.service.list();
@@ -28,7 +28,7 @@ export class TodoController {
 
   @Get("/:id", {
     summary: "Get todo by id",
-    response: TodoResponse,
+    response: TodoResponseDto,
     responses: {
       400: {
         description: "Missing todo id",
@@ -63,8 +63,8 @@ export class TodoController {
 
   @Post("/", {
     summary: "Create todo",
-    request: CreateTodoRequest,
-    response: TodoResponse,
+    request: CreateTodoRequestDto,
+    response: TodoResponseDto,
     responses: {
       400: {
         description: "Validation error",
@@ -77,15 +77,15 @@ export class TodoController {
     },
   })
   async create(ctx: RequestContext) {
-    return json(await this.service.create(await ctx.json<CreateTodoRequest>()), {
+    return json(await this.service.create(await ctx.json<CreateTodoRequestDto>()), {
       status: 201,
     });
   }
 
   @Patch("/:id", {
     summary: "Update todo",
-    request: UpdateTodoRequest,
-    response: TodoResponse,
+    request: UpdateTodoRequestDto,
+    response: TodoResponseDto,
     responses: {
       400: {
         description: "Validation error",
@@ -112,7 +112,7 @@ export class TodoController {
 
     const todo = await this.service.updateById(
       id,
-      await ctx.json<UpdateTodoRequest>(),
+      await ctx.json<UpdateTodoRequestDto>(),
     );
 
     if (!todo) {
@@ -127,7 +127,7 @@ export class TodoController {
 
   @Delete("/:id", {
     summary: "Delete todo",
-    response: DeleteTodoResponse,
+    response: DeleteTodoResponseDto,
     responses: {
       400: {
         description: "Missing todo id",

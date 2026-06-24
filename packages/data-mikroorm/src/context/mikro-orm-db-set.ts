@@ -1,4 +1,4 @@
-import type { DbSet, ListOptions, PageRequest, PageResult } from "@genspire/data";
+import type { DbSet, ListOptions, IPageRequest, IPageResult } from "@genspire/data";
 import type { EntityClass, EntityManager } from "@mikro-orm/core";
 
 type WhereInput<TEntity extends object> = Partial<TEntity>;
@@ -21,7 +21,7 @@ export class MikroOrmDbSet<TEntity extends object, TId = string>
     ) as TEntity[];
   }
 
-  async page(options: PageRequest<TEntity> = {}): Promise<PageResult<TEntity>> {
+  async page(options: IPageRequest<TEntity> = {}): Promise<IPageResult<TEntity>> {
     const page = Math.max(1, options.page ?? 1);
     const pageSize = Math.max(1, options.pageSize ?? 25);
     const [items, total] = await this.em.findAndCount(

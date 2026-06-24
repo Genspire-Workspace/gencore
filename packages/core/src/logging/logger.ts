@@ -1,7 +1,7 @@
 // file: packages\core\src\logging\logger.ts
 
 import path from "node:path";
-import type { LogEntry, LogLevel, LogStore } from "./log-store.js";
+import type { ILogEntry, LogLevel, LogStore } from "./log-store.js";
 
 type LogFormat = "pretty" | "json";
 
@@ -196,7 +196,7 @@ function formatLevel(level: LogLevel, enabled: boolean): string {
   return colorize(` ${level.toUpperCase()} `, `1;37;${background}`, enabled);
 }
 
-function formatLogPrefix(entry: LogEntry, enabled: boolean): string {
+function formatLogPrefix(entry: ILogEntry, enabled: boolean): string {
   return `${formatTimestamp(entry.timestamp, entry.level, enabled)} ${formatLevel(entry.level, enabled)}: `;
 }
 
@@ -213,7 +213,7 @@ function formatData(data?: Record<string, unknown>): string[] {
   return lines;
 }
 
-function formatConsoleEntry(entry: LogEntry, colorsEnabled: boolean): string {
+function formatConsoleEntry(entry: ILogEntry, colorsEnabled: boolean): string {
   return [
     `${formatLogPrefix(entry, colorsEnabled)}${colorize(entry.category, "1", colorsEnabled)}${entry.source ? ` ${colorize(`[${entry.source}]`, "90", colorsEnabled)}` : ""}`,
     `      ${entry.message}`,
@@ -298,7 +298,7 @@ export class Logger {
       return;
     }
 
-    const entry: LogEntry = {
+    const entry: ILogEntry = {
       level,
       category: this.category,
       message,

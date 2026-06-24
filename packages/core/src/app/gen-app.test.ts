@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 import { createApp } from "./create-app.js";
-import type { GenExtension } from "./gen-extension.js";
+import type { IGenExtension } from "./gen-extension.js";
 
 describe("GenApp extension lifecycle", () => {
   let calls: string[];
@@ -45,7 +45,7 @@ describe("GenApp extension lifecycle", () => {
 
   test("start runs in registration order", async () => {
     const app = createApp();
-    const extensions: GenExtension[] = [
+    const extensions: IGenExtension[] = [
       {
         name: "first",
         start() {
@@ -77,7 +77,7 @@ describe("GenApp extension lifecycle", () => {
 
   test("stop runs in reverse registration order", async () => {
     const app = createApp();
-    const extensions: GenExtension[] = [
+    const extensions: IGenExtension[] = [
       {
         name: "first",
         stop() {

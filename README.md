@@ -20,6 +20,9 @@ The current architecture is:
 - Keep `@genspire/swagger` as the extension/UI layer only.
 - Keep `@genspire/data` framework-agnostic and ORM-agnostic.
 - Put MikroORM-specific behavior in `@genspire/data-mikroorm`.
+- All interfaces must use the `I` prefix (e.g., `IEntity`, `IDataSource`, `IPageRequest`).
+- All DTO classes must use the `Dto` suffix (e.g., `ListResponseDto`, `CreateTodoRequestDto`).
+- Type aliases do not require a prefix (e.g., `EntityState`, `SortDirection`).
 
 ## Packages
 

@@ -4,7 +4,7 @@ import { Singleton } from "../container/decorators.js";
 
 export type LogLevel = "debug" | "info" | "warn" | "error";
 
-export interface LogEntry {
+export interface ILogEntry {
   level: LogLevel;
   category: string;
   message: string;
@@ -15,18 +15,18 @@ export interface LogEntry {
 
 @Singleton()
 export class LogStore {
-  private readonly entries: LogEntry[] = [];
+  private readonly entries: ILogEntry[] = [];
 
   constructor(private readonly maxEntries = 500) {}
 
-  add(entry: LogEntry): void {
+  add(entry: ILogEntry): void {
     this.entries.push(entry);
     if (this.entries.length > this.maxEntries) {
       this.entries.splice(0, this.entries.length - this.maxEntries);
     }
   }
 
-  list(limit = 200): readonly LogEntry[] {
+  list(limit = 200): readonly ILogEntry[] {
     return this.entries.slice(-Math.max(1, limit));
   }
 

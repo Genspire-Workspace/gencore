@@ -3,7 +3,7 @@ import { ApiDto, ApiField } from "@genspire/server";
 @ApiDto({
   description: "Request payload for creating a todo",
 })
-export class CreateTodoRequest {
+export class CreateTodoRequestDto {
   @ApiField({
     type: "string",
     description: "Todo title",
@@ -14,7 +14,7 @@ export class CreateTodoRequest {
 @ApiDto({
   description: "Request payload for updating a todo",
 })
-export class UpdateTodoRequest {
+export class UpdateTodoRequestDto {
   @ApiField({
     type: "string",
     description: "Updated todo title",
@@ -33,7 +33,7 @@ export class UpdateTodoRequest {
 @ApiDto({
   description: "A persisted todo record",
 })
-export class TodoResponse {
+export class TodoResponseDto {
   @ApiField({ type: "string" })
   id!: string;
 
@@ -53,18 +53,18 @@ export class TodoResponse {
 @ApiDto({
   description: "A list of todo records",
 })
-export class TodoListResponse {
+export class TodoListResponseDto {
   @ApiField({
-    arrayOf: TodoResponse,
+    arrayOf: TodoResponseDto,
     description: "Todo items",
   })
-  items!: TodoResponse[];
+  items!: TodoResponseDto[];
 }
 
 @ApiDto({
   description: "Delete todo response",
 })
-export class DeleteTodoResponse {
+export class DeleteTodoResponseDto {
   @ApiField({
     type: "boolean",
     description: "Whether the todo was deleted.",

@@ -1,5 +1,5 @@
 import type {
-  AuthExtensionOptions,
+  IAuthExtensionOptions,
   RequiredAuthExtensionOptions,
 } from "../types/auth-options.js";
 import type { AuthUserBase } from "../entities/auth-user.entity.js";
@@ -11,7 +11,7 @@ export class AuthConfiguration<
 > {
   readonly options: RequiredAuthExtensionOptions<TUser>;
 
-  constructor(options: AuthExtensionOptions<TUser>) {
+  constructor(options: IAuthExtensionOptions<TUser>) {
     this.options = resolveAuthExtensionOptions(options);
   }
 }

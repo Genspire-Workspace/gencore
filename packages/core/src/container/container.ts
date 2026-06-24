@@ -9,7 +9,7 @@ export type Constructor<T = unknown> = new (...args: any[]) => T;
 export type ServiceToken<T = unknown> = Constructor<T>;
 export type Lifetime = "singleton" | "scoped" | "transient";
 
-interface Registration<T = unknown> {
+interface IRegistration<T = unknown> {
   token: ServiceToken<T>;
   lifetime: Lifetime;
   implementation?: Constructor<T>;
@@ -17,7 +17,7 @@ interface Registration<T = unknown> {
 }
 
 export class Container {
-  private readonly registrations = new Map<ServiceToken, Registration>();
+  private readonly registrations = new Map<ServiceToken, IRegistration>();
   private readonly singletons = new Map<ServiceToken, unknown>();
   private readonly destroyables = new Set<unknown>();
 
@@ -76,7 +76,7 @@ export class Container {
     return this.registrations.has(token) || getLifetime(token) != null;
   }
 
-  getRegistration<T>(token: ServiceToken<T>): Readonly<Registration<T>> | undefined {
+  getRegistration<T>(token: ServiceToken<T>): Readonly<IRegistration<T>> | undefined {
     return this.ensureRegistration(token);
   }
 
@@ -157,10 +157,10 @@ export class Container {
     this.singletons.clear();
   }
 
-  ensureRegistration<T>(token: ServiceToken<T>): Registration<T> | undefined {
+  ensureRegistration<T>(token: ServiceToken<T>): IRegistration<T> | undefined {
     const existing = this.registrations.get(token);
     if (existing) {
-      return existing as Registration<T>;
+      return existing as IRegistration<T>;
     }
 
     const lifetime = getLifetime(token);
@@ -176,7 +176,7 @@ export class Container {
       this.registerTransient(token);
     }
 
-    return this.registrations.get(token) as Registration<T> | undefined;
+    return this.registrations.get(token) as IRegistration<T> | undefined;
   }
 
   private trackDestroyable(instance: unknown): void {
