@@ -15,6 +15,11 @@
     "dev": "bun run apps/playground-api/src/index.ts",
     "dev:playground-api": "bun run apps/playground-api/src/index.ts",
     "dev:person-api": "bun run apps/person-api/src/index.ts",
+    "db:playground:create": "bun run apps/playground-api/src/database/playground-migrations.ts create",
+    "db:playground:up": "bun run apps/playground-api/src/database/playground-migrations.ts up",
+    "db:playground:down": "bun run apps/playground-api/src/database/playground-migrations.ts down",
+    "db:playground:pending": "bun run apps/playground-api/src/database/playground-migrations.ts pending",
+    "db:playground:executed": "bun run apps/playground-api/src/database/playground-migrations.ts executed",
     "clean": "rm -rf node_modules bun.lock packages/*/dist apps/*/dist",
     "sync:file-paths": "bun scripts/sync-file-path-relative.mjs"
   },

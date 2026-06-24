@@ -1,9 +1,16 @@
 import { createApp } from "@genspire/core";
 import { dataExtension } from "@genspire/data";
-import { MikroOrmService, mikroOrmExtension } from "@genspire/data-mikroorm";
+import {
+  MikroOrmMigrationRunner,
+  MikroOrmService,
+  mikroOrmExtension,
+} from "@genspire/data-mikroorm";
 import { serverExtension, Server } from "@genspire/server";
 import { swaggerExtension } from "@genspire/swagger";
-import { createPlaygroundMikroOrmConfig } from "./database/playground-database-config.js";
+import {
+  createPlaygroundMikroOrmConfig,
+  resolvePlaygroundSchemaMode,
+} from "./database/playground-database-config.js";
 import { HealthController } from "./health/health.controller.js";
 import { TodoController } from "./todos/todo.controller.js";
 
@@ -17,6 +24,8 @@ export async function createPlaygroundApp(
   options: PlaygroundAppOptions = {},
 ) {
   const app = createApp();
+  const env = options.env ?? process.env;
+  const schemaMode = resolvePlaygroundSchemaMode(env);
 
   await app.use(
     dataExtension({
@@ -26,18 +35,25 @@ export async function createPlaygroundApp(
 
   await app.use(
     mikroOrmExtension(
-      await createPlaygroundMikroOrmConfig(options.repoRoot, options.env ?? process.env),
+      await createPlaygroundMikroOrmConfig(options.repoRoot, env),
     ),
   );
 
-  await app.use({
-    name: "playground-schema",
-    dependsOn: ["data-mikroorm"],
-    async start(currentApp) {
-      // Playground-only schema sync. Production deployments should use migrations.
-      await currentApp.get(MikroOrmService).getOrm().schema.update();
-    },
-  });
+  if (schemaMode !== "none") {
+    await app.use({
+      name: "playground-schema",
+      dependsOn: ["data-mikroorm"],
+      async start(currentApp) {
+        if (schemaMode === "update") {
+          // Playground-only schema sync. Production deployments should use migrations.
+          await currentApp.get(MikroOrmService).getOrm().schema.update();
+          return;
+        }
+
+        await currentApp.get(MikroOrmMigrationRunner).up();
+      },
+    });
+  }
 
   await app.use(
     serverExtension({

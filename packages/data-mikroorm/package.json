@@ -11,6 +11,7 @@
     "@genspire/data": "workspace:*",
     "@mikro-orm/core": "^7.1.4",
     "@mikro-orm/libsql": "^7.1.4",
+    "@mikro-orm/migrations": "^7.1.4",
     "@mikro-orm/postgresql": "^7.1.4"
   }
 }

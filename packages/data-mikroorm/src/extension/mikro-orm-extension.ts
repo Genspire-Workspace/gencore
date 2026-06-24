@@ -3,11 +3,13 @@ import type { Options, EntityManager, MikroORM } from "@mikro-orm/core";
 import { MikroORM as MikroOrmLibsql } from "@mikro-orm/libsql";
 import { MikroORM as MikroOrmRuntime } from "@mikro-orm/postgresql";
 import { EntityManagerProvider } from "../context/entity-manager-provider.js";
+import { MikroOrmMigrationRunner } from "../migrations/migration-runner.js";
 
 export type MikroOrmDriver = "postgresql" | "libsql";
 
 export type MikroOrmExtensionOptions = Partial<Options> & {
   runtimeDriver?: MikroOrmDriver;
+  runMigrationsOnStart?: boolean;
   entities: NonNullable<Options["entities"]>;
 };
 
@@ -20,6 +22,7 @@ export class MikroOrmService {
     const driver = this.options.runtimeDriver ?? "postgresql";
     const initOptions = { ...this.options };
     delete initOptions.runtimeDriver;
+    delete initOptions.runMigrationsOnStart;
 
     this.orm =
       driver === "libsql"
@@ -52,12 +55,19 @@ export function mikroOrmExtension(options: MikroOrmExtensionOptions): GenExtensi
 
     register(app) {
       const service = new MikroOrmService(options);
+      const migrationRunner = new MikroOrmMigrationRunner(service);
       app.provide(MikroOrmService, service);
       app.provide(EntityManagerProvider, new EntityManagerProvider(service));
+      app.provide(MikroOrmMigrationRunner, migrationRunner);
     },
 
     async start(app) {
-      await app.get(MikroOrmService).start();
+      const service = app.get(MikroOrmService);
+      await service.start();
+
+      if (options.runMigrationsOnStart) {
+        await app.get(MikroOrmMigrationRunner).up();
+      }
     },
 
     async stop(app) {
