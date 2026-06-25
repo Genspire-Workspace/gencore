@@ -5,6 +5,7 @@ import {
   findAiTool,
   createToolCallFromUnknown,
   createToolResultFromUnknown,
+  isRecord,
 } from "./ai-tool-utils.js";
 import type { IAiTool } from "./ai-tool.js";
 
@@ -48,7 +49,7 @@ describe("createToolCallFromUnknown", () => {
     expect(call).toBeDefined();
     expect(call!.id).toBe("call-1");
     expect(call!.name).toBe("get_capital");
-    expect((call!.arguments as any).country).toBe("Portugal");
+    expect(isRecord(call!.arguments) ? call!.arguments.country : undefined).toBe("Portugal");
   });
 
   test("supports id/name/arguments shape", () => {
@@ -88,7 +89,7 @@ describe("createToolResultFromUnknown", () => {
     expect(result).toBeDefined();
     expect(result!.toolCallId).toBe("call-1");
     expect(result!.name).toBe("get_capital");
-    expect((result!.result as any).capital).toBe("Lisbon");
+    expect(isRecord(result!.result) ? result!.result.capital : undefined).toBe("Lisbon");
   });
 
   test("supports id/name/result shape", () => {

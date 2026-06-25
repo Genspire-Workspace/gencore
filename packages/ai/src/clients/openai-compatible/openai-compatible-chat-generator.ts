@@ -62,8 +62,12 @@ export class OpenAICompatibleChatGenerator implements IChatGenerator {
       abortSignal: request.signal ?? request.settings?.signal,
       providerOptions: this.buildProviderOptions(request),
       tools: this.buildTools(request, modelId),
-      toolChoice: this.buildToolChoice(request),
-      stopWhen: this.buildStopWhen(request),
+      toolChoice: this.buildToolChoice(request) as Parameters<
+        typeof generateText
+      >[0]["toolChoice"],
+      stopWhen: this.buildStopWhen(request) as Parameters<
+        typeof generateText
+      >[0]["stopWhen"],
     });
 
     return {
@@ -77,12 +81,12 @@ export class OpenAICompatibleChatGenerator implements IChatGenerator {
       finishReason: this.mapFinishReason(result.finishReason),
       usage: this.mapUsage(result.usage),
       toolCalls: result.toolCalls?.length
-        ? (result.toolCalls.map((tc: any) =>
+        ? (result.toolCalls.map((tc: unknown) =>
             createToolCallFromUnknown(tc),
           ).filter(Boolean) as IAiToolCall[])
         : undefined,
       toolResults: result.toolResults?.length
-        ? (result.toolResults.map((tr: any) =>
+        ? (result.toolResults.map((tr: unknown) =>
             createToolResultFromUnknown(tr),
           ).filter(Boolean) as IAiToolResult[])
         : undefined,
@@ -112,8 +116,12 @@ export class OpenAICompatibleChatGenerator implements IChatGenerator {
       abortSignal: request.signal ?? request.settings?.signal,
       providerOptions: this.buildProviderOptions(request),
       tools: this.buildTools(request, modelId),
-      toolChoice: this.buildToolChoice(request),
-      stopWhen: this.buildStopWhen(request),
+      toolChoice: this.buildToolChoice(request) as Parameters<
+        typeof streamText
+      >[0]["toolChoice"],
+      stopWhen: this.buildStopWhen(request) as Parameters<
+        typeof streamText
+      >[0]["stopWhen"],
     });
 
     const responseId = crypto.randomUUID();
@@ -212,7 +220,7 @@ export class OpenAICompatibleChatGenerator implements IChatGenerator {
     const base: Record<string, unknown> = {
       description: toolDef.description,
       inputSchema: toolDef.parameters
-        ? jsonSchema(toolDef.parameters as any)
+        ? jsonSchema(toolDef.parameters as Record<string, unknown>)
         : jsonSchema({ type: "object" }),
     };
 
@@ -235,7 +243,7 @@ export class OpenAICompatibleChatGenerator implements IChatGenerator {
 
   private buildToolChoice(
     request: IChatGenerationRequest,
-  ): any | undefined {
+  ): unknown {
     const choice = request.settings?.toolChoice;
     if (!choice || choice === "auto") return undefined;
     return choice;
@@ -243,7 +251,7 @@ export class OpenAICompatibleChatGenerator implements IChatGenerator {
 
   private buildStopWhen(
     request: IChatGenerationRequest,
-  ): any | undefined {
+  ): unknown {
     const maxSteps = request.settings?.maxToolSteps;
     if (!request.tools || request.tools.length === 0) return undefined;
     if (maxSteps === undefined || maxSteps <= 1) return undefined;

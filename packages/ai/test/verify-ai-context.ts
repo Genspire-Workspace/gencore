@@ -6,7 +6,15 @@ import { AiService } from "../src/services/ai-service.js";
 import { OpenAICompatibleClient } from "../src/clients/openai-compatible/index.js";
 import type { IChatGenerationChunk } from "../src/chat/chat-generation-chunk.js";
 import type { IChatGenerationRequest } from "../src/chat/chat-generation-request.js";
-import type { IAiTool } from "../src/tools/ai-tool.js";
+import type { IAiToolCall } from "../src/tools/ai-tool-call.js";
+import { AiToolCallingManager } from "../src/tools/ai-tool-calling-manager.js";
+import { defineAiTool } from "../src/tools/define-ai-tool.js";
+import { AiToolRegistry } from "../src/tools/ai-tool-registry.js";
+import { AiToolResolver } from "../src/tools/ai-tool-resolver.js";
+import {
+  addNumbersTool,
+  getCapitalTool,
+} from "./tools/test-tools.js";
 
 function parseArgs(): { list?: boolean; scenarios?: string } {
   const args = process.argv.slice(2);
@@ -76,31 +84,6 @@ function log(message: string): void {
   writer.write(`${message}\n`);
 }
 
-const getCapitalTool: IAiTool = {
-  name: "get_capital",
-  description: "Gets the capital city for a country.",
-  parameters: {
-    type: "object",
-    properties: {
-      country: {
-        type: "string",
-        description: "Country name",
-      },
-    },
-    required: ["country"],
-  },
-  execute: async (args: unknown) => {
-    const input = args && typeof args === "object"
-      ? (args as { country?: string })
-      : {};
-
-    return {
-      country: input.country ?? "Portugal",
-      capital: "Lisbon",
-    };
-  },
-};
-
 function logRequest(request: IChatGenerationRequest): void {
   log("  Request:");
   log(`    model: ${request.model ?? "(default)"}`);
@@ -137,6 +120,42 @@ interface IScenario {
   service: AiService;
   chatModels: string[];
 }
+
+const resolvedCapitalOverrideTool = defineAiTool({
+  name: "get_capital",
+  description: "Gets the capital city for a country and returns an uppercase alias.",
+  resultConverter: (result: { country: string; capital: string }) => ({
+    ...result,
+    capitalAlias: result.capital.toUpperCase(),
+  }),
+  execute: async (args: unknown) => {
+    const input = args && typeof args === "object"
+      ? (args as { country?: string })
+      : {};
+    const country =
+      typeof input.country === "string" ? input.country : "Portugal";
+
+    return {
+      country,
+      capital: "Lisbon",
+    };
+  },
+});
+
+const returnDirectAnswerTool = defineAiTool({
+  name: "return_direct_answer",
+  description: "Returns a final answer directly for local verification.",
+  returnDirect: true,
+  execute: async (args: unknown) => {
+    const input = args && typeof args === "object"
+      ? (args as { answer?: string })
+      : {};
+
+    return {
+      answer: typeof input.answer === "string" ? input.answer : "OK",
+    };
+  },
+});
 
 const scenarios: IScenario[] = [];
 
@@ -230,6 +249,144 @@ function createToolConversationRequest(model: string): IChatGenerationRequest {
     });
 }
 
+function resolveSmokeTools(): ReturnType<AiToolResolver["resolve"]> {
+  const registry = new AiToolRegistry([
+    getCapitalTool,
+    addNumbersTool,
+  ]);
+
+  return new AiToolResolver().resolve({
+    toolNames: ["get_capital"],
+    tools: [
+      resolvedCapitalOverrideTool,
+      addNumbersTool,
+    ],
+    registry,
+  });
+}
+
+function createResolvedToolConversationRequest(
+  model: string,
+): IChatGenerationRequest {
+  return new AiContext()
+    .setSystemPrompt(
+      "You are a careful tool-using assistant. Use tools when useful and keep the final answer compact.",
+    )
+    .addUserMessage(
+      "Use add_numbers to add 123 and 456. Then use get_capital for Portugal. Final format: '<sum> | <capital>'.",
+    )
+    .addTools(resolveSmokeTools())
+    .mergeMetadata({
+      smokeTest: "ai-context-resolved-tool-conversation",
+      mode: "resolver",
+    })
+    .toChatGenerationRequest({
+      model,
+      settings: {
+        reasoningEffort: "none",
+        toolChoice: "auto",
+        maxToolSteps: 4,
+      },
+    });
+}
+
+function createComplexConversationRequest(model: string): IChatGenerationRequest {
+  return new AiContext()
+    .setSystemPrompt(
+      "You are a precise assistant. When tools are available, use them and keep the final answer to one short sentence.",
+    )
+    .addUserMessage("Remember that my trip starts in Portugal.")
+    .addAssistantMessage("Understood.")
+    .addUserMessage(
+      "Use add_numbers to total 7, 11, and 13 by first adding 7 and 11, then using the sum with 13 if needed. Also use get_capital for Portugal. Reply with the city and the total.",
+    )
+    .addTools(resolveSmokeTools())
+    .mergeMetadata({
+      smokeTest: "ai-context-complex-tool-conversation",
+      mode: "multi-step",
+    })
+    .toChatGenerationRequest({
+      model,
+      settings: {
+        reasoningEffort: "none",
+        toolChoice: "auto",
+        maxToolSteps: 5,
+      },
+    });
+}
+
+async function runLocalToolLayerVerification(): Promise<void> {
+  log("========== LOCAL TOOL LAYER VERIFICATION ==========");
+
+  const registry = new AiToolRegistry([
+    getCapitalTool,
+    addNumbersTool,
+  ]);
+  const resolver = new AiToolResolver();
+  const manager = new AiToolCallingManager();
+
+  const resolvedTools = resolver.resolve({
+    toolNames: ["get_capital"],
+    tools: [
+      addNumbersTool,
+      resolvedCapitalOverrideTool,
+    ],
+    registry,
+  });
+
+  log(`  Resolved tools: ${resolvedTools.map((tool) => tool.name).join(", ")}`);
+  log(
+    `  Overridden get_capital description: ${resolvedTools.find((tool) => tool.name === "get_capital")?.description ?? "(missing)"}`,
+  );
+
+  const toolRun = await manager.run({
+    toolCalls: [
+      {
+        id: "call-1",
+        name: "add_numbers",
+        arguments: { a: 20, b: 22 },
+      },
+      {
+        id: "call-2",
+        name: "get_capital",
+        arguments: { country: "Portugal" },
+      },
+    ] satisfies IAiToolCall[],
+    tools: resolvedTools,
+    provider: "local",
+    model: "local-tool-check",
+    metadata: { smokeTest: "local-tool-layer" },
+  });
+
+  log(`  Tool results: ${JSON.stringify(toolRun.toolResults)}`);
+
+  const returnDirectRun = await manager.run({
+    toolCalls: [
+      {
+        id: "call-3",
+        name: "return_direct_answer",
+        arguments: { answer: "DIRECT_OK" },
+      },
+      {
+        id: "call-4",
+        name: "add_numbers",
+        arguments: { a: 1, b: 2 },
+      },
+    ] satisfies IAiToolCall[],
+    tools: [
+      returnDirectAnswerTool,
+      addNumbersTool,
+    ],
+    provider: "local",
+    model: "local-tool-check",
+    metadata: { smokeTest: "local-return-direct" },
+  });
+
+  log(`  Return-direct results: ${JSON.stringify(returnDirectRun.toolResults)}`);
+  log(`  Return-direct value: ${JSON.stringify(returnDirectRun.returnDirectResult)}`);
+  log("");
+}
+
 async function runConversationSmokeTest(
   scenario: IScenario,
   model: string,
@@ -278,6 +435,8 @@ if (SCENARIO_FILTER) {
 }
 log("");
 
+await runLocalToolLayerVerification();
+
 for (const scenario of scenarios) {
   if (SCENARIO_FILTER && !SCENARIO_FILTER.has(scenario.name.toLowerCase())) {
     log(`SKIP [${scenario.name}]: use --scenarios ${scenario.name.toLowerCase()} to include.`);
@@ -302,6 +461,20 @@ for (const scenario of scenarios) {
       model,
       "TOOL CONVERSATION",
       createToolConversationRequest(model),
+    );
+
+    await runConversationSmokeTest(
+      scenario,
+      model,
+      "RESOLVED MULTI-TOOL CONVERSATION",
+      createResolvedToolConversationRequest(model),
+    );
+
+    await runConversationSmokeTest(
+      scenario,
+      model,
+      "COMPLEX MULTI-STEP TOOL CONVERSATION",
+      createComplexConversationRequest(model),
     );
   }
 }

@@ -10,7 +10,7 @@ import type { IAiTokenUsage } from "../../common/ai-token-usage.js";
 import type { IOllamaClientOptions } from "./ollama-client-options.js";
 import type { IAiToolCall } from "../../tools/ai-tool-call.js";
 import type { IAiToolResult } from "../../tools/ai-tool-result.js";
-import { findAiTool } from "../../tools/ai-tool-utils.js";
+import { AiToolCallingManager } from "../../tools/ai-tool-calling-manager.js";
 import { AiError } from "../../errors/ai-error.js";
 import { Ollama, type Message, type ChatResponse } from "ollama";
 
@@ -22,6 +22,7 @@ type OllamaChatRequestWithTools = Parameters<Ollama["chat"]>[0] & {
 export class OllamaChatGenerator implements IChatGenerator {
   private readonly options: IOllamaClientOptions;
   private readonly client: Ollama;
+  private readonly toolCallingManager = new AiToolCallingManager();
 
   constructor(options: IOllamaClientOptions) {
     this.options = options;
@@ -46,7 +47,7 @@ export class OllamaChatGenerator implements IChatGenerator {
 
     const requestBase: Partial<OllamaChatRequestWithTools> = {
       model: modelId,
-      tools: tools as any,
+      tools: tools as OllamaChatRequestWithTools["tools"],
       ...this.buildChatOptions(request),
     };
 
@@ -67,9 +68,20 @@ export class OllamaChatGenerator implements IChatGenerator {
 
       const results: IAiToolResult[] = [];
       for (const toolCall of toolCalls) {
-        results.push(
-          await this.executeToolCall(toolCall, request, modelId),
-        );
+        const toolRun = await this.toolCallingManager.run({
+          toolCalls: [toolCall],
+          tools: request.tools ?? [],
+          provider: this.options.id,
+          model: modelId,
+          userId: request.userId,
+          metadata: request.metadata,
+          signal: request.signal ?? request.settings?.signal,
+        });
+
+        const result = toolRun.toolResults[0];
+        if (result) {
+          results.push(result);
+        }
       }
 
       allToolResults.push(...results);
@@ -137,7 +149,7 @@ export class OllamaChatGenerator implements IChatGenerator {
     const responseId = crypto.randomUUID();
     const requestBase: Partial<OllamaChatRequestWithTools> = {
       model: modelId,
-      tools: tools as any,
+      tools: tools as OllamaChatRequestWithTools["tools"],
       ...this.buildChatOptions(request),
     };
 
@@ -181,11 +193,20 @@ export class OllamaChatGenerator implements IChatGenerator {
           raw: toolCall.raw,
         };
 
-        const result = await this.executeToolCall(
-          toolCall,
-          request,
-          modelId,
-        );
+        const toolRun = await this.toolCallingManager.run({
+          toolCalls: [toolCall],
+          tools: request.tools ?? [],
+          provider: this.options.id,
+          model: modelId,
+          userId: request.userId,
+          metadata: request.metadata,
+          signal: request.signal ?? request.settings?.signal,
+        });
+        const result = toolRun.toolResults[0];
+
+        if (!result) {
+          continue;
+        }
 
         yield {
           id: responseId,
@@ -281,49 +302,6 @@ export class OllamaChatGenerator implements IChatGenerator {
       return JSON.parse(value);
     } catch {
       return value;
-    }
-  }
-
-  private async executeToolCall(
-    toolCall: IAiToolCall,
-    request: IChatGenerationRequest,
-    modelId: string,
-  ): Promise<IAiToolResult> {
-    const tool = findAiTool(request.tools, toolCall.name);
-
-    if (!tool?.execute) {
-      return {
-        toolCallId: toolCall.id,
-        name: toolCall.name,
-        error: `Tool '${toolCall.name}' is not executable.`,
-        raw: toolCall.raw,
-      };
-    }
-
-    try {
-      const result = await tool.execute(toolCall.arguments, {
-        toolCallId: toolCall.id,
-        toolName: toolCall.name,
-        provider: this.options.id,
-        model: modelId,
-        userId: request.userId,
-        metadata: request.metadata,
-        signal: request.signal ?? request.settings?.signal,
-      });
-
-      return {
-        toolCallId: toolCall.id,
-        name: toolCall.name,
-        result,
-        raw: toolCall.raw,
-      };
-    } catch (error) {
-      return {
-        toolCallId: toolCall.id,
-        name: toolCall.name,
-        error: error instanceof Error ? error.message : String(error),
-        raw: toolCall.raw,
-      };
     }
   }
 

@@ -2,18 +2,16 @@
 
 import { mkdirSync } from "node:fs";
 import path from "node:path";
+import { AiClientRegistry } from "../src/clients/ai-client-registry.js";
+import { AiService } from "../src/services/ai-service.js";
+import { OpenAICompatibleClient } from "../src/clients/openai-compatible/index.js";
+import type { IChatGenerationChunk } from "../src/chat/chat-generation-chunk.js";
+import type { IChatGenerationRequest } from "../src/chat/chat-generation-request.js";
+import type { IEmbeddingGenerationRequest } from "../src/embeddings/embedding-generation-request.js";
 import {
-  AiClientRegistry,
-  AiService,
-  OllamaClient,
-  OpenAICompatibleClient,
-} from "@genspire/ai";
-import type {
-  IChatGenerationChunk,
-  IChatGenerationRequest,
-  IEmbeddingGenerationRequest,
-  IAiTool,
-} from "@genspire/ai";
+  addNumbersTool,
+  getCapitalTool,
+} from "./tools/test-tools.js";
 
 function parseArgs(): { list?: boolean; scenarios?: string } {
   const args = process.argv.slice(2);
@@ -86,54 +84,6 @@ function log(message: string): void {
   writer.write(`${message}\n`);
 }
 
-// --- Tool definitions ---
-const getCapitalTool: IAiTool = {
-  name: "get_capital",
-  description: "Gets the capital city for a country.",
-  parameters: {
-    type: "object",
-    properties: {
-      country: {
-        type: "string",
-        description: "Country name",
-      },
-    },
-    required: ["country"],
-  },
-  execute: async (args: unknown) => {
-    const input = args && typeof args === "object"
-      ? (args as { country?: string })
-      : {};
-    return {
-      country: input.country ?? "Portugal",
-      capital: "Lisbon",
-    };
-  },
-};
-
-const addNumbersTool: IAiTool = {
-  name: "add_numbers",
-  description: "Adds two numbers.",
-  parameters: {
-    type: "object",
-    properties: {
-      a: { type: "number" },
-      b: { type: "number" },
-    },
-    required: ["a", "b"],
-  },
-  execute: async (args: unknown) => {
-    const input = args && typeof args === "object"
-      ? (args as { a?: number; b?: number })
-      : {};
-    return {
-      a: input.a ?? 0,
-      b: input.b ?? 0,
-      sum: (input.a ?? 0) + (input.b ?? 0),
-    };
-  },
-};
-
 function logRequest(request: IChatGenerationRequest | IEmbeddingGenerationRequest): void {
   log(`  Request:`);
   log(`    model: ${request.model ?? "(default)"}`);
@@ -181,26 +131,33 @@ const scenarios: Scenario[] = [];
 
 // --- Ollama scenario ---
 {
-  const ollamaClient = new OllamaClient({
-    id: "ollama",
-    name: "Ollama",
-    host: process.env.OLLAMA_HOST ?? "http://127.0.0.1:11434",
-  });
+  try {
+    const { OllamaClient } = await import("../src/clients/ollama/index.js");
+    const ollamaClient = new OllamaClient({
+      id: "ollama",
+      name: "Ollama",
+      host: process.env.OLLAMA_HOST ?? "http://127.0.0.1:11434",
+    });
 
-  const ollamaRegistry = new AiClientRegistry();
-  ollamaRegistry.register(ollamaClient);
+    const ollamaRegistry = new AiClientRegistry();
+    ollamaRegistry.register(ollamaClient);
 
-  scenarios.push({
-    name: "OLLAMA",
-    service: new AiService(ollamaRegistry, {
-      chatProvider: "ollama",
-      embeddingProvider: "ollama",
-      embeddingModel: process.env.OLLAMA_EMBED_MODEL ?? "embeddinggemma:latest",
-    }),
-    chatModels: [process.env.OLLAMA_CHAT_MODEL ?? "gemma4:12b"],
-    embedModel: process.env.OLLAMA_EMBED_MODEL ?? "embeddinggemma:latest",
-    supportsEmbedding: true,
-  });
+    scenarios.push({
+      name: "OLLAMA",
+      service: new AiService(ollamaRegistry, {
+        chatProvider: "ollama",
+        embeddingProvider: "ollama",
+        embeddingModel: process.env.OLLAMA_EMBED_MODEL ?? "embeddinggemma:latest",
+      }),
+      chatModels: [process.env.OLLAMA_CHAT_MODEL ?? "gemma4:12b"],
+      embedModel: process.env.OLLAMA_EMBED_MODEL ?? "embeddinggemma:latest",
+      supportsEmbedding: true,
+    });
+  } catch (error) {
+    log(
+      `SKIP Ollama: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
 }
 
 // --- DeepSeek OpenAI-compatible scenario ---
