@@ -1,6 +1,6 @@
 // file: packages\ai\src\providers\ollama\ollama-provider.ts
 
-import type { IAiProvider } from "../ai-provider.js";
+import type { IAiRuntimeProvider } from "../runtime/ai-runtime-provider.js";
 import { OpenAiCompatibleClient } from "../openai-compatible/openai-compatible-client.js";
 import type { IOpenAiCompatibleProviderOptions } from "../openai-compatible/openai-compatible-types.js";
 import type { IChatGenerationRequest } from "../../chat/chat-generation-request.js";
@@ -46,7 +46,7 @@ function manageThinkToken(messages: IChatMessage[], thinkingEnabled: boolean): I
 
 export interface IOllamaProviderOptions extends IOpenAiCompatibleProviderOptions {}
 
-export function ollamaProvider(options: IOllamaProviderOptions): IAiProvider {
+export function ollamaProvider(options: IOllamaProviderOptions): IAiRuntimeProvider {
   const client = new OpenAiCompatibleClient(options);
 
   return {

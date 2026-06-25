@@ -1,12 +1,12 @@
 // file: packages\ai\src\providers\openai-compatible\openai-compatible-provider.ts
 
-import type { IAiProvider } from "../ai-provider.js";
+import type { IAiRuntimeProvider } from "../runtime/ai-runtime-provider.js";
 import { OpenAiCompatibleClient } from "./openai-compatible-client.js";
 import type { IOpenAiCompatibleProviderOptions } from "./openai-compatible-types.js";
 
 export function openAiCompatibleProvider(
   options: IOpenAiCompatibleProviderOptions,
-): IAiProvider {
+): IAiRuntimeProvider {
   const client = new OpenAiCompatibleClient(options);
 
   return {

@@ -2,7 +2,7 @@
 
 import { describe, expect, test, beforeEach, afterEach, mock } from "bun:test";
 import { anthropicCompatibleProvider } from "./anthropic-compatible-provider.js";
-import type { IAiProvider } from "../ai-provider.js";
+import type { IAiRuntimeProvider } from "../runtime/ai-runtime-provider.js";
 
 type FetchMock = ReturnType<typeof mock>;
 
@@ -21,7 +21,7 @@ function mockFetchJson(body: unknown, status = 200): FetchMock {
 }
 
 describe("Anthropic-compatible chat", () => {
-  let provider: IAiProvider;
+  let provider: IAiRuntimeProvider;
   let fetchMock: FetchMock;
 
   beforeEach(() => {
@@ -178,7 +178,7 @@ describe("Anthropic-compatible chat", () => {
 });
 
 describe("Anthropic-compatible streaming", () => {
-  let provider: IAiProvider;
+  let provider: IAiRuntimeProvider;
 
   function createStreamResponse(chunks: string[]): Response {
     const encoder = new TextEncoder();
