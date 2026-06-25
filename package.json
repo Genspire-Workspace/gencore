@@ -23,7 +23,8 @@
     "db:playground:executed": "bun run apps/playground-api/src/database/playground-migrations.ts executed",
     "clean": "rm -rf node_modules bun.lock packages/*/dist apps/*/dist",
     "sync:file-paths": "bun scripts/sync-file-path-relative.mjs",
-    "dev:ai:verify": "bun run packages/ai/test/verify-generation.ts"
+    "dev:ai:verify": "bun run packages/ai/test/verify-generation.ts",
+    "dev:api:verify": "bun run packages/ai/test/verify-api.ts"
   },
   "devDependencies": {
     "@types/bun": "latest",

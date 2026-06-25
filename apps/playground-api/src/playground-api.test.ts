@@ -10,7 +10,7 @@ import { createPlaygroundApp } from "./playground-app.js";
 
 async function registerAndGetToken(
   server: Server,
-  email = "test@example.com",
+  email = `test-${crypto.randomUUID()}@example.com`,
   password = "password123",
 ): Promise<{ accessToken: string; userId: string }> {
   const res = await server.handle(
@@ -89,6 +89,50 @@ describe("playground api", () => {
       const response = await app.get(Server).handle(new Request("http://localhost/health"));
       expect(response.status).toBe(200);
       expect(await response.json()).toEqual({ ok: true });
+    } finally {
+      await app.stop();
+    }
+  });
+
+  test("ai providers route and swagger routes are registered", async () => {
+    const app = await createPlaygroundApp({
+      port: 0,
+      env: {
+        ...process.env,
+        GENCORE_PLAYGROUND_LIBSQL_DB_PATH: dbPath,
+      },
+    });
+
+    await app.start();
+
+    try {
+      const server = app.get(Server);
+      const providersResponse = await server.handle(
+        new Request("http://localhost/ai/providers"),
+      );
+
+      expect(providersResponse.status).toBe(200);
+      const providersBody = await providersResponse.json() as {
+        providers: Array<{ id: string; configured: boolean }>;
+        defaults: Record<string, unknown>;
+      };
+      expect(providersBody.providers.some((provider) => provider.id === "ollama")).toBe(true);
+      expect(providersBody.providers.some((provider) => provider.id === "deepseek")).toBe(true);
+      expect(providersBody.defaults.chatProvider).toBeDefined();
+      expect(providersBody.defaults.embeddingProvider).toBeDefined();
+
+      const swaggerResponse = await server.handle(
+        new Request("http://localhost/swagger.json"),
+      );
+      expect(swaggerResponse.status).toBe(200);
+      const swaggerDocument = await swaggerResponse.json() as {
+        paths: Record<string, unknown>;
+      };
+
+      expect(swaggerDocument.paths["/ai/providers"]).toBeDefined();
+      expect(swaggerDocument.paths["/ai/chat"]).toBeDefined();
+      expect(swaggerDocument.paths["/ai/chat/stream"]).toBeDefined();
+      expect(swaggerDocument.paths["/ai/embeddings"]).toBeDefined();
     } finally {
       await app.stop();
     }
