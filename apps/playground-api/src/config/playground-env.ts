@@ -1,3 +1,5 @@
+// file: apps\playground-api\src\config\playground-env.ts
+
 export interface IPlaygroundSeedRoleDefinition {
   name: string;
   description?: string | null;

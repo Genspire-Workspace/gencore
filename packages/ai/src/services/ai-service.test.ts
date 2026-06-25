@@ -1,3 +1,5 @@
+// file: packages\ai\src\services\ai-service.test.ts
+
 import { describe, expect, test } from "bun:test";
 import { AiClientRegistry } from "../clients/ai-client-registry.js";
 import { AiService } from "./ai-service.js";

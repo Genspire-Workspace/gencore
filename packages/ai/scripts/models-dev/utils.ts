@@ -1,3 +1,5 @@
+// file: packages\ai\scripts\models-dev\utils.ts
+
 export async function fetchJson(url: string): Promise<unknown> {
   const response = await fetch(url);
 

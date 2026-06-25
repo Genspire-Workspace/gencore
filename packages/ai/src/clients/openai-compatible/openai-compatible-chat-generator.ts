@@ -20,6 +20,7 @@ import {
   createToolCallFromUnknown,
   createToolResultFromUnknown,
 } from "../../tools/ai-tool-utils.js";
+import { applyModelTransform } from "../../model-transforms/index.js";
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import {
   generateText,
@@ -277,9 +278,14 @@ export class OpenAICompatibleChatGenerator implements IChatGenerator {
   ): Record<string, Record<string, JSONValue>> | undefined {
     const providerOpts: Record<string, JSONValue> = {};
 
-    if (request.settings?.reasoningEffort && request.settings.reasoningEffort !== "none") {
+    const modelId = request.model ?? this.options.defaultModel;
+    const transform = applyModelTransform(modelId, request);
+    if (transform?.providerOptions) {
+      Object.assign(providerOpts, transform.providerOptions as Record<string, JSONValue>);
+    } else if (request.settings?.reasoningEffort) {
       providerOpts.reasoningEffort = request.settings.reasoningEffort;
     }
+
     if (request.userId) {
       providerOpts.user = request.userId;
     }

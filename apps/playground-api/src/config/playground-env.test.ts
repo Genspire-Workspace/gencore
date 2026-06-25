@@ -1,3 +1,5 @@
+// file: apps\playground-api\src\config\playground-env.test.ts
+
 import { describe, expect, test } from "bun:test";
 import { readPlaygroundEnv, type IPlaygroundEnv } from "./playground-env.js";
 

@@ -1,3 +1,5 @@
+// file: packages\ai\src\catalogue\ai-catalogue.test.ts
+
 import { describe, expect, test } from "bun:test";
 import { AiCatalogue } from "./ai-catalogue.js";
 

@@ -1,3 +1,5 @@
+// file: packages\ai\scripts\models-dev\normalize-models-dev.ts
+
 import type { AiClientKind } from "../../src/clients/ai-client-kind.js";
 import type { IAiLab } from "../../src/common/ai-lab.js";
 import type { AiModelModality, IAiModel, IAiModelBenchmark, IAiModelCost, IAiModelInterleaved, IAiModelLimit, IAiModelLink, IAiModelModalities } from "../../src/common/ai-model.js";

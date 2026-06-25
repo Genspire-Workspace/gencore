@@ -1,3 +1,5 @@
+// file: packages\ai\src\clients\openai-compatible\openai-compatible-chat-generator.test.ts
+
 import { describe, expect, test } from "bun:test";
 import type {
   IAiTokenUsage,

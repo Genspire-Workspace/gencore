@@ -1,3 +1,5 @@
+// file: packages\ai\test\verify-generation.ts
+
 import { mkdirSync } from "node:fs";
 import path from "node:path";
 import {

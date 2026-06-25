@@ -1,3 +1,5 @@
+// file: packages\ai\scripts\models-dev\write-generated.ts
+
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { IAiLab } from "../../src/common/ai-lab.js";

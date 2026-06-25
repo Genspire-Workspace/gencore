@@ -1,3 +1,5 @@
+// file: packages\storage\src\files\file.dto.ts
+
 import { ApiDto, ApiField } from "@genspire/server";
 
 @ApiDto({

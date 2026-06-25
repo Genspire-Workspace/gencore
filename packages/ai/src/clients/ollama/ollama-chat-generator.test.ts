@@ -1,3 +1,5 @@
+// file: packages\ai\src\clients\ollama\ollama-chat-generator.test.ts
+
 import { describe, expect, test } from "bun:test";
 import { OllamaChatGenerator } from "./ollama-chat-generator.js";
 import type { ChatResponse, Message } from "ollama";

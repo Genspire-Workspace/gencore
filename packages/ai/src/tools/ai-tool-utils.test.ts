@@ -1,3 +1,5 @@
+// file: packages\ai\src\tools\ai-tool-utils.test.ts
+
 import { describe, expect, test } from "bun:test";
 import {
   findAiTool,

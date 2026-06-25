@@ -1,3 +1,5 @@
+# file: docker-compose.example.yml
+
 # GenCore Playground — Docker Compose
 # Start the infrastructure services for Docker-based playground development.
 #

@@ -1,3 +1,5 @@
+// file: packages\storage\src\files\file.service.ts
+
 import { GenError, Scoped } from "@genspire/core";
 import { StorageService } from "../services/storage-service.js";
 import { StorageDbContext } from "./storage-db-context.js";

@@ -1,3 +1,5 @@
+// file: packages\ai\src\common\ai-lab.ts
+
 export interface IAiLab {
   id: string;
   name: string;

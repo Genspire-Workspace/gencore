@@ -17,6 +17,8 @@ export type { IAiModelResponse } from "./common/ai-model-response.js";
 export type { IAiModelChunk, AiModelChunkType } from "./common/ai-model-chunk.js";
 export type { AiStopReason } from "./common/ai-stop-reason.js";
 export type { IAiTokenUsage, IAiInputTokenUsageDetails, IAiOutputTokenUsageDetails } from "./common/ai-token-usage.js";
+export type { IModelTransformResult, ModelTransform } from "./common/ai-model-transforms.js";
+export { applyModelTransform } from "./model-transforms/index.js";
 export type {
   AiApiKeySource,
   IAiApiKey,

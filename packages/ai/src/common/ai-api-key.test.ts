@@ -1,3 +1,5 @@
+// file: packages\ai\src\common\ai-api-key.test.ts
+
 import { describe, expect, test } from "bun:test";
 import { resolveAiApiKey, resolveAiApiKeyValue } from "./ai-api-key.js";
 

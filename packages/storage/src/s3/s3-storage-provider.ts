@@ -1,3 +1,5 @@
+// file: packages\storage\src\s3\s3-storage-provider.ts
+
 import {
   S3Client,
   PutObjectCommand,

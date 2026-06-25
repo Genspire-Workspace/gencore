@@ -1,3 +1,5 @@
+// file: packages\ai\src\catalogue\ai-catalogue.ts
+
 import type { IAiLab } from "../common/ai-lab.js";
 import type { IAiModel } from "../common/ai-model.js";
 import type { IAiProvider } from "../common/ai-provider.js";

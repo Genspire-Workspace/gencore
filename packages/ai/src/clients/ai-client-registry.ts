@@ -1,3 +1,5 @@
+// file: packages\ai\src\clients\ai-client-registry.ts
+
 import { AiError } from "../errors/ai-error.js";
 import type { IAiClient } from "./ai-client.js";
 

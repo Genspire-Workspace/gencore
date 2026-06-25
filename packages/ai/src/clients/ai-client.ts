@@ -1,3 +1,5 @@
+// file: packages\ai\src\clients\ai-client.ts
+
 import type { IChatGenerator } from "../chat/chat-generator.js";
 import type { IEmbeddingGenerator } from "../embeddings/embedding-generator.js";
 import type { AiClientKind } from "./ai-client-kind.js";

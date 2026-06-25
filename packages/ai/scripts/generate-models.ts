@@ -1,3 +1,5 @@
+// file: packages\ai\scripts\generate-models.ts
+
 import type { AiClientKind } from "../src/clients/ai-client-kind.js";
 import { fetchModelsDev } from "./models-dev/fetch-models-dev.js";
 import { normalizeModelsDev } from "./models-dev/normalize-models-dev.js";

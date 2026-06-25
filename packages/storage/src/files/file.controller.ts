@@ -1,3 +1,5 @@
+// file: packages\storage\src\files\file.controller.ts
+
 import { Authorize, Controller, Delete, Get, Post, defineProblemDetailsType, json, problem } from "@genspire/server";
 import type { RequestContext } from "@genspire/server";
 import { requireCurrentUser } from "@genspire/auth";

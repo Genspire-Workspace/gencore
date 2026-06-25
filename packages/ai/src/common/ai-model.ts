@@ -1,3 +1,5 @@
+// file: packages\ai\src\common\ai-model.ts
+
 export type AiModelModality =
   | "text"
   | "image"

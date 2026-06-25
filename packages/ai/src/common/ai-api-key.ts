@@ -1,3 +1,5 @@
+// file: packages\ai\src\common\ai-api-key.ts
+
 export type AiApiKeySource =
   | "direct"
   | "environment"

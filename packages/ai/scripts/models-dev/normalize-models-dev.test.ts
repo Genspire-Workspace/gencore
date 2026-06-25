@@ -1,3 +1,5 @@
+// file: packages\ai\scripts\models-dev\normalize-models-dev.test.ts
+
 import { describe, expect, test } from "bun:test";
 import { normalizeModelRecord, normalizeModelsDev, normalizeProviderRecord } from "./normalize-models-dev.js";
 

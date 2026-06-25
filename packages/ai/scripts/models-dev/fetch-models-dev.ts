@@ -1,3 +1,5 @@
+// file: packages\ai\scripts\models-dev\fetch-models-dev.ts
+
 import { fetchJson } from "./utils.js";
 
 export interface IModelsDevFetchResult {

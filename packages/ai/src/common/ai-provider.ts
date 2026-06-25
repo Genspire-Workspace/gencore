@@ -1,3 +1,5 @@
+// file: packages\ai\src\common\ai-provider.ts
+
 import type { AiClientKind } from "../clients/ai-client-kind.js";
 
 export type AiProviderKind =

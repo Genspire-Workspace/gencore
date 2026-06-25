@@ -1,3 +1,5 @@
+// file: packages\storage\src\s3\s3-storage-provider.test.ts
+
 import { describe, expect, test } from "bun:test";
 import { S3StorageProvider, s3StorageProvider } from "./s3-storage-provider.js";
 import type { IS3StorageProviderOptions } from "../contracts/storage-options.js";
