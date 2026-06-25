@@ -30,5 +30,6 @@
     "reflect-metadata": "^0.2.2",
     "tinyglobby": "^0.2.13",
     "typescript": "latest"
-  }
+  },
+  "dependencies": {}
 }

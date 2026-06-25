@@ -45,6 +45,10 @@ export type { IEmbeddingGenerator } from "./embeddings/embedding-generator.js";
 export type { AiClientKind } from "./clients/ai-client-kind.js";
 export type { IAiClient } from "./clients/ai-client.js";
 export { AiClientRegistry } from "./clients/ai-client-registry.js";
+export type { IOpenAICompatibleClientOptions } from "./clients/openai-compatible/index.js";
+export { OpenAICompatibleClient } from "./clients/openai-compatible/index.js";
+export type { IOllamaClientOptions } from "./clients/ollama/index.js";
+export { OllamaClient } from "./clients/ollama/index.js";
 
 export type { AiProviderKind, IAiProvider } from "./common/ai-provider.js";
 export type {
