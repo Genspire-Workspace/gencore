@@ -1,8 +1,8 @@
-// file: packages\ai\src\providers\openai-compatible\openai-compatible-provider.test.ts
+// file: packages\ai\src\clients\openai-compatible\openai-compatible-provider.test.ts
 
 import { describe, expect, test, beforeEach, afterEach, mock } from "bun:test";
 import { openAiCompatibleProvider } from "./openai-compatible-provider.js";
-import type { IAiProvider } from "../ai-provider.js";
+import type { IAiClient } from "../ai-client.js";
 
 type FetchMock = ReturnType<typeof mock>;
 
@@ -21,7 +21,7 @@ function mockFetchJson(body: unknown, status = 200): FetchMock {
 }
 
 describe("OpenAI-compatible chat", () => {
-  let provider: IAiProvider;
+  let provider: IAiClient;
   let fetchMock: FetchMock;
 
   beforeEach(() => {
@@ -83,6 +83,61 @@ describe("OpenAI-compatible chat", () => {
     expect(headers["Content-Type"]).toBe("application/json");
   });
 
+  test("allows request apiKey to override the provider apiKey", async () => {
+    fetchMock = mockFetchJson({
+      id: "chatcmpl-123",
+      model: "test-model",
+      choices: [{ message: { role: "assistant", content: "yes" } }],
+    });
+
+    await provider.chat!.generateChatCompletion({
+      apiKey: "sk-request",
+      messages: [{ role: "user", content: "hi" }],
+    });
+
+    const headers = fetchMock.mock.calls[0]![1]!.headers as Record<string, string>;
+    expect(headers["Authorization"]).toBe("Bearer sk-request");
+  });
+
+  test("prefers a model-scoped api key when configured", async () => {
+    fetchMock = mockFetchJson({
+      id: "chatcmpl-123",
+      model: "test-model",
+      choices: [{ message: { role: "assistant", content: "yes" } }],
+    });
+
+    provider = openAiCompatibleProvider({
+      id: "test-provider",
+      displayName: "Test Provider",
+      baseUrl: "https://api.example.com/v1",
+      apiKeys: [
+        {
+          id: "provider-default",
+          name: "Provider Default",
+          value: "sk-provider",
+          provider: "test-provider",
+        },
+        {
+          id: "model-user-key",
+          name: "Model User Key",
+          value: "sk-model-user",
+          provider: "test-provider",
+          model: "test-model",
+          userId: "user-1",
+        },
+      ],
+      defaultChatModel: "test-model",
+    });
+
+    await provider.chat!.generateChatCompletion({
+      userId: "user-1",
+      messages: [{ role: "user", content: "hi" }],
+    });
+
+    const headers = fetchMock.mock.calls[0]![1]!.headers as Record<string, string>;
+    expect(headers["Authorization"]).toBe("Bearer sk-model-user");
+  });
+
   test("maps response message correctly", async () => {
     fetchMock = mockFetchJson({
       id: "chatcmpl-123",
@@ -141,7 +196,7 @@ describe("OpenAI-compatible chat", () => {
 });
 
 describe("OpenAI-compatible streaming", () => {
-  let provider: IAiProvider;
+  let provider: IAiClient;
 
   function createStreamResponse(chunks: string[]): Response {
     const encoder = new TextEncoder();
@@ -292,7 +347,7 @@ describe("OpenAI-compatible streaming", () => {
 });
 
 describe("OpenAI-compatible embeddings", () => {
-  let provider: IAiProvider;
+  let provider: IAiClient;
 
   beforeEach(() => {
     provider = openAiCompatibleProvider({
@@ -448,7 +503,7 @@ describe("OpenAI-compatible embeddings", () => {
 });
 
 describe("OpenAI-compatible content mapping", () => {
-  let provider: IAiProvider;
+  let provider: IAiClient;
 
   beforeEach(() => {
     provider = openAiCompatibleProvider({
@@ -601,7 +656,7 @@ describe("OpenAI-compatible content mapping", () => {
 });
 
 describe("Common/chat compatibility", () => {
-  let provider: IAiProvider;
+  let provider: IAiClient;
 
   beforeEach(() => {
     provider = openAiCompatibleProvider({

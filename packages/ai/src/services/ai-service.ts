@@ -6,12 +6,12 @@ import type { IChatGenerationChunk } from "../chat/chat-generation-chunk.js";
 import type { IEmbeddingGenerationRequest } from "../embeddings/embedding-generation-request.js";
 import type { IEmbeddingGenerationResponse } from "../embeddings/embedding-generation-response.js";
 import type { IAiDefaults } from "../extension/ai-extension.js";
-import { AiProviderRegistry } from "../providers/ai-provider-registry.js";
+import { AiClientRegistry } from "../clients/ai-client-registry.js";
 import { AiError } from "../errors/ai-error.js";
 
 export class AiService {
   constructor(
-    private readonly registry: AiProviderRegistry,
+    private readonly registry: AiClientRegistry,
     private readonly defaults?: IAiDefaults,
   ) {}
 
@@ -23,9 +23,9 @@ export class AiService {
       throw new AiError("No chat provider was provided and no default chat provider is configured.");
     }
 
-    const provider = this.registry.get(providerId);
-    if (!provider.supportsChat() || !provider.chat) {
-      throw new AiError(`AI provider '${providerId}' does not support chat.`);
+    const client = this.registry.get(providerId);
+    if (!client.supportsChat() || !client.chat) {
+      throw new AiError(`AI client '${providerId}' does not support chat.`);
     }
 
     const model = request.model ?? this.defaults?.chatModel;
@@ -33,7 +33,7 @@ export class AiService {
       throw new AiError("No chat model was provided and no default chat model is configured.");
     }
 
-    return provider.chat.generateChatCompletion({
+    return client.chat.generateChatCompletion({
       ...request,
       provider: providerId,
       model,
@@ -48,9 +48,9 @@ export class AiService {
       throw new AiError("No chat provider was provided and no default chat provider is configured.");
     }
 
-    const provider = this.registry.get(providerId);
-    if (!provider.supportsChat() || !provider.chat) {
-      throw new AiError(`AI provider '${providerId}' does not support chat.`);
+    const client = this.registry.get(providerId);
+    if (!client.supportsChat() || !client.chat) {
+      throw new AiError(`AI client '${providerId}' does not support chat.`);
     }
 
     const model = request.model ?? this.defaults?.chatModel;
@@ -58,7 +58,7 @@ export class AiService {
       throw new AiError("No chat model was provided and no default chat model is configured.");
     }
 
-    return provider.chat.streamChatCompletion({
+    return client.chat.streamChatCompletion({
       ...request,
       provider: providerId,
       model,
@@ -73,9 +73,9 @@ export class AiService {
       throw new AiError("No embedding provider was provided and no default embedding provider is configured.");
     }
 
-    const provider = this.registry.get(providerId);
-    if (!provider.supportsEmbeddings() || !provider.embeddings) {
-      throw new AiError(`AI provider '${providerId}' does not support embeddings.`);
+    const client = this.registry.get(providerId);
+    if (!client.supportsEmbeddings() || !client.embeddings) {
+      throw new AiError(`AI client '${providerId}' does not support embeddings.`);
     }
 
     const model = request.model ?? this.defaults?.embeddingModel;
@@ -83,7 +83,7 @@ export class AiService {
       throw new AiError("No embedding model was provided and no default embedding model is configured.");
     }
 
-    return provider.embeddings.generateEmbedding({
+    return client.embeddings.generateEmbedding({
       ...request,
       provider: providerId,
       model,

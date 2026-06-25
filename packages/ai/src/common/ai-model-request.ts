@@ -3,6 +3,9 @@
 export interface IAiModelRequest<TInput = unknown, TSettings = unknown> {
   provider?: string;
   model?: string;
+  apiKey?: string;
+  apiKeyId?: string;
+  userId?: string;
   input?: TInput;
   settings?: TSettings;
   signal?: AbortSignal;

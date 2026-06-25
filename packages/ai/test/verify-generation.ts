@@ -6,7 +6,7 @@ import {
   openAiCompatibleProvider,
   anthropicCompatibleProvider,
   ollamaProvider,
-  type IAiProvider,
+  type IAiClient,
   type IChatGenerator,
 } from "@genspire/ai";
 
@@ -18,7 +18,7 @@ interface Scenario {
   apiKey?: string;
   chat: boolean;
   embeddings: boolean;
-  provider: IAiProvider;
+  provider: IAiClient;
 }
 
 const GRAY = "\u001b[90m";

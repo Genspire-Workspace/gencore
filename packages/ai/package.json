@@ -6,6 +6,9 @@
   "exports": {
     ".": "./src/index.ts"
   },
+  "scripts": {
+    "generate-models": "bun run scripts/generate-models.ts"
+  },
   "dependencies": {
     "@genspire/core": "workspace:*"
   }

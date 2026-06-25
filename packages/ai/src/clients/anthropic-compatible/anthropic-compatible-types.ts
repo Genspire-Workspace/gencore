@@ -1,10 +1,14 @@
-// file: packages\ai\src\providers\anthropic-compatible\anthropic-compatible-types.ts
+// file: packages\ai\src\clients\anthropic-compatible\anthropic-compatible-types.ts
+
+import type { IAiApiKey } from "../../common/ai-api-key.js";
 
 export interface IAnthropicCompatibleProviderOptions {
   id: string;
   displayName: string;
   baseUrl: string;
   apiKey?: string;
+  apiKeys?: IAiApiKey[];
+  defaultApiKeyId?: string;
   headers?: Record<string, string>;
   defaultChatModel?: string;
 }

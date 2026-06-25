@@ -1,17 +1,18 @@
-// file: packages\ai\src\providers\openai-compatible\openai-compatible-provider.ts
+// file: packages\ai\src\clients\openai-compatible\openai-compatible-provider.ts
 
-import type { IAiProvider } from "../ai-provider.js";
+import type { IAiClient } from "../ai-client.js";
 import { OpenAiCompatibleClient } from "./openai-compatible-client.js";
 import type { IOpenAiCompatibleProviderOptions } from "./openai-compatible-types.js";
 
 export function openAiCompatibleProvider(
   options: IOpenAiCompatibleProviderOptions,
-): IAiProvider {
+): IAiClient {
   const client = new OpenAiCompatibleClient(options);
 
   return {
     id: options.id,
-    displayName: options.displayName,
+    name: options.displayName,
+    kind: "openai-compatible",
     chat: {
       generateChatCompletion(request) {
         return client.generateChatCompletion(request);

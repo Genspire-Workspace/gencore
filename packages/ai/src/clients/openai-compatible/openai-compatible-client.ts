@@ -1,4 +1,4 @@
-// file: packages\ai\src\providers\openai-compatible\openai-compatible-client.ts
+// file: packages\ai\src\clients\openai-compatible\openai-compatible-client.ts
 
 import type { IChatMessage } from "../../chat/chat-message.js";
 import type {
@@ -12,6 +12,7 @@ import type { IChatGenerationResponse } from "../../chat/chat-generation-respons
 import type { IChatGenerationChunk } from "../../chat/chat-generation-chunk.js";
 import type { IEmbeddingGenerationRequest } from "../../embeddings/embedding-generation-request.js";
 import type { IEmbeddingGenerationResponse } from "../../embeddings/embedding-generation-response.js";
+import { resolveAiApiKeyValue } from "../../common/ai-api-key.js";
 import type {
   IOpenAiCompatibleProviderOptions,
   IOpenAiChatCompletionRequest,
@@ -96,7 +97,7 @@ function mapContentFromOpenAi(content: OpenAiMessageContent | undefined): AiMess
 
 export class OpenAiCompatibleClient {
   private readonly baseUrl: string;
-  private readonly headers: Record<string, string>;
+  private readonly baseHeaders: Record<string, string>;
   private readonly defaultChatModel?: string;
   private readonly defaultEmbeddingModel?: string;
 
@@ -105,16 +106,12 @@ export class OpenAiCompatibleClient {
     this.defaultChatModel = options.defaultChatModel;
     this.defaultEmbeddingModel = options.defaultEmbeddingModel;
 
-    this.headers = {
+    this.baseHeaders = {
       "Content-Type": "application/json",
     };
 
-    if (options.apiKey) {
-      this.headers["Authorization"] = `Bearer ${options.apiKey}`;
-    }
-
     if (options.headers) {
-      Object.assign(this.headers, options.headers);
+      Object.assign(this.baseHeaders, options.headers);
     }
   }
 
@@ -163,7 +160,7 @@ export class OpenAiCompatibleClient {
 
     const response = await fetch(`${this.baseUrl}/chat/completions`, {
       method: "POST",
-      headers: this.headers,
+      headers: this.createHeaders(request, model),
       body: JSON.stringify(body),
       signal: request.settings?.signal,
     });
@@ -217,7 +214,7 @@ export class OpenAiCompatibleClient {
 
     const response = await fetch(`${this.baseUrl}/chat/completions`, {
       method: "POST",
-      headers: this.headers,
+      headers: this.createHeaders(request, model),
       body: JSON.stringify(body),
       signal: request.settings?.signal,
     });
@@ -288,7 +285,7 @@ export class OpenAiCompatibleClient {
 
     const response = await fetch(`${this.baseUrl}/embeddings`, {
       method: "POST",
-      headers: this.headers,
+      headers: this.createHeaders(request, model),
       body: JSON.stringify(body),
       signal: request.signal,
     });
@@ -385,5 +382,25 @@ export class OpenAiCompatibleClient {
         : undefined,
       raw: data,
     };
+  }
+
+  private createHeaders(
+    request: { apiKey?: string; apiKeyId?: string; userId?: string },
+    model?: string,
+  ): Record<string, string> {
+    const headers = { ...this.baseHeaders };
+    const apiKey = resolveAiApiKeyValue(this.options.apiKeys, {
+      provider: this.options.id,
+      model,
+      userId: request.userId,
+      apiKey: request.apiKey,
+      apiKeyId: request.apiKeyId ?? this.options.defaultApiKeyId,
+    }) ?? this.options.apiKey;
+
+    if (apiKey) {
+      headers["Authorization"] = `Bearer ${apiKey}`;
+    }
+
+    return headers;
   }
 }

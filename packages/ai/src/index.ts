@@ -17,6 +17,15 @@ export type { IAiModelResponse } from "./common/ai-model-response.js";
 export type { IAiModelChunk } from "./common/ai-model-chunk.js";
 export type { AiStopReason } from "./common/ai-stop-reason.js";
 export type { IAiTokenUsage } from "./common/ai-token-usage.js";
+export type {
+  AiApiKeySource,
+  IAiApiKey,
+  IAiApiKeyResolveInput,
+} from "./common/ai-api-key.js";
+export {
+  resolveAiApiKey,
+  resolveAiApiKeyValue,
+} from "./common/ai-api-key.js";
 
 export type {
   ChatRole,
@@ -33,23 +42,41 @@ export type { IEmbeddingGenerationRequest } from "./embeddings/embedding-generat
 export type { IEmbeddingGenerationResponse, IEmbeddingVector } from "./embeddings/embedding-generation-response.js";
 export type { IEmbeddingGenerator } from "./embeddings/embedding-generator.js";
 
-export type { IAiProvider } from "./providers/ai-provider.js";
-export { AiProviderRegistry } from "./providers/ai-provider-registry.js";
-export { openAiCompatibleProvider } from "./providers/openai-compatible/openai-compatible-provider.js";
+export type { AiClientKind } from "./clients/ai-client-kind.js";
+export type { IAiClient } from "./clients/ai-client.js";
+export { AiClientRegistry } from "./clients/ai-client-registry.js";
+export { openAiCompatibleProvider } from "./clients/openai-compatible/openai-compatible-provider.js";
 export type {
   IOpenAiCompatibleProviderOptions,
   OpenAiContentBlock,
   OpenAiMessageContent,
-} from "./providers/openai-compatible/openai-compatible-types.js";
+} from "./clients/openai-compatible/openai-compatible-types.js";
 
-export { anthropicCompatibleProvider } from "./providers/anthropic-compatible/anthropic-compatible-provider.js";
-export type { IAnthropicCompatibleProviderOptions } from "./providers/anthropic-compatible/anthropic-compatible-types.js";
+export { anthropicCompatibleProvider } from "./clients/anthropic-compatible/anthropic-compatible-provider.js";
+export type { IAnthropicCompatibleProviderOptions } from "./clients/anthropic-compatible/anthropic-compatible-types.js";
 
-export { ollamaProvider } from "./providers/ollama/ollama-provider.js";
-export type { IOllamaProviderOptions } from "./providers/ollama/ollama-provider.js";
+export { ollamaProvider } from "./clients/ollama/ollama-provider.js";
+export type { IOllamaProviderOptions } from "./clients/ollama/ollama-provider.js";
 
-export type { IAiModel } from "./models/ai-model.js";
-export type { IAiModelCapabilities } from "./models/ai-model-capabilities.js";
+export type { AiProviderKind, IAiProvider } from "./common/ai-provider.js";
+export type {
+  AiModelModality,
+  IAiModel,
+  IAiModelBenchmark,
+  IAiModelCost,
+  IAiModelInterleaved,
+  IAiModelLimit,
+  IAiModelLink,
+  IAiModelModalities,
+} from "./common/ai-model.js";
+export type { IAiLab } from "./common/ai-lab.js";
+export type {
+  IAiCatalogueData,
+  IAiModelFilter,
+  IAiProviderFilter,
+} from "./catalogue/ai-catalogue.js";
+export { AiCatalogue } from "./catalogue/ai-catalogue.js";
+export * from "./catalogue/generated/index.js";
 
 export { AiService } from "./services/ai-service.js";
 export { aiExtension } from "./extension/ai-extension.js";

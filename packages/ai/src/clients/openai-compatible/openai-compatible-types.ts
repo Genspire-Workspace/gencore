@@ -1,10 +1,14 @@
-// file: packages\ai\src\providers\openai-compatible\openai-compatible-types.ts
+// file: packages\ai\src\clients\openai-compatible\openai-compatible-types.ts
+
+import type { IAiApiKey } from "../../common/ai-api-key.js";
 
 export interface IOpenAiCompatibleProviderOptions {
   id: string;
   displayName: string;
   baseUrl: string;
   apiKey?: string;
+  apiKeys?: IAiApiKey[];
+  defaultApiKeyId?: string;
   headers?: Record<string, string>;
   defaultChatModel?: string;
   defaultEmbeddingModel?: string;

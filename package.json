@@ -12,6 +12,7 @@
   "scripts": {
     "typecheck": "bunx tsc --noEmit",
     "test": "bun test --path-ignore-patterns '**/old_spirecorejs/**' --pass-with-no-tests",
+    "generate:models": "bun run packages/ai/scripts/generate-models.ts",
     "dev": "bun run apps/playground-api/src/index.ts",
     "dev:playground-api": "bun run apps/playground-api/src/index.ts",
     "dev:person-api": "bun run apps/person-api/src/index.ts",

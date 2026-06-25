@@ -2,8 +2,8 @@
 
 import { describe, expect, test, beforeEach } from "bun:test";
 import { AiService } from "./ai-service.js";
-import { AiProviderRegistry } from "../providers/ai-provider-registry.js";
-import type { IAiProvider } from "../providers/ai-provider.js";
+import { AiClientRegistry } from "../clients/ai-client-registry.js";
+import type { IAiClient } from "../clients/ai-client.js";
 import type { IChatGenerationRequest } from "../chat/chat-generation-request.js";
 import type { IChatGenerationResponse } from "../chat/chat-generation-response.js";
 import type { IEmbeddingGenerationRequest } from "../embeddings/embedding-generation-request.js";
@@ -15,10 +15,11 @@ function createChatProvider(
   chatImpl?: {
     generate: (req: IChatGenerationRequest) => Promise<IChatGenerationResponse>;
   },
-): IAiProvider {
+): IAiClient {
   return {
     id,
-    displayName: `Mock ${id}`,
+    name: `Mock ${id}`,
+    kind: "custom",
     supportsChat() {
       return true;
     },
@@ -46,10 +47,11 @@ function createEmbeddingProvider(
   embeddingImpl?: {
     generate: (req: IEmbeddingGenerationRequest) => Promise<IEmbeddingGenerationResponse>;
   },
-): IAiProvider {
+): IAiClient {
   return {
     id,
-    displayName: `Mock ${id}`,
+    name: `Mock ${id}`,
+    kind: "custom",
     supportsChat() {
       return false;
     },
@@ -69,11 +71,11 @@ function createEmbeddingProvider(
 }
 
 describe("AiService", () => {
-  let registry: AiProviderRegistry;
+  let registry: AiClientRegistry;
   let defaults: IAiDefaults;
 
   beforeEach(() => {
-    registry = new AiProviderRegistry();
+    registry = new AiClientRegistry();
     defaults = {
       chatProvider: "openai",
       chatModel: "gpt-4",
@@ -176,6 +178,6 @@ describe("AiService", () => {
       service.generateEmbedding({
         input: "test",
       }),
-    ).rejects.toThrow("AI provider 'openai' does not support embeddings.");
+    ).rejects.toThrow("AI client 'openai' does not support embeddings.");
   });
 });

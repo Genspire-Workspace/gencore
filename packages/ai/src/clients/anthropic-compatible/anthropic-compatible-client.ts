@@ -1,4 +1,4 @@
-// file: packages\ai\src\providers\anthropic-compatible\anthropic-compatible-client.ts
+// file: packages\ai\src\clients\anthropic-compatible\anthropic-compatible-client.ts
 
 import type { IChatMessage } from "../../chat/chat-message.js";
 import type {
@@ -10,6 +10,7 @@ import type { AiReasoningEffort } from "../../common/ai-generation-settings.js";
 import type { IChatGenerationRequest } from "../../chat/chat-generation-request.js";
 import type { IChatGenerationResponse } from "../../chat/chat-generation-response.js";
 import type { IChatGenerationChunk } from "../../chat/chat-generation-chunk.js";
+import { resolveAiApiKeyValue } from "../../common/ai-api-key.js";
 import type {
   IAnthropicCompatibleProviderOptions,
   IAnthropicMessage,
@@ -122,23 +123,19 @@ function mapMessagesToAnthropic(messages: IChatMessage[]): {
 
 export class AnthropicCompatibleClient {
   private readonly baseUrl: string;
-  private readonly headers: Record<string, string>;
+  private readonly baseHeaders: Record<string, string>;
   private readonly defaultChatModel?: string;
 
   constructor(private readonly options: IAnthropicCompatibleProviderOptions) {
     this.baseUrl = options.baseUrl.replace(/\/+$/, "");
     this.defaultChatModel = options.defaultChatModel;
 
-    this.headers = {
+    this.baseHeaders = {
       "Content-Type": "application/json",
     };
 
-    if (options.apiKey) {
-      this.headers["x-api-key"] = options.apiKey;
-    }
-
     if (options.headers) {
-      Object.assign(this.headers, options.headers);
+      Object.assign(this.baseHeaders, options.headers);
     }
   }
 
@@ -178,7 +175,7 @@ export class AnthropicCompatibleClient {
 
     const response = await fetch(`${this.baseUrl}/messages`, {
       method: "POST",
-      headers: this.headers,
+      headers: this.createHeaders(request, model),
       body: JSON.stringify(body),
       signal: request.settings?.signal,
     });
@@ -231,7 +228,7 @@ export class AnthropicCompatibleClient {
 
     const response = await fetch(`${this.baseUrl}/messages`, {
       method: "POST",
-      headers: this.headers,
+      headers: this.createHeaders(request, model),
       body: JSON.stringify(body),
       signal: request.settings?.signal,
     });
@@ -368,5 +365,25 @@ export class AnthropicCompatibleClient {
         : undefined,
       raw: data,
     };
+  }
+
+  private createHeaders(
+    request: { apiKey?: string; apiKeyId?: string; userId?: string },
+    model?: string,
+  ): Record<string, string> {
+    const headers = { ...this.baseHeaders };
+    const apiKey = resolveAiApiKeyValue(this.options.apiKeys, {
+      provider: this.options.id,
+      model,
+      userId: request.userId,
+      apiKey: request.apiKey,
+      apiKeyId: request.apiKeyId ?? this.options.defaultApiKeyId,
+    }) ?? this.options.apiKey;
+
+    if (apiKey) {
+      headers["x-api-key"] = apiKey;
+    }
+
+    return headers;
   }
 }

@@ -1,8 +1,8 @@
-// file: packages\ai\src\providers\anthropic-compatible\anthropic-compatible-provider.test.ts
+// file: packages\ai\src\clients\anthropic-compatible\anthropic-compatible-provider.test.ts
 
 import { describe, expect, test, beforeEach, afterEach, mock } from "bun:test";
 import { anthropicCompatibleProvider } from "./anthropic-compatible-provider.js";
-import type { IAiProvider } from "../ai-provider.js";
+import type { IAiClient } from "../ai-client.js";
 
 type FetchMock = ReturnType<typeof mock>;
 
@@ -21,7 +21,7 @@ function mockFetchJson(body: unknown, status = 200): FetchMock {
 }
 
 describe("Anthropic-compatible chat", () => {
-  let provider: IAiProvider;
+  let provider: IAiClient;
   let fetchMock: FetchMock;
 
   beforeEach(() => {
@@ -98,6 +98,24 @@ describe("Anthropic-compatible chat", () => {
     const headers = fetchMock.mock.calls[0]![1]!.headers as Record<string, string>;
     expect(headers["x-api-key"]).toBe("sk-ant-test");
     expect(headers["Content-Type"]).toBe("application/json");
+  });
+
+  test("allows request apiKey to override the provider apiKey", async () => {
+    fetchMock = mockFetchJson({
+      id: "msg_123",
+      model: "claude-model",
+      type: "message",
+      role: "assistant",
+      content: [{ type: "text", text: "yes" }],
+    });
+
+    await provider.chat!.generateChatCompletion({
+      apiKey: "sk-ant-request",
+      messages: [{ role: "user", content: "hi" }],
+    });
+
+    const headers = fetchMock.mock.calls[0]![1]!.headers as Record<string, string>;
+    expect(headers["x-api-key"]).toBe("sk-ant-request");
   });
 
   test("maps response content correctly", async () => {
@@ -178,7 +196,7 @@ describe("Anthropic-compatible chat", () => {
 });
 
 describe("Anthropic-compatible streaming", () => {
-  let provider: IAiProvider;
+  let provider: IAiClient;
 
   function createStreamResponse(chunks: string[]): Response {
     const encoder = new TextEncoder();
