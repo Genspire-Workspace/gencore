@@ -5,7 +5,7 @@ import {
   normalizeBaseUrl,
   parseAiVerifyArgs,
   postJson,
-  readNdjsonOrJson,
+  streamNdjsonOrJson,
   shouldRunScenario,
 } from "./shared/index.js";
 
@@ -108,7 +108,18 @@ async function runStreamCheck(
 
   logger.log(`  Status: ${response.status}`);
   logger.log(`  Content-Type: ${response.headers.get("content-type") ?? ""}`);
-  logger.log(`  Body: ${JSON.stringify(await readNdjsonOrJson(response))}`);
+
+  let chunkCount = 0;
+  const collected: unknown[] = [];
+
+  for await (const chunk of streamNdjsonOrJson(response)) {
+    chunkCount += 1;
+    collected.push(chunk);
+    logger.log(`  Chunk ${chunkCount}: ${JSON.stringify(chunk)}`);
+  }
+
+  logger.log(`  Chunk Count: ${chunkCount}`);
+  logger.log(`  Body: ${JSON.stringify(collected)}`);
   logger.log("");
 }
 

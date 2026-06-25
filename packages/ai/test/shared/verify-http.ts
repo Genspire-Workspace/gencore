@@ -53,3 +53,62 @@ export async function readNdjsonOrJson(response: Response): Promise<unknown> {
 
   return response.json();
 }
+
+export async function* streamNdjsonOrJson(
+  response: Response,
+): AsyncGenerator<unknown, void, void> {
+  const contentType = response.headers.get("content-type") ?? "";
+
+  if (!contentType.includes("application/x-ndjson")) {
+    yield await response.json().catch(async () => {
+      return await response.text().catch(() => "");
+    });
+    return;
+  }
+
+  if (!response.body) {
+    return;
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+
+      if (done) {
+        break;
+      }
+
+      buffer += decoder.decode(value, { stream: true });
+
+      while (true) {
+        const newlineIndex = buffer.indexOf("\n");
+
+        if (newlineIndex < 0) {
+          break;
+        }
+
+        const line = buffer.slice(0, newlineIndex).trim();
+        buffer = buffer.slice(newlineIndex + 1);
+
+        if (!line) {
+          continue;
+        }
+
+        yield JSON.parse(line);
+      }
+    }
+
+    buffer += decoder.decode();
+    const trailing = buffer.trim();
+
+    if (trailing) {
+      yield JSON.parse(trailing);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+}

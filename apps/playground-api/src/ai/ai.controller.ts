@@ -112,6 +112,8 @@ export class AiController {
     return new Response(stream, {
       headers: {
         "content-type": "application/x-ndjson; charset=utf-8",
+        "cache-control": "no-cache",
+        connection: "keep-alive",
       },
     });
   }

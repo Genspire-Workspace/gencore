@@ -14,11 +14,12 @@ export type HttpMethod =
 
 export type RouteHandlerResult =
   | Response
+  | ReadableStream
   | string
   | object
   | null
   | undefined
-  | Promise<Response | string | object | null | undefined>;
+  | Promise<Response | ReadableStream | string | object | null | undefined>;
 
 export type RouteHandler = (ctx: HttpContext) => RouteHandlerResult;
 

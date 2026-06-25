@@ -108,6 +108,28 @@ describe("@genspire/server", () => {
     expect(await response.json()).toEqual({ created: true });
   });
 
+  test("ReadableStream return is wrapped in a Response", async () => {
+    const server = createServer();
+    const encoder = new TextEncoder();
+
+    server.get(
+      "/stream",
+      () =>
+        new ReadableStream<Uint8Array>({
+          start(controller) {
+            controller.enqueue(encoder.encode("line-1\n"));
+            controller.enqueue(encoder.encode("line-2\n"));
+            controller.close();
+          },
+        }),
+    );
+
+    const response = await server.handle(new Request("http://localhost/stream"));
+
+    expect(response.status).toBe(200);
+    expect(await response.text()).toBe("line-1\nline-2\n");
+  });
+
   test("unmatched route returns 404", async () => {
     const server = createServer();
 

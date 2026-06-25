@@ -1,6 +1,6 @@
 import { AiClientRegistry } from "../../../../packages/ai/src/clients/ai-client-registry.js";
-import { AiService } from "../../../../packages/ai/src/services/ai-service.js";
 import { OpenAICompatibleClient } from "../../../../packages/ai/src/clients/openai-compatible/index.js";
+import { AiService } from "../../../../packages/ai/src/services/ai-service.js";
 import { AiProviderModelResolver } from "./ai-provider-model-resolver.js";
 
 export interface IAiPlaygroundProviderInfo {
@@ -11,6 +11,7 @@ export interface IAiPlaygroundProviderInfo {
   supportsEmbeddings: boolean;
   defaultChatModel?: string;
   defaultEmbeddingModel?: string;
+  host?: string;
   configured: boolean;
 }
 
@@ -87,6 +88,7 @@ export function createAiPlaygroundRuntime(): IAiPlaygroundRuntime {
         supportsEmbeddings: true,
         defaultChatModel: ollamaDefaultChatModel,
         defaultEmbeddingModel: ollamaDefaultEmbeddingModel,
+        host: ollamaHost,
         configured: true,
       },
       {

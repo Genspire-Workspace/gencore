@@ -120,6 +120,11 @@ describe("playground api", () => {
       expect(providersBody.providers.some((provider) => provider.id === "deepseek")).toBe(true);
       expect(providersBody.defaults.chatProvider).toBeDefined();
       expect(providersBody.defaults.embeddingProvider).toBeDefined();
+      expect(
+        providersBody.providers.find((provider) => provider.id === "ollama"),
+      ).toMatchObject({
+        configured: true,
+      });
 
       const swaggerResponse = await server.handle(
         new Request("http://localhost/swagger.json"),
@@ -133,6 +138,47 @@ describe("playground api", () => {
       expect(swaggerDocument.paths["/ai/chat"]).toBeDefined();
       expect(swaggerDocument.paths["/ai/chat/stream"]).toBeDefined();
       expect(swaggerDocument.paths["/ai/embeddings"]).toBeDefined();
+    } finally {
+      await app.stop();
+    }
+  });
+
+  test("ai stream route returns NDJSON response headers", async () => {
+    const app = await createPlaygroundApp({
+      port: 0,
+      env: {
+        ...process.env,
+        GENCORE_PLAYGROUND_LIBSQL_DB_PATH: dbPath,
+      },
+    });
+
+    await app.start();
+
+    try {
+      const server = app.get(Server);
+      const response = await server.handle(
+        new Request("http://localhost/ai/chat/stream", {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+          },
+          body: JSON.stringify({
+            provider: "missing-provider",
+            model: "missing-model",
+            messages: [
+              {
+                role: "user",
+                content: "Hello",
+              },
+            ],
+          }),
+        }),
+      );
+
+      expect(response.headers.get("content-type")).toContain(
+        "application/x-ndjson",
+      );
+      expect(response.headers.get("cache-control")).toBe("no-cache");
     } finally {
       await app.stop();
     }

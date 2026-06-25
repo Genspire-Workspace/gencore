@@ -323,6 +323,9 @@ export class AiProviderInfoDto {
   @ApiField({ type: "string", required: false })
   defaultEmbeddingModel?: string;
 
+  @ApiField({ type: "string", required: false })
+  host?: string;
+
   @ApiField({ type: "boolean" })
   configured!: boolean;
 }
