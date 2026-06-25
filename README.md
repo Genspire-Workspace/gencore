@@ -11,6 +11,8 @@ The current architecture is:
 - `@genspire/swagger`: Swagger/OpenAPI delivery extension
 - `@genspire/data`: framework-agnostic data contracts and lifecycle
 - `@genspire/data-mikroorm`: MikroORM adapter for libSQL and PostgreSQL
+- `@genspire/auth`: authentication, roles, guards, current user, IP tracking, auth middleware
+- `@genspire/storage`: object storage abstraction, local + S3 providers, file management toolkit
 
 ## Design Rules
 
@@ -21,7 +23,7 @@ The current architecture is:
 - Keep `@genspire/data` framework-agnostic and ORM-agnostic.
 - Put MikroORM-specific behavior in `@genspire/data-mikroorm`.
 - All interfaces must use the `I` prefix (e.g., `IEntity`, `IDataSource`, `IPageRequest`).
-- All DTO classes must use the `Dto` suffix (e.g., `ListResponseDto`, `CreateTodoRequestDto`).
+- All DTO classes must use the `Dto`/`DTO` suffix (e.g., `ListResponseDto`, `PrepareUploadRequestDTO`).
 - Type aliases do not require a prefix (e.g., `EntityState`, `SortDirection`).
 
 ## Packages
@@ -118,18 +120,45 @@ Use this for:
 - `EntityManagerProvider`
 - libSQL or PostgreSQL-backed MikroORM integration
 
+### `@genspire/auth`
+
+Use this for:
+
+- `authExtension()`
+- user registration, login, refresh, logout
+- bearer token authentication
+- role-based authorization
+- IP tracking and banning
+- password hashing (Argon2)
+- `requireCurrentUser(ctx)`, `getCurrentUser(ctx)`
+
+### `@genspire/storage`
+
+Use this for:
+
+- `storageExtension()`
+- `StorageService` — bucket/key object storage API
+- `LocalStorageProvider` — filesystem-backed with sidecar `.meta.json`
+- `S3StorageProvider` — AWS S3 / MinIO compatible with presigned URLs
+- `FileEntity` — reusable MikroORM entity for file metadata
+- `StorageDbContext` — extendable DbContext with `files` set
+- `FileService` — upload, download, list, delete with DB + storage
+- `FileController` — REST controller (`POST /file`, `GET /file`, `GET /file/:id`, `DELETE /file/:id`)
+
 ## Building an API
 
 The recommended stack for a documented SQL-backed API is:
 
 1. Create the app with `createApp()`
 2. Register `dataExtension()`
-3. Register `mikroOrmExtension(...)`
-4. Register any schema-sync or migration bootstrap extension
-5. Register `serverExtension(...)`
-6. Register `swaggerExtension(...)` if needed
-7. Register controllers on `Server`
-8. Start the app
+3. Register `storageExtension(...)` if needed
+4. Register `mikroOrmExtension(...)`
+5. Register `authExtension(...)` if needed
+6. Register any schema-sync or migration bootstrap extension
+7. Register `serverExtension(...)`
+8. Register `swaggerExtension(...)` if needed
+9. Register controllers on `Server`
+10. Start the app
 
 Example:
 
@@ -265,52 +294,117 @@ Attach DTOs to controller route docs:
 
 ## Playground API
 
-The main example app is `apps/playground-api`.
+The main reference app is `apps/playground-api`. It demonstrates the full stack: controllers, Swagger, auth, file storage, and database-backed CRUD.
 
-It demonstrates:
+### Endpoints
 
-- controller-based routing
-- OpenAPI metadata
-- Swagger UI
-- MikroORM with libSQL
-- repository/service/controller layering
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| `GET` | `/health` | Public | Health check |
+| `POST` | `/register` | Public | Register a new user |
+| `POST` | `/login` | Public | Login, returns access + refresh tokens |
+| `POST` | `/refresh` | Public | Rotate refresh token |
+| `POST` | `/logout` | Auth | Revoke refresh token |
+| `GET` | `/me` | Auth | Get current user profile |
+| `GET` | `/todo` | Auth | List todos |
+| `GET` | `/todo/:id` | Auth | Get todo by id |
+| `POST` | `/todo` | Auth | Create todo |
+| `PATCH` | `/todo/:id` | Auth | Update todo |
+| `DELETE` | `/todo/:id` | Admin | Delete todo |
+| `POST` | `/file` | Auth | Upload file (multipart or presigned JSON) |
+| `GET` | `/file` | Auth | List files |
+| `GET` | `/file/:id` | Auth | Download file |
+| `DELETE` | `/file/:id` | Admin | Delete file |
+| `GET` | `/swagger.json` | Public | OpenAPI document |
+| `GET` | `/docs` | Public | Swagger UI |
 
-Run it with:
+### File Upload Modes
+
+`POST /file` supports two upload strategies:
+
+- **Multipart (local/small files):** Send `multipart/form-data` with a `file` field. The server buffers and stores the file.
+- **Presigned URL (S3):** Send `application/json` with `{ "originalName": "photo.png" }`. The server returns a presigned PUT URL. Upload the file directly to S3/MinIO — it never touches the server.
+
+### Running Modes
+
+The playground supports two infrastructure configurations controlled entirely by environment variables.
+
+#### Local Mode (libSQL + local filesystem)
+
+Copy `.env.local.example` to `.env` and run:
 
 ```bash
+cp .env.local.example .env
 bun run dev:playground-api
 ```
 
-Default endpoints:
+Key env settings:
 
-- `GET /health`
-- `GET /todo`
-- `GET /todo/:id`
-- `POST /todo`
-- `PATCH /todo/:id`
-- `DELETE /todo/:id`
-- `GET /swagger.json`
-- `GET /docs`
+| Variable | Value | Description |
+|----------|-------|-------------|
+| `GENCORE_PLAYGROUND_DATABASE_PROVIDER` | `libsql` | SQLite-compatible via libSQL |
+| `GENCORE_PLAYGROUND_STORAGE_PROVIDER` | `local` | Filesystem storage under `./data/storage` |
+| `GENCORE_PLAYGROUND_SCHEMA_MODE` | `update` | Auto-create/update tables on start |
 
-Default database path:
+Files are stored at `data/storage/{bucket}/{key}` with companion `.meta.json` sidecar files.
 
-- `C:\Users\PC\Documents\GitHub\Gencore\data\playground-api.db`
+#### Docker Mode (PostgreSQL + MinIO/S3)
 
-Override it with:
-
-```txt
-GENCORE_PLAYGROUND_LIBSQL_DB_PATH=...
-```
-
-## Person API
-
-`apps/person-api` is a second example focused on a simpler SQL-backed function-first API.
-
-Run it with:
+Requires Docker. Copy `.env.local.docker.example` to `.env` and run:
 
 ```bash
-bun run dev:person-api
+cp .env.local.docker.example .env
+docker compose -f docker-compose.example.yml up -d
+bun run dev:playground-api
 ```
+
+Key env settings:
+
+| Variable | Value | Description |
+|----------|-------|-------------|
+| `GENCORE_PLAYGROUND_DATABASE_PROVIDER` | `postgres` | PostgreSQL 16 |
+| `GENCORE_PLAYGROUND_POSTGRES_URL` | `postgresql://gencore:gencore@localhost:5432/gencore_playground` | Connection string |
+| `GENCORE_PLAYGROUND_STORAGE_PROVIDER` | `s3` | S3-compatible (MinIO) |
+| `GENCORE_PLAYGROUND_STORAGE_S3_ENDPOINT` | `http://localhost:9000` | MinIO API |
+| `GENCORE_PLAYGROUND_STORAGE_S3_DEFAULT_BUCKET` | `playground` | Bucket name |
+| `GENCORE_PLAYGROUND_SCHEMA_MODE` | `update` | Auto-create/update tables on start |
+
+Docker services:
+
+| Service | Ports | Description |
+|---------|-------|-------------|
+| `postgres` | `5432` | PostgreSQL 16 |
+| `minio` | `9000` (API), `9001` (Console) | S3-compatible object storage |
+| `minio-init` | — | Creates the `playground` bucket |
+
+MinIO console: http://localhost:9001 (user: `gencore`, password: `gencore-secret`)
+
+### Auth and Seeding
+
+Both modes seed roles and a default admin user on first start. Controlled by env:
+
+| Variable | Description |
+|----------|-------------|
+| `GENCORE_PLAYGROUND_SEED_ENABLED` | Enable/disable all seeding (`true`) |
+| `GENCORE_PLAYGROUND_SEED_ROLES` | Role definitions: `name:desc;name:desc` |
+| `GENCORE_PLAYGROUND_SEED_ADMIN_ENABLED` | Create admin user (`true`) |
+| `GENCORE_PLAYGROUND_SEED_ADMIN_EMAIL` | Admin email |
+| `GENCORE_PLAYGROUND_SEED_ADMIN_PASSWORD` | Admin password |
+| `GENCORE_PLAYGROUND_SEED_ADMIN_ROLES` | Comma-separated roles to assign |
+
+Default admin: `admin@example.com` / `change-me-admin-password` (change these in production).
+
+### `.env.local` vs `.env.local.docker`
+
+| Concern | Local | Docker |
+|---------|-------|--------|
+| Database | libSQL (file: `data/playground/playground.db`) | PostgreSQL 16 |
+| Storage | Local filesystem (`data/storage/`) | MinIO S3-compatible (`playground` bucket) |
+| Schema | `update` (auto DDL) | `update` (auto DDL) |
+| Infrastructure | None required | Docker Compose with 3 services |
+| Presigned URLs | Not supported (direct upload) | Supported |
+| File server overhead | Buffers file in memory | File never touches server |
+| Best for | Quick local dev, single dev | Team dev, production-like setup |
 
 ## Development Commands
 
@@ -323,7 +417,7 @@ bun install
 Run typecheck:
 
 ```bash
-bunx tsc --noEmit
+bun run typecheck
 ```
 
 Run tests:
@@ -338,10 +432,12 @@ Run playground API:
 bun run dev:playground-api
 ```
 
-Run person API:
+Database migrations (playground):
 
 ```bash
-bun run dev:person-api
+bun run db:playground:create   # create a new migration
+bun run db:playground:up       # apply pending migrations
+bun run db:playground:down     # rollback last migration
 ```
 
 ## Current Boundaries
