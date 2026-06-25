@@ -10,7 +10,62 @@ import type {
   IChatGenerationChunk,
   IChatGenerationRequest,
   IEmbeddingGenerationRequest,
+  IAiTool,
 } from "@genspire/ai";
+
+function parseArgs(): { list?: boolean; scenarios?: string } {
+  const args = process.argv.slice(2);
+  const result: { list?: boolean; scenarios?: string } = {};
+
+  for (let i = 0; i < args.length; i++) {
+    switch (args[i]) {
+      case "--list":
+      case "-l":
+        result.list = true;
+        break;
+      case "--scenarios":
+      case "-s":
+        result.scenarios = args[++i];
+        break;
+    }
+  }
+
+  return result;
+}
+
+const CLI_ARGS = parseArgs();
+
+if (CLI_ARGS.list) {
+  console.log("Available scenarios:");
+  console.log("  ollama       - Local Ollama (gemma4:12b + embeddinggemma)");
+  console.log("  deepseek     - DeepSeek API (deepseek-v4-flash + deepseek-v4-pro)");
+  console.log("");
+  console.log("Usage:");
+  console.log("  bun run dev:ai:verify");
+  console.log("  bun run dev:ai:verify -- --scenarios ollama");
+  console.log("  bun run dev:ai:verify -- --scenarios deepseek,ollama");
+  console.log("  bun run dev:ai:verify -- --list");
+  console.log("");
+  console.log("Env vars:");
+  console.log("  OLLAMA_HOST         - Ollama server URL (default http://127.0.0.1:11434)");
+  console.log("  OLLAMA_CHAT_MODEL   - Ollama chat model (default gemma4:12b)");
+  console.log("  OLLAMA_EMBED_MODEL  - Ollama embed model (default embeddinggemma:latest)");
+  console.log("  DEEPSEEK_API_KEY    - DeepSeek API key (required)");
+  console.log("  DEEPSEEK_BASE_URL   - DeepSeek base URL (default https://api.deepseek.com/v1)");
+  console.log("  DEEPSEEK_CHAT_MODELS - Comma-separated models (default deepseek-v4-flash,deepseek-v4-pro)");
+  console.log("  AI_VERIFY_SCENARIOS  - Comma-separated scenario filter (alternative to --scenarios)");
+  process.exit(0);
+}
+
+const SCENARIO_FILTER_ARG = CLI_ARGS.scenarios ?? process.env.AI_VERIFY_SCENARIOS;
+
+// Allow filtering scenarios via CLI --scenarios or AI_VERIFY_SCENARIOS env
+const SCENARIO_FILTER = SCENARIO_FILTER_ARG
+  ? new Set(
+      SCENARIO_FILTER_ARG.split(",")
+        .map((s) => s.trim().toLowerCase()),
+    )
+  : null;
 
 const LOG_DIR = path.resolve(import.meta.dirname, "../../../data/logs/test");
 mkdirSync(LOG_DIR, { recursive: true });
@@ -29,6 +84,54 @@ function log(message: string): void {
   writer.write(`${message}\n`);
 }
 
+// --- Tool definitions ---
+const getCapitalTool: IAiTool = {
+  name: "get_capital",
+  description: "Gets the capital city for a country.",
+  parameters: {
+    type: "object",
+    properties: {
+      country: {
+        type: "string",
+        description: "Country name",
+      },
+    },
+    required: ["country"],
+  },
+  execute: async (args: unknown) => {
+    const input = args && typeof args === "object"
+      ? (args as { country?: string })
+      : {};
+    return {
+      country: input.country ?? "Portugal",
+      capital: "Lisbon",
+    };
+  },
+};
+
+const addNumbersTool: IAiTool = {
+  name: "add_numbers",
+  description: "Adds two numbers.",
+  parameters: {
+    type: "object",
+    properties: {
+      a: { type: "number" },
+      b: { type: "number" },
+    },
+    required: ["a", "b"],
+  },
+  execute: async (args: unknown) => {
+    const input = args && typeof args === "object"
+      ? (args as { a?: number; b?: number })
+      : {};
+    return {
+      a: input.a ?? 0,
+      b: input.b ?? 0,
+      sum: (input.a ?? 0) + (input.b ?? 0),
+    };
+  },
+};
+
 function logRequest(request: IChatGenerationRequest | IEmbeddingGenerationRequest): void {
   log(`  Request:`);
   log(`    model: ${request.model ?? "(default)"}`);
@@ -38,6 +141,9 @@ function logRequest(request: IChatGenerationRequest | IEmbeddingGenerationReques
     log(`    messages: ${JSON.stringify(r.messages)}`);
     if (r.settings) {
       log(`    settings: ${JSON.stringify(r.settings)}`);
+    }
+    if (r.tools?.length) {
+      log(`    tools: ${r.tools.map((t) => t.name).join(", ")}`);
     }
   } else {
     const r = request as IEmbeddingGenerationRequest;
@@ -53,6 +159,8 @@ function logChunk(chunk: IChatGenerationChunk): void {
   if (chunk.type) parts.push(`type=${chunk.type}`);
   if (chunk.delta) parts.push(`delta=${JSON.stringify(chunk.delta)}`);
   if (chunk.reasoningDelta) parts.push(`reasoning=${JSON.stringify(chunk.reasoningDelta)}`);
+  if (chunk.toolCall) parts.push(`toolCall=${JSON.stringify(chunk.toolCall)}`);
+  if (chunk.toolResult) parts.push(`toolResult=${JSON.stringify(chunk.toolResult)}`);
   if (chunk.finishReason) parts.push(`finishReason=${chunk.finishReason}`);
   if (chunk.usage) parts.push(`usage={input:${chunk.usage.inputTokens},output:${chunk.usage.outputTokens},total:${chunk.usage.totalTokens}}`);
   if (chunk.raw) parts.push(`raw=${JSON.stringify(chunk.raw)}`);
@@ -129,6 +237,9 @@ const scenarios: Scenario[] = [];
 
 log(`Log: ${LOG_PATH}`);
 log(`Scenarios: ${scenarios.map((s) => s.name).join(", ")}`);
+if (SCENARIO_FILTER) {
+  log(`Filter: ${[...SCENARIO_FILTER].join(", ")}`);
+}
 log("");
 
 async function runStreamingTest(
@@ -146,6 +257,8 @@ async function runStreamingTest(
     const chunks: IChatGenerationChunk[] = [];
     let fullText = "";
     let fullReasoning = "";
+    let toolCallCount = 0;
+    let toolResultCount = 0;
 
     for await (const chunk of scenario.service.streamChatCompletion(req)) {
       chunks.push(chunk);
@@ -157,6 +270,8 @@ async function runStreamingTest(
       if (collectReasoning && chunk.reasoningDelta) {
         fullReasoning += chunk.reasoningDelta;
       }
+      if (chunk.toolCall) toolCallCount++;
+      if (chunk.toolResult) toolResultCount++;
     }
 
     log(`  Chunks received: ${chunks.length}`);
@@ -164,6 +279,8 @@ async function runStreamingTest(
     if (collectReasoning && fullReasoning) {
       log(`  Full reasoning: ${JSON.stringify(fullReasoning)}`);
     }
+    log(`  Tool calls: ${toolCallCount}`);
+    log(`  Tool results: ${toolResultCount}`);
     log(`[${scenario.name}] [${model}] ${label} PASSED.`);
 
     log("");
@@ -203,6 +320,11 @@ async function runEmbeddingTest(scenario: Scenario, model: string): Promise<void
 }
 
 for (const scenario of scenarios) {
+  if (SCENARIO_FILTER && !SCENARIO_FILTER.has(scenario.name.toLowerCase())) {
+    log(`SKIP [${scenario.name}]: use --scenarios ${scenario.name.toLowerCase()} to include.`);
+    log("");
+    continue;
+  }
   log(`========== [${scenario.name}] SCENARIO ==========`);
   log(`  Models: ${scenario.chatModels.join(", ")}`);
   log("");
@@ -228,6 +350,50 @@ for (const scenario of scenarios) {
         settings: { reasoningEffort: "high" },
       },
       true,
+    );
+
+    await runStreamingTest(
+      scenario,
+      model,
+      "WITH TOOL CALL - CAPITAL",
+      {
+        messages: [
+          {
+            role: "user",
+            content:
+              "Use the get_capital tool to find the capital of Portugal. Then answer with only the capital city name.",
+          },
+        ],
+        tools: [getCapitalTool],
+        settings: {
+          reasoningEffort: "none",
+          toolChoice: "auto",
+          maxToolSteps: 3,
+        },
+      },
+      false,
+    );
+
+    await runStreamingTest(
+      scenario,
+      model,
+      "WITH TOOL CALL - ADD NUMBERS",
+      {
+        messages: [
+          {
+            role: "user",
+            content:
+              "Use the add_numbers tool to add 123 and 456. Then answer with only the numeric result.",
+          },
+        ],
+        tools: [addNumbersTool],
+        settings: {
+          reasoningEffort: "none",
+          toolChoice: "auto",
+          maxToolSteps: 3,
+        },
+      },
+      false,
     );
   }
 

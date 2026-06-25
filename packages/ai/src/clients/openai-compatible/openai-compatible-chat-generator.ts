@@ -12,14 +12,24 @@ import type {
 import type { AiStopReason } from "../../common/ai-stop-reason.js";
 import type { IAiTokenUsage } from "../../common/ai-token-usage.js";
 import type { IOpenAICompatibleClientOptions } from "./openai-compatible-client-options.js";
+import type { IAiTool } from "../../tools/ai-tool.js";
+import type { IAiToolCall } from "../../tools/ai-tool-call.js";
+import type { IAiToolResult } from "../../tools/ai-tool-result.js";
 import { AiError } from "../../errors/ai-error.js";
+import {
+  createToolCallFromUnknown,
+  createToolResultFromUnknown,
+} from "../../tools/ai-tool-utils.js";
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import {
   generateText,
   streamText,
+  stepCountIs,
+  jsonSchema,
   type ModelMessage,
   type LanguageModelUsage,
   type JSONValue,
+  type ToolSet,
 } from "ai";
 
 export class OpenAICompatibleChatGenerator implements IChatGenerator {
@@ -50,6 +60,9 @@ export class OpenAICompatibleChatGenerator implements IChatGenerator {
       stopSequences: request.settings?.stop,
       abortSignal: request.signal ?? request.settings?.signal,
       providerOptions: this.buildProviderOptions(request),
+      tools: this.buildTools(request, modelId),
+      toolChoice: this.buildToolChoice(request),
+      stopWhen: this.buildStopWhen(request),
     });
 
     return {
@@ -62,6 +75,16 @@ export class OpenAICompatibleChatGenerator implements IChatGenerator {
       },
       finishReason: this.mapFinishReason(result.finishReason),
       usage: this.mapUsage(result.usage),
+      toolCalls: result.toolCalls?.length
+        ? (result.toolCalls.map((tc: any) =>
+            createToolCallFromUnknown(tc),
+          ).filter(Boolean) as IAiToolCall[])
+        : undefined,
+      toolResults: result.toolResults?.length
+        ? (result.toolResults.map((tr: any) =>
+            createToolResultFromUnknown(tr),
+          ).filter(Boolean) as IAiToolResult[])
+        : undefined,
       raw: result,
     };
   }
@@ -87,6 +110,9 @@ export class OpenAICompatibleChatGenerator implements IChatGenerator {
       stopSequences: request.settings?.stop,
       abortSignal: request.signal ?? request.settings?.signal,
       providerOptions: this.buildProviderOptions(request),
+      tools: this.buildTools(request, modelId),
+      toolChoice: this.buildToolChoice(request),
+      stopWhen: this.buildStopWhen(request),
     });
 
     const responseId = crypto.randomUUID();
@@ -113,6 +139,34 @@ export class OpenAICompatibleChatGenerator implements IChatGenerator {
             raw: part,
           };
           break;
+        case "tool-call": {
+          const toolCall = createToolCallFromUnknown(part);
+          if (toolCall) {
+            yield {
+              id: responseId,
+              type: "tool_call_delta" as const,
+              provider: this.options.id,
+              model: modelId,
+              toolCall,
+              raw: part,
+            };
+          }
+          break;
+        }
+        case "tool-result": {
+          const toolResult = createToolResultFromUnknown(part);
+          if (toolResult) {
+            yield {
+              id: responseId,
+              type: "tool_result_delta" as const,
+              provider: this.options.id,
+              model: modelId,
+              toolResult,
+              raw: part,
+            };
+          }
+          break;
+        }
         case "finish":
           yield {
             id: responseId,
@@ -132,6 +186,67 @@ export class OpenAICompatibleChatGenerator implements IChatGenerator {
           );
       }
     }
+  }
+
+  private buildTools(
+    request: IChatGenerationRequest,
+    modelId: string,
+  ): ToolSet | undefined {
+    if (!request.tools || request.tools.length === 0) return undefined;
+
+    const tools: Record<string, unknown> = {};
+
+    for (const toolDef of request.tools) {
+      tools[toolDef.name] = this.toSdkTool(toolDef, request, modelId);
+    }
+
+    return tools as ToolSet;
+  }
+
+  private toSdkTool(
+    toolDef: IAiTool,
+    request: IChatGenerationRequest,
+    modelId: string,
+  ): unknown {
+    const base: Record<string, unknown> = {
+      description: toolDef.description,
+      inputSchema: toolDef.parameters
+        ? jsonSchema(toolDef.parameters as any)
+        : jsonSchema({ type: "object" }),
+    };
+
+    if (toolDef.execute) {
+      base.execute = async (args: unknown) => {
+        return toolDef.execute!(args, {
+          toolCallId: "",
+          toolName: toolDef.name,
+          provider: this.options.id,
+          model: modelId,
+          userId: request.userId,
+          metadata: request.metadata,
+          signal: request.signal ?? request.settings?.signal,
+        });
+      };
+    }
+
+    return base;
+  }
+
+  private buildToolChoice(
+    request: IChatGenerationRequest,
+  ): any | undefined {
+    const choice = request.settings?.toolChoice;
+    if (!choice || choice === "auto") return undefined;
+    return choice;
+  }
+
+  private buildStopWhen(
+    request: IChatGenerationRequest,
+  ): any | undefined {
+    const maxSteps = request.settings?.maxToolSteps;
+    if (!request.tools || request.tools.length === 0) return undefined;
+    if (maxSteps === undefined || maxSteps <= 1) return undefined;
+    return stepCountIs(maxSteps);
   }
 
   private resolveModelId(request: IChatGenerationRequest): string {
@@ -162,7 +277,7 @@ export class OpenAICompatibleChatGenerator implements IChatGenerator {
   ): Record<string, Record<string, JSONValue>> | undefined {
     const providerOpts: Record<string, JSONValue> = {};
 
-    if (request.settings?.reasoningEffort) {
+    if (request.settings?.reasoningEffort && request.settings.reasoningEffort !== "none") {
       providerOpts.reasoningEffort = request.settings.reasoningEffort;
     }
     if (request.userId) {

@@ -136,3 +136,101 @@ describe("OllamaChatGenerator stream chunk types", () => {
     expect(chunk.delta).toBe("final text");
   });
 });
+
+describe("OllamaChatGenerator tool mapping", () => {
+  test("buildOllamaTools produces OpenAI-style function tools", () => {
+    const generator = new OllamaChatGenerator({
+      id: "test",
+      name: "Test",
+      defaultModel: "test-model",
+    });
+
+    const tools = Reflect.get(
+      Reflect.getPrototypeOf(generator)!,
+      "buildOllamaTools",
+    ).call(generator, {
+      tools: [
+        {
+          name: "get_capital",
+          description: "Gets capital",
+          parameters: {
+            type: "object",
+            properties: { country: { type: "string" } },
+            required: ["country"],
+          },
+        },
+      ],
+    });
+
+    expect(tools).toBeDefined();
+    expect(tools).toHaveLength(1);
+    expect(tools[0].type).toBe("function");
+    expect(tools[0].function.name).toBe("get_capital");
+    expect(tools[0].function.description).toBe("Gets capital");
+    expect(tools[0].function.parameters.required).toContain("country");
+  });
+
+  test("buildOllamaTools returns undefined when no tools", () => {
+    const generator = new OllamaChatGenerator({
+      id: "test",
+      name: "Test",
+      defaultModel: "test-model",
+    });
+
+    const tools = Reflect.get(
+      Reflect.getPrototypeOf(generator)!,
+      "buildOllamaTools",
+    ).call(generator, { tools: undefined });
+
+    expect(tools).toBeUndefined();
+  });
+
+  test("extractOllamaToolCalls parses message.tool_calls array", () => {
+    const generator = new OllamaChatGenerator({
+      id: "test",
+      name: "Test",
+      defaultModel: "test-model",
+    });
+
+    const calls = Reflect.get(
+      Reflect.getPrototypeOf(generator)!,
+      "extractOllamaToolCalls",
+    ).call(generator, {
+      tool_calls: [
+        {
+          id: "call-1",
+          function: {
+            name: "get_capital",
+            arguments: { country: "Portugal" },
+          },
+        },
+      ],
+    });
+
+    expect(calls).toHaveLength(1);
+    expect(calls[0].name).toBe("get_capital");
+    expect((calls[0].arguments as any).country).toBe("Portugal");
+  });
+
+  test("createOllamaToolResultMessage builds tool role message", () => {
+    const generator = new OllamaChatGenerator({
+      id: "test",
+      name: "Test",
+      defaultModel: "test-model",
+    });
+
+    const msg = Reflect.get(
+      Reflect.getPrototypeOf(generator)!,
+      "createOllamaToolResultMessage",
+    ).call(generator, {
+      toolCallId: "call-1",
+      name: "get_capital",
+      result: { capital: "Lisbon" },
+    });
+
+    expect(msg.role).toBe("tool");
+    expect(msg.tool_call_id).toBe("call-1");
+    const parsed = JSON.parse(msg.content);
+    expect(parsed.capital).toBe("Lisbon");
+  });
+});

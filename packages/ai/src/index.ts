@@ -75,3 +75,5 @@ export { aiExtension } from "./extension/ai-extension.js";
 export type { IAiDefaults, IAiExtensionOptions } from "./extension/ai-extension.js";
 
 export { AiError } from "./errors/ai-error.js";
+
+export * from "./tools/index.js";

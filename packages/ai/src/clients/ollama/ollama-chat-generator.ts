@@ -8,8 +8,16 @@ import type { IChatMessage } from "../../chat/chat-message.js";
 import type { AiStopReason } from "../../common/ai-stop-reason.js";
 import type { IAiTokenUsage } from "../../common/ai-token-usage.js";
 import type { IOllamaClientOptions } from "./ollama-client-options.js";
+import type { IAiToolCall } from "../../tools/ai-tool-call.js";
+import type { IAiToolResult } from "../../tools/ai-tool-result.js";
+import { findAiTool } from "../../tools/ai-tool-utils.js";
 import { AiError } from "../../errors/ai-error.js";
 import { Ollama, type Message, type ChatResponse } from "ollama";
+
+type OllamaToolMessage = Message & { tool_call_id?: string };
+type OllamaChatRequestWithTools = Parameters<Ollama["chat"]>[0] & {
+  tools?: unknown[];
+};
 
 export class OllamaChatGenerator implements IChatGenerator {
   private readonly options: IOllamaClientOptions;
@@ -29,20 +37,81 @@ export class OllamaChatGenerator implements IChatGenerator {
     request: IChatGenerationRequest,
   ): Promise<IChatGenerationResponse> {
     const modelId = this.resolveModelId(request);
-    const response = await this.client.chat({
-      model: modelId,
-      messages: this.convertToOllamaMessages(request.messages),
-      stream: false,
-      ...this.buildChatOptions(request),
-    });
+    const maxToolSteps = request.settings?.maxToolSteps ?? 1;
+    const messages = this.convertToOllamaMessages(request.messages);
+    const tools = this.buildOllamaTools(request);
 
-    return this.toCompletionResponse(response, modelId);
+    const allToolCalls: IAiToolCall[] = [];
+    const allToolResults: IAiToolResult[] = [];
+
+    const requestBase: Partial<OllamaChatRequestWithTools> = {
+      model: modelId,
+      tools: tools as any,
+      ...this.buildChatOptions(request),
+    };
+
+    let response = await this.client.chat({
+      ...requestBase,
+      messages: messages as Message[],
+      stream: false,
+    } as OllamaChatRequestWithTools & { stream: false });
+
+    for (let step = 0; step < maxToolSteps; step++) {
+      const toolCalls = this.extractOllamaToolCalls(
+        response.message?.tool_calls ?? response,
+      );
+
+      if (toolCalls.length === 0) break;
+
+      allToolCalls.push(...toolCalls);
+
+      const results: IAiToolResult[] = [];
+      for (const toolCall of toolCalls) {
+        results.push(
+          await this.executeToolCall(toolCall, request, modelId),
+        );
+      }
+
+      allToolResults.push(...results);
+
+      if (response.message) {
+        messages.push(response.message);
+      }
+      for (const result of results) {
+        messages.push(this.createOllamaToolResultMessage(result));
+      }
+
+      response = await this.client.chat({
+        ...requestBase,
+        messages: messages as Message[],
+        stream: false,
+      } as OllamaChatRequestWithTools & { stream: false });
+    }
+
+    return {
+      ...this.toCompletionResponse(response, modelId),
+      toolCalls: allToolCalls.length ? allToolCalls : undefined,
+      toolResults: allToolResults.length ? allToolResults : undefined,
+    };
   }
 
   async *streamChatCompletion(
     request: IChatGenerationRequest,
   ): AsyncIterable<IChatGenerationChunk> {
     const modelId = this.resolveModelId(request);
+
+    if (!request.tools || request.tools.length === 0) {
+      yield* this.simpleStream(request, modelId);
+      return;
+    }
+
+    yield* this.toolStream(request, modelId);
+  }
+
+  private async *simpleStream(
+    request: IChatGenerationRequest,
+    modelId: string,
+  ): AsyncIterable<IChatGenerationChunk> {
     const stream = await this.client.chat({
       model: modelId,
       messages: this.convertToOllamaMessages(request.messages),
@@ -53,8 +122,82 @@ export class OllamaChatGenerator implements IChatGenerator {
     const responseId = crypto.randomUUID();
 
     for await (const part of stream) {
-      const chunk = this.toStreamChunk(part, modelId, responseId);
-      yield chunk;
+      yield this.toStreamChunk(part, modelId, responseId);
+    }
+  }
+
+  private async *toolStream(
+    request: IChatGenerationRequest,
+    modelId: string,
+  ): AsyncIterable<IChatGenerationChunk> {
+    const maxToolSteps = request.settings?.maxToolSteps ?? 1;
+    const messages = this.convertToOllamaMessages(request.messages);
+    const tools = this.buildOllamaTools(request);
+
+    const responseId = crypto.randomUUID();
+    const requestBase: Partial<OllamaChatRequestWithTools> = {
+      model: modelId,
+      tools: tools as any,
+      ...this.buildChatOptions(request),
+    };
+
+    for (let step = 0; step < maxToolSteps; step++) {
+      const stepToolCalls: IAiToolCall[] = [];
+      let assistantMessage: Message | undefined;
+
+      const stream = await this.client.chat({
+        ...requestBase,
+        messages: messages as Message[],
+        stream: true,
+      } as OllamaChatRequestWithTools & { stream: true });
+
+      for await (const part of stream) {
+        const chunk = this.toStreamChunk(part, modelId, responseId);
+        yield chunk;
+
+        const toolCalls = this.extractOllamaToolCalls(
+          part.message?.tool_calls ?? part,
+        );
+
+        if (toolCalls.length > 0) {
+          assistantMessage = part.message;
+          stepToolCalls.push(...toolCalls);
+        }
+      }
+
+      if (stepToolCalls.length === 0) break;
+
+      if (assistantMessage) {
+        messages.push(assistantMessage);
+      }
+
+      for (const toolCall of stepToolCalls) {
+        yield {
+          id: responseId,
+          type: "tool_call_delta" as const,
+          provider: this.options.id,
+          model: modelId,
+          toolCall,
+          raw: toolCall.raw,
+        };
+
+        const result = await this.executeToolCall(
+          toolCall,
+          request,
+          modelId,
+        );
+
+        yield {
+          id: responseId,
+          type: "tool_result_delta" as const,
+          provider: this.options.id,
+          model: modelId,
+          toolResult: result,
+          raw: result.raw,
+        };
+
+        messages.push(this.createOllamaToolResultMessage(result));
+      }
     }
   }
 
@@ -66,6 +209,136 @@ export class OllamaChatGenerator implements IChatGenerator {
       );
     }
     return id;
+  }
+
+  private buildOllamaTools(
+    request: IChatGenerationRequest,
+  ): unknown[] | undefined {
+    if (!request.tools || request.tools.length === 0) return undefined;
+
+    return request.tools.map((tool) => ({
+      type: "function" as const,
+      function: {
+        name: tool.name,
+        description: tool.description,
+        parameters: tool.parameters ?? {
+          type: "object" as const,
+          properties: {},
+        },
+      },
+    }));
+  }
+
+  private extractOllamaToolCalls(value: unknown): IAiToolCall[] {
+    if (!value) return [];
+
+    let calls: unknown[] = [];
+    if (Array.isArray(value)) {
+      calls = value;
+    } else if (typeof value === "object") {
+      const record = value as Record<string, unknown>;
+      if (Array.isArray(record.tool_calls)) {
+        calls = record.tool_calls;
+      } else if (Array.isArray(record.message)) {
+        calls = record.message as unknown[];
+      }
+    }
+
+    return calls
+      .map((c) => {
+        if (!c || typeof c !== "object") return undefined;
+
+        const obj = c as Record<string, unknown>;
+        const id =
+          typeof obj.id === "string"
+            ? obj.id
+            : "";
+        const fn =
+          typeof obj.function === "object" && obj.function
+            ? (obj.function as Record<string, unknown>)
+            : null;
+
+        const name =
+          typeof obj.name === "string"
+            ? obj.name
+            : (fn?.name as string | undefined) ?? "";
+        const args = fn?.arguments ?? obj.arguments ?? obj.input ?? {};
+
+        if (!name) return undefined;
+
+        return {
+          id: id || crypto.randomUUID(),
+          name,
+          arguments: typeof args === "string" ? this.safeParseJson(args) : args,
+          raw: c,
+        } as IAiToolCall;
+      })
+      .filter(Boolean) as IAiToolCall[];
+  }
+
+  private safeParseJson(value: string): unknown {
+    try {
+      return JSON.parse(value);
+    } catch {
+      return value;
+    }
+  }
+
+  private async executeToolCall(
+    toolCall: IAiToolCall,
+    request: IChatGenerationRequest,
+    modelId: string,
+  ): Promise<IAiToolResult> {
+    const tool = findAiTool(request.tools, toolCall.name);
+
+    if (!tool?.execute) {
+      return {
+        toolCallId: toolCall.id,
+        name: toolCall.name,
+        error: `Tool '${toolCall.name}' is not executable.`,
+        raw: toolCall.raw,
+      };
+    }
+
+    try {
+      const result = await tool.execute(toolCall.arguments, {
+        toolCallId: toolCall.id,
+        toolName: toolCall.name,
+        provider: this.options.id,
+        model: modelId,
+        userId: request.userId,
+        metadata: request.metadata,
+        signal: request.signal ?? request.settings?.signal,
+      });
+
+      return {
+        toolCallId: toolCall.id,
+        name: toolCall.name,
+        result,
+        raw: toolCall.raw,
+      };
+    } catch (error) {
+      return {
+        toolCallId: toolCall.id,
+        name: toolCall.name,
+        error: error instanceof Error ? error.message : String(error),
+        raw: toolCall.raw,
+      };
+    }
+  }
+
+  private createOllamaToolResultMessage(
+    result: IAiToolResult,
+  ): OllamaToolMessage {
+    const content = result.error
+      ? JSON.stringify({ error: result.error })
+      : JSON.stringify(result.result);
+
+    return {
+      role: "tool" as const,
+      content,
+      tool_call_id: result.toolCallId,
+    };
   }
 
   private buildChatOptions(
@@ -120,7 +393,10 @@ export class OllamaChatGenerator implements IChatGenerator {
     return messages.map((msg) => {
       const base: Message = {
         role: msg.role,
-        content: typeof msg.content === "string" ? msg.content : JSON.stringify(msg.content),
+        content:
+          typeof msg.content === "string"
+            ? msg.content
+            : JSON.stringify(msg.content),
       };
       return base;
     });
@@ -189,9 +465,7 @@ export class OllamaChatGenerator implements IChatGenerator {
     }
   }
 
-  private mapUsage(
-    response: ChatResponse,
-  ): IAiTokenUsage | undefined {
+  private mapUsage(response: ChatResponse): IAiTokenUsage | undefined {
     if (!response.prompt_eval_count && !response.eval_count) {
       return undefined;
     }
@@ -199,7 +473,8 @@ export class OllamaChatGenerator implements IChatGenerator {
       inputTokens: response.prompt_eval_count || undefined,
       outputTokens: response.eval_count || undefined,
       totalTokens:
-        (response.prompt_eval_count || 0) + (response.eval_count || 0) || undefined,
+        (response.prompt_eval_count || 0) + (response.eval_count || 0) ||
+        undefined,
     };
   }
 }

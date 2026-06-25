@@ -4,6 +4,10 @@ import type {
   IAiInputTokenUsageDetails,
   IAiOutputTokenUsageDetails,
   IChatGenerationChunk,
+  IChatGenerationRequest,
+  IChatGenerationResponse,
+  IAiToolCall,
+  IAiToolResult,
 } from "../../index.js";
 
 describe("IAiTokenUsage", () => {
@@ -137,5 +141,97 @@ describe("IChatGenerationChunk types", () => {
     };
     expect(chunk.type).toBeUndefined();
     expect(chunk.delta).toBe("text");
+  });
+});
+
+describe("IChatGenerationRequest tools", () => {
+  test("accepts tools array", () => {
+    const request: IChatGenerationRequest = {
+      messages: [{ role: "user", content: "hello" }],
+      tools: [
+        {
+          name: "get_capital",
+          description: "Gets capital",
+          parameters: {
+            type: "object",
+            properties: { country: { type: "string" } },
+          },
+        },
+      ],
+    };
+    expect(request.tools).toHaveLength(1);
+    expect(request.tools![0]!.name).toBe("get_capital");
+  });
+});
+
+describe("IChatGenerationChunk tool shapes", () => {
+  test("accepts toolCall on chunk", () => {
+    const chunk: IChatGenerationChunk = {
+      id: "abc",
+      type: "tool_call_delta",
+      provider: "test",
+      model: "test-model",
+      toolCall: {
+        id: "call-1",
+        name: "get_capital",
+        arguments: { country: "Portugal" },
+      },
+    };
+    expect(chunk.type).toBe("tool_call_delta");
+    expect(chunk.toolCall).toBeDefined();
+    expect(chunk.toolCall!.name).toBe("get_capital");
+  });
+
+  test("accepts toolResult on chunk", () => {
+    const chunk: IChatGenerationChunk = {
+      id: "abc",
+      type: "tool_result_delta",
+      provider: "test",
+      model: "test-model",
+      toolResult: {
+        toolCallId: "call-1",
+        name: "get_capital",
+        result: { capital: "Lisbon" },
+      },
+    };
+    expect(chunk.type).toBe("tool_result_delta");
+    expect(chunk.toolResult).toBeDefined();
+    expect(chunk.toolResult!.toolCallId).toBe("call-1");
+  });
+});
+
+describe("IChatGenerationResponse tool shapes", () => {
+  test("accepts toolCalls on response", () => {
+    const response: IChatGenerationResponse = {
+      id: "abc",
+      provider: "test",
+      model: "test-model",
+      message: { role: "assistant", content: "Done" },
+      toolCalls: [
+        {
+          id: "call-1",
+          name: "get_capital",
+          arguments: { country: "Portugal" },
+        },
+      ],
+    };
+    expect(response.toolCalls).toHaveLength(1);
+  });
+
+  test("accepts toolResults on response", () => {
+    const response: IChatGenerationResponse = {
+      id: "abc",
+      provider: "test",
+      model: "test-model",
+      message: { role: "assistant", content: "Done" },
+      toolResults: [
+        {
+          toolCallId: "call-1",
+          name: "get_capital",
+          result: { capital: "Lisbon" },
+        },
+      ],
+    };
+    expect(response.toolResults).toHaveLength(1);
   });
 });
