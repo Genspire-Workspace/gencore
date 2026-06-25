@@ -2,6 +2,7 @@ import {
   AllowAnonymous,
   Controller,
   Get,
+  HttpError,
   Post,
   RequestContext,
 } from "@genspire/server";
@@ -10,12 +11,15 @@ import type { AiMessageContent } from "../../../../packages/ai/src/common/ai-con
 import type { IChatGenerationRequest } from "../../../../packages/ai/src/chat/chat-generation-request.js";
 import type { IChatGenerationSettings } from "../../../../packages/ai/src/chat/chat-generation-settings.js";
 import type { IChatMessage } from "../../../../packages/ai/src/chat/chat-message.js";
+import type { IAiToolCall } from "../../../../packages/ai/src/tools/ai-tool-call.js";
+import type { IAiToolResult } from "../../../../packages/ai/src/tools/ai-tool-result.js";
 import type { IAiTool } from "../../../../packages/ai/src/tools/ai-tool.js";
 import {
   AiChatRequestDto,
   AiChatResponseDto,
   AiChatStreamChunkDto,
   AiChatToolDto,
+  type AiToolExecutionModeDto,
   AiEmbeddingRequestDto,
   AiEmbeddingResponseDto,
   AiProvidersResponseDto,
@@ -47,8 +51,14 @@ export class AiController {
   })
   async generateChat(ctx: RequestContext) {
     const body = await ctx.json<AiChatRequestDto>();
+    const toolExecutionModes = this.createToolExecutionModeMap(body.tools);
     const response = await aiPlaygroundRuntime.service.generateChatCompletion(
       this.createChatRequest(body),
+    );
+
+    this.assertNoClientToolResults(
+      response.toolResults,
+      toolExecutionModes,
     );
 
     return {
@@ -58,8 +68,12 @@ export class AiController {
       message: this.toChatMessageDto(response.message),
       finishReason: response.finishReason,
       usage: response.usage as Record<string, unknown> | undefined,
-      toolCalls: response.toolCalls as unknown[] | undefined,
-      toolResults: response.toolResults as unknown[] | undefined,
+      toolCalls: response.toolCalls?.map((toolCall) =>
+        this.annotateToolCall(toolCall, toolExecutionModes)
+      ) as unknown[] | undefined,
+      toolResults: response.toolResults?.map((toolResult) =>
+        this.annotateToolResult(toolResult, toolExecutionModes)
+      ) as unknown[] | undefined,
       metadata: response.metadata,
     };
   }
@@ -73,6 +87,7 @@ export class AiController {
   async streamChat(ctx: RequestContext) {
     const body = await ctx.json<AiChatRequestDto>();
     const request = this.createChatRequest(body);
+    const toolExecutionModes = this.createToolExecutionModeMap(body.tools);
     const encoder = new TextEncoder();
 
     const stream = new ReadableStream<Uint8Array>({
@@ -81,6 +96,10 @@ export class AiController {
           for await (const chunk of aiPlaygroundRuntime.service.streamChatCompletion(
             request,
           )) {
+            if (chunk.toolResult) {
+              this.assertToolResultOwnership(chunk.toolResult, toolExecutionModes);
+            }
+
             controller.enqueue(
               encoder.encode(
                 `${JSON.stringify({
@@ -93,8 +112,12 @@ export class AiController {
                   message: chunk.message
                     ? this.toChatMessageDto(chunk.message)
                     : undefined,
-                  toolCall: chunk.toolCall,
-                  toolResult: chunk.toolResult,
+                  toolCall: chunk.toolCall
+                    ? this.annotateToolCall(chunk.toolCall, toolExecutionModes)
+                    : undefined,
+                  toolResult: chunk.toolResult
+                    ? this.annotateToolResult(chunk.toolResult, toolExecutionModes)
+                    : undefined,
                   finishReason: chunk.finishReason,
                   usage: chunk.usage,
                   metadata: chunk.metadata,
@@ -196,11 +219,110 @@ export class AiController {
   }
 
   private toDeclarativeTool(tool: AiChatToolDto): IAiTool {
+    if (tool.executionMode === "server") {
+      const resolvedTool = aiPlaygroundRuntime.serverToolRegistry.tryGet(tool.name);
+
+      if (!resolvedTool) {
+        throw new HttpError(400, `Unknown server AI tool '${tool.name}'.`, {
+          code: "AI_SERVER_TOOL_NOT_FOUND",
+        });
+      }
+
+      return resolvedTool;
+    }
+
     return {
       name: tool.name,
       description: tool.description,
       parameters: tool.parameters,
+      metadata: {
+        executionMode: this.resolveExecutionMode(tool.executionMode),
+      },
     };
+  }
+
+  private createToolExecutionModeMap(
+    tools: readonly AiChatToolDto[] | undefined,
+  ): Map<string, AiToolExecutionModeDto> {
+    const map = new Map<string, AiToolExecutionModeDto>();
+
+    for (const tool of tools ?? []) {
+      map.set(tool.name, this.resolveExecutionMode(tool.executionMode));
+    }
+
+    return map;
+  }
+
+  private resolveExecutionMode(
+    executionMode: AiToolExecutionModeDto | undefined,
+  ): AiToolExecutionModeDto {
+    return executionMode ?? "client";
+  }
+
+  private annotateToolCall(
+    toolCall: IAiToolCall,
+    toolExecutionModes: ReadonlyMap<string, AiToolExecutionModeDto>,
+  ): Record<string, unknown> {
+    return {
+      ...toolCall,
+      executionMode: this.resolveToolExecutionModeByName(
+        toolCall.name,
+        toolExecutionModes,
+      ),
+    };
+  }
+
+  private annotateToolResult(
+    toolResult: IAiToolResult,
+    toolExecutionModes: ReadonlyMap<string, AiToolExecutionModeDto>,
+  ): Record<string, unknown> {
+    return {
+      ...toolResult,
+      executionMode: this.resolveToolExecutionModeByName(
+        toolResult.name,
+        toolExecutionModes,
+      ),
+    };
+  }
+
+  private resolveToolExecutionModeByName(
+    name: string | undefined,
+    toolExecutionModes: ReadonlyMap<string, AiToolExecutionModeDto>,
+  ): AiToolExecutionModeDto {
+    if (!name) {
+      return "client";
+    }
+
+    return toolExecutionModes.get(name) ?? "client";
+  }
+
+  private assertNoClientToolResults(
+    toolResults: readonly IAiToolResult[] | undefined,
+    toolExecutionModes: ReadonlyMap<string, AiToolExecutionModeDto>,
+  ): void {
+    for (const toolResult of toolResults ?? []) {
+      this.assertToolResultOwnership(toolResult, toolExecutionModes);
+    }
+  }
+
+  private assertToolResultOwnership(
+    toolResult: IAiToolResult,
+    toolExecutionModes: ReadonlyMap<string, AiToolExecutionModeDto>,
+  ): void {
+    const executionMode = this.resolveToolExecutionModeByName(
+      toolResult.name,
+      toolExecutionModes,
+    );
+
+    if (executionMode === "client" && toolResult.name) {
+      throw new HttpError(
+        500,
+        `Client-owned AI tool '${toolResult.name}' was unexpectedly executed on the server.`,
+        {
+          code: "AI_CLIENT_TOOL_EXECUTED_ON_SERVER",
+        },
+      );
+    }
   }
 
   private toChatSettings(

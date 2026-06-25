@@ -1,7 +1,9 @@
 import { AiClientRegistry } from "../../../../packages/ai/src/clients/ai-client-registry.js";
 import { OpenAICompatibleClient } from "../../../../packages/ai/src/clients/openai-compatible/index.js";
 import { AiService } from "../../../../packages/ai/src/services/ai-service.js";
+import { AiToolRegistry } from "../../../../packages/ai/src/tools/ai-tool-registry.js";
 import { AiProviderModelResolver } from "./ai-provider-model-resolver.js";
+import { playgroundAiSmokeToolRegistry } from "./ai-smoke-tools.js";
 
 export interface IAiPlaygroundProviderInfo {
   id: string;
@@ -20,6 +22,7 @@ export interface IAiPlaygroundRuntime {
   service: AiService;
   resolver: AiProviderModelResolver;
   providers: IAiPlaygroundProviderInfo[];
+  serverToolRegistry: AiToolRegistry;
 }
 
 export function createAiPlaygroundRuntime(): IAiPlaygroundRuntime {
@@ -79,6 +82,7 @@ export function createAiPlaygroundRuntime(): IAiPlaygroundRuntime {
     registry,
     service,
     resolver,
+    serverToolRegistry: playgroundAiSmokeToolRegistry,
     providers: [
       {
         id: "ollama",

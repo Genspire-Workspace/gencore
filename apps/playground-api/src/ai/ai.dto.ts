@@ -1,5 +1,7 @@
 import { ApiDto, ApiField, defineApiType } from "@genspire/server";
 
+export type AiToolExecutionModeDto = "client" | "server";
+
 @ApiDto({
   description: "AI chat message",
 })
@@ -54,6 +56,13 @@ export class AiChatToolDto {
     required: false,
   })
   parameters?: Record<string, unknown>;
+
+  @ApiField({
+    type: "string",
+    description: "Execution ownership for this tool definition",
+    required: false,
+  })
+  executionMode?: AiToolExecutionModeDto;
 }
 
 @ApiDto({

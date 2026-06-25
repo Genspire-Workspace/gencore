@@ -184,6 +184,56 @@ describe("playground api", () => {
     }
   });
 
+  test("ai chat rejects unknown server tool names before model execution", async () => {
+    const app = await createPlaygroundApp({
+      port: 0,
+      env: {
+        ...process.env,
+        GENCORE_PLAYGROUND_LIBSQL_DB_PATH: dbPath,
+      },
+    });
+
+    await app.start();
+
+    try {
+      const server = app.get(Server);
+      const response = await server.handle(
+        new Request("http://localhost/ai/chat", {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+          },
+          body: JSON.stringify({
+            provider: "ollama",
+            model: "gemma4:12b",
+            messages: [
+              {
+                role: "user",
+                content: "Hello",
+              },
+            ],
+            tools: [
+              {
+                name: "missing_server_tool",
+                description: "Missing server tool",
+                executionMode: "server",
+              },
+            ],
+          }),
+        }),
+      );
+
+      expect(response.status).toBe(400);
+      expect(await response.json()).toMatchObject({
+        title: "Unknown server AI tool 'missing_server_tool'.",
+        status: 400,
+        code: "AI_SERVER_TOOL_NOT_FOUND",
+      });
+    } finally {
+      await app.stop();
+    }
+  });
+
   test("todo CRUD and swagger routes work with libsql", async () => {
     const app = await createPlaygroundApp({
       port: 0,
