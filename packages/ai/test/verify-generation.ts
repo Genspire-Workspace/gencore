@@ -50,6 +50,7 @@ function logRequest(request: IChatGenerationRequest | IEmbeddingGenerationReques
 
 function logChunk(chunk: IChatGenerationChunk): void {
   const parts: string[] = [`[chunk]`];
+  if (chunk.type) parts.push(`type=${chunk.type}`);
   if (chunk.delta) parts.push(`delta=${JSON.stringify(chunk.delta)}`);
   if (chunk.reasoningDelta) parts.push(`reasoning=${JSON.stringify(chunk.reasoningDelta)}`);
   if (chunk.finishReason) parts.push(`finishReason=${chunk.finishReason}`);
@@ -61,6 +62,8 @@ function logChunk(chunk: IChatGenerationChunk): void {
 interface Scenario {
   name: string;
   service: AiService;
+  chatModels: string[];
+  embedModel?: string;
   supportsEmbedding: boolean;
 }
 
@@ -81,17 +84,18 @@ const scenarios: Scenario[] = [];
     name: "OLLAMA",
     service: new AiService(ollamaRegistry, {
       chatProvider: "ollama",
-      chatModel: process.env.OLLAMA_CHAT_MODEL ?? "gemma4:12b",
       embeddingProvider: "ollama",
       embeddingModel: process.env.OLLAMA_EMBED_MODEL ?? "embeddinggemma:latest",
     }),
+    chatModels: [process.env.OLLAMA_CHAT_MODEL ?? "gemma4:12b"],
+    embedModel: process.env.OLLAMA_EMBED_MODEL ?? "embeddinggemma:latest",
     supportsEmbedding: true,
   });
 }
 
 // --- DeepSeek OpenAI-compatible scenario ---
 {
-  const deepseekApiKey = process.env.DEEPSEEK_API_KEY || "sk-9aa09af613654c6e87c942af909bd12c";
+  const deepseekApiKey = process.env.DEEPSEEK_API_KEY;
   if (!deepseekApiKey) {
     log("SKIP DeepSeek: DEEPSEEK_API_KEY not set.");
   } else {
@@ -105,14 +109,19 @@ const scenarios: Scenario[] = [];
     const deepseekRegistry = new AiClientRegistry();
     deepseekRegistry.register(deepseekClient);
 
+    const models = process.env.DEEPSEEK_CHAT_MODELS
+      ? process.env.DEEPSEEK_CHAT_MODELS.split(",")
+      : ["deepseek-v4-flash", "deepseek-v4-pro"];
+
     scenarios.push({
       name: "DEEPSEEK",
       service: new AiService(deepseekRegistry, {
         chatProvider: "deepseek",
-        chatModel: process.env.DEEPSEEK_CHAT_MODEL ?? "deepseek-chat",
         embeddingProvider: "deepseek",
         embeddingModel: process.env.DEEPSEEK_EMBED_MODEL ?? "",
       }),
+      chatModels: models,
+      embedModel: process.env.DEEPSEEK_EMBED_MODEL || undefined,
       supportsEmbedding: Boolean(process.env.DEEPSEEK_EMBED_MODEL),
     });
   }
@@ -124,19 +133,21 @@ log("");
 
 async function runStreamingTest(
   scenario: Scenario,
+  model: string,
   label: string,
   request: IChatGenerationRequest,
   collectReasoning: boolean,
 ): Promise<void> {
-  log(`===== [${scenario.name}] ${label} =====`);
-  logRequest(request);
+  const req: IChatGenerationRequest = { ...request, model };
+  log(`===== [${scenario.name}] [${model}] ${label} =====`);
+  logRequest(req);
 
   try {
     const chunks: IChatGenerationChunk[] = [];
     let fullText = "";
     let fullReasoning = "";
 
-    for await (const chunk of scenario.service.streamChatCompletion(request)) {
+    for await (const chunk of scenario.service.streamChatCompletion(req)) {
       chunks.push(chunk);
       logChunk(chunk);
 
@@ -153,7 +164,7 @@ async function runStreamingTest(
     if (collectReasoning && fullReasoning) {
       log(`  Full reasoning: ${JSON.stringify(fullReasoning)}`);
     }
-    log(`[${scenario.name}] ${label} PASSED.`);
+    log(`[${scenario.name}] [${model}] ${label} PASSED.`);
 
     log("");
     log("  --- Stream chunks dump ---");
@@ -162,15 +173,16 @@ async function runStreamingTest(
       log(`  Chunk ${i}: ${JSON.stringify(c)}`);
     }
   } catch (error) {
-    log(`  [${scenario.name}] ${label} error: ${error instanceof Error ? error.message : String(error)}`);
+    log(`  [${scenario.name}] [${model}] ${label} error: ${error instanceof Error ? error.message : String(error)}`);
   }
   log("");
 }
 
-async function runEmbeddingTest(scenario: Scenario): Promise<void> {
-  log(`===== [${scenario.name}] EMBEDDING GENERATION =====`);
+async function runEmbeddingTest(scenario: Scenario, model: string): Promise<void> {
+  log(`===== [${scenario.name}] [${model}] EMBEDDING GENERATION =====`);
 
   const request: IEmbeddingGenerationRequest = {
+    model,
     input: "The quick brown fox jumps over the lazy dog",
   };
   logRequest(request);
@@ -183,41 +195,46 @@ async function runEmbeddingTest(scenario: Scenario): Promise<void> {
       log(`  Usage: input=${response.usage.inputTokens}, total=${response.usage.totalTokens}`);
     }
     log(`  Raw: ${JSON.stringify(response.raw)}`);
-    log(`[${scenario.name}] Embedding PASSED.`);
+    log(`[${scenario.name}] [${model}] Embedding PASSED.`);
   } catch (error) {
-    log(`  [${scenario.name}] Embedding error: ${error instanceof Error ? error.message : String(error)}`);
+    log(`  [${scenario.name}] [${model}] Embedding error: ${error instanceof Error ? error.message : String(error)}`);
   }
   log("");
 }
 
 for (const scenario of scenarios) {
-  const prefix = `[${scenario.name}]`;
-  log(`========== ${prefix} SCENARIO ==========`);
+  log(`========== [${scenario.name}] SCENARIO ==========`);
+  log(`  Models: ${scenario.chatModels.join(", ")}`);
   log("");
 
-  await runStreamingTest(
-    scenario,
-    "STREAMING WITHOUT REASONING",
-    {
-      messages: [{ role: "user", content: "What is the capital of Portugal? Answer in one word." }],
-    },
-    false,
-  );
+  for (const model of scenario.chatModels) {
+    await runStreamingTest(
+      scenario,
+      model,
+      "WITHOUT REASONING",
+      {
+        messages: [{ role: "user", content: "What is the capital of Portugal? Answer in one word." }],
+        settings: { reasoningEffort: "none" },
+      },
+      false,
+    );
 
-  await runStreamingTest(
-    scenario,
-    "STREAMING WITH REASONING",
-    {
-      messages: [{ role: "user", content: "If a train leaves Station A at 60 km/h and another leaves Station B at 80 km/h, and the stations are 280 km apart, how long until they meet? Explain step by step." }],
-      settings: { reasoningEffort: "high" },
-    },
-    true,
-  );
+    await runStreamingTest(
+      scenario,
+      model,
+      "WITH REASONING",
+      {
+        messages: [{ role: "user", content: "If a train leaves Station A at 60 km/h and another leaves Station B at 80 km/h, and the stations are 280 km apart, how long until they meet? Explain step by step." }],
+        settings: { reasoningEffort: "high" },
+      },
+      true,
+    );
+  }
 
-  if (scenario.supportsEmbedding) {
-    await runEmbeddingTest(scenario);
+  if (scenario.supportsEmbedding && scenario.embedModel) {
+    await runEmbeddingTest(scenario, scenario.embedModel);
   } else {
-    log(`[${scenario.name}] Skipping embedding (not supported).`);
+    log(`[${scenario.name}] Skipping embedding (not configured).`);
     log("");
   }
 }

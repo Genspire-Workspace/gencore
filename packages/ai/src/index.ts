@@ -14,9 +14,9 @@ export type { IAiMessage } from "./common/ai-message.js";
 export type { IAiGenerationSettings, AiReasoningEffort } from "./common/ai-generation-settings.js";
 export type { IAiModelRequest } from "./common/ai-model-request.js";
 export type { IAiModelResponse } from "./common/ai-model-response.js";
-export type { IAiModelChunk } from "./common/ai-model-chunk.js";
+export type { IAiModelChunk, AiModelChunkType } from "./common/ai-model-chunk.js";
 export type { AiStopReason } from "./common/ai-stop-reason.js";
-export type { IAiTokenUsage } from "./common/ai-token-usage.js";
+export type { IAiTokenUsage, IAiInputTokenUsageDetails, IAiOutputTokenUsageDetails } from "./common/ai-token-usage.js";
 export type {
   AiApiKeySource,
   IAiApiKey,

@@ -96,6 +96,7 @@ export class OpenAICompatibleChatGenerator implements IChatGenerator {
         case "text-delta":
           yield {
             id: responseId,
+            type: "text_delta" as const,
             provider: this.options.id,
             model: modelId,
             delta: part.text,
@@ -105,6 +106,7 @@ export class OpenAICompatibleChatGenerator implements IChatGenerator {
         case "reasoning-delta":
           yield {
             id: responseId,
+            type: "reasoning_delta" as const,
             provider: this.options.id,
             model: modelId,
             reasoningDelta: part.text,
@@ -114,6 +116,7 @@ export class OpenAICompatibleChatGenerator implements IChatGenerator {
         case "finish":
           yield {
             id: responseId,
+            type: "finish" as const,
             provider: this.options.id,
             model: modelId,
             finishReason: this.mapFinishReason(part.finishReason),
@@ -246,10 +249,43 @@ export class OpenAICompatibleChatGenerator implements IChatGenerator {
     if (!usage) {
       return undefined;
     }
+
+    const inputTokenDetails = this.mapTokenDetails(
+      usage.inputTokenDetails,
+    ) as IAiTokenUsage["inputTokenDetails"];
+
+    const outputTokenDetails = this.mapTokenDetails(
+      usage.outputTokenDetails,
+    ) as IAiTokenUsage["outputTokenDetails"];
+
     return {
       inputTokens: usage.inputTokens,
       outputTokens: usage.outputTokens,
       totalTokens: usage.totalTokens,
+
+      cacheReadTokens: inputTokenDetails?.cacheReadTokens,
+      cacheWriteTokens: inputTokenDetails?.cacheWriteTokens,
+
+      inputTokenDetails,
+      outputTokenDetails,
     };
+  }
+
+  private mapTokenDetails(
+    details: unknown,
+  ): Record<string, number | undefined> | undefined {
+    if (!details || typeof details !== "object") {
+      return undefined;
+    }
+
+    const mapped: Record<string, number | undefined> = {};
+
+    for (const [key, value] of Object.entries(details)) {
+      if (typeof value === "number") {
+        mapped[key] = value;
+      }
+    }
+
+    return Object.keys(mapped).length > 0 ? mapped : undefined;
   }
 }

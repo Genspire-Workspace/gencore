@@ -157,14 +157,17 @@ export class OllamaChatGenerator implements IChatGenerator {
     };
 
     if (part.message.content) {
+      chunk.type = "text_delta";
       chunk.delta = part.message.content;
     }
 
     if (part.message.thinking) {
+      chunk.type = "reasoning_delta";
       chunk.reasoningDelta = part.message.thinking;
     }
 
     if (part.done) {
+      chunk.type = "finish";
       chunk.finishReason = this.mapDoneReason(part.done_reason);
       chunk.usage = this.mapUsage(part);
     }
