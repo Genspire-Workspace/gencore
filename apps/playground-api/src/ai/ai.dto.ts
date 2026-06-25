@@ -235,6 +235,18 @@ export class AiChatStreamChunkDto {
 
   @ApiField({ type: "object", required: false })
   metadata?: Record<string, unknown>;
+
+  @ApiField({ type: "string", required: false })
+  phase?: string;
+
+  @ApiField({ type: "number", required: false })
+  elapsedMs?: number;
+
+  @ApiField({ type: "string", required: false })
+  toolCallId?: string;
+
+  @ApiField({ type: "string", required: false })
+  toolName?: string;
 }
 
 @ApiDto({

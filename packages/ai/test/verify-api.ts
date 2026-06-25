@@ -6,8 +6,8 @@ import {
   createDeclarativeToolDto,
   createToolResultMessages,
   executeSmokeClientToolCalls,
-  extractTextFromApiChatResponseBody,
   fetchJson,
+  fetchWithTimeout,
   normalizeBaseUrl,
   parseAiVerifyArgs,
   postJson,
@@ -18,6 +18,7 @@ import {
 import {
   addNumbersTool,
   getCapitalTool,
+  waitThenAddNumbersTool,
 } from "./tools/test-tools.js";
 
 interface IAiProviderInfo {
@@ -35,7 +36,12 @@ interface IAiApiChatRequestPayload {
   model?: string;
   systemPrompt?: string;
   messages: IAiApiChatMessageDto[];
-  tools?: Array<Record<string, unknown>>;
+  tools?: Array<{
+    name: string;
+    description?: string;
+    parameters?: Record<string, unknown>;
+    executionMode?: "client" | "server";
+  }>;
   settings?: Record<string, unknown>;
   metadata?: Record<string, unknown>;
 }
@@ -44,9 +50,36 @@ interface IPostedApiStream {
   status: number;
   contentType: string;
   chunks: unknown[];
+  timings: {
+    startedAt: number;
+    firstChunkAt?: number;
+    completedAt: number;
+    chunkTimings: Array<{
+      index: number;
+      at: number;
+      elapsedMs: number;
+      type?: string;
+    }>;
+  };
 }
 
 const MAX_TOOL_ROUNDS = 5;
+const TOOL_DELAY_CLAMP_MIN_MS = 0;
+const TOOL_DELAY_CLAMP_MAX_MS = 10_000;
+const TOOL_DELAY_MIN_MS = readNumberEnv("AI_VERIFY_TOOL_DELAY_MIN_MS", 250);
+const TOOL_DELAY_MAX_MS = readNumberEnv("AI_VERIFY_TOOL_DELAY_MAX_MS", 1500);
+const TOOL_DELAY_ROUNDS = Math.max(
+  1,
+  Math.floor(readNumberEnv("AI_VERIFY_TOOL_DELAY_ROUNDS", 3)),
+);
+const STREAM_HEARTBEAT_INTERVAL_MS = readNumberEnv(
+  "AI_STREAM_HEARTBEAT_INTERVAL_MS",
+  1000,
+);
+const HTTP_TIMEOUT_MS = Math.max(
+  readNumberEnv("AI_VERIFY_HTTP_TIMEOUT_MS", 30_000),
+  TOOL_DELAY_MAX_MS * 4,
+);
 
 function printApiHelp(): void {
   console.log("Available scenarios:");
@@ -59,28 +92,46 @@ function printApiHelp(): void {
   console.log("  bun run dev:api:verify -- --scenarios ollama");
   console.log("  bun run dev:api:verify -- --scenario ollama");
   console.log("  bun run dev:api:verify -- --s ollama");
+  console.log("  bun run dev:api:verify -- --ollama-model gemma4:31b-cloud --scenarios ollama");
   console.log("  bun run dev:api:verify -- --list");
   console.log("");
   console.log("Env vars:");
-  console.log("  AI_API_BASE_URL     - Base URL for the playground API");
-  console.log("  AI_VERIFY_SCENARIOS - Comma-separated scenario filter");
+  console.log("  AI_API_BASE_URL           - Base URL for the playground API");
+  console.log("  AI_VERIFY_SCENARIOS       - Comma-separated scenario filter");
+  console.log("  AI_VERIFY_OLLAMA_MODEL    - Override Ollama chat model for API verification");
+  console.log("  AI_VERIFY_TOOL_DELAY_MIN_MS - Minimum delay for delayed tool checks");
+  console.log("  AI_VERIFY_TOOL_DELAY_MAX_MS - Maximum delay for delayed tool checks");
+  console.log("  AI_VERIFY_TOOL_DELAY_ROUNDS - Number of delayed tool rounds");
+  console.log("  AI_VERIFY_HTTP_TIMEOUT_MS - Verifier HTTP timeout");
+  console.log("  AI_STREAM_HEARTBEAT_INTERVAL_MS - API stream heartbeat interval");
 }
 
-const cliArgs = parseAiVerifyArgs();
+function readNumberEnv(name: string, fallback: number): number {
+  const value = process.env[name];
+  const parsed = value ? Number(value) : Number.NaN;
 
-if (cliArgs.list) {
-  printApiHelp();
-  process.exit(0);
+  return Number.isFinite(parsed) ? parsed : fallback;
 }
 
-const logger = createAiVerifyLogger({
-  suite: "api",
-  filePrefix: "verify-api",
-});
-const filter = createScenarioFilter(cliArgs.scenarios);
-const baseUrl = normalizeBaseUrl(
-  cliArgs.baseUrl ?? process.env.AI_API_BASE_URL ?? "http://localhost:3000",
-);
+function randomIntInclusive(min: number, max: number): number {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function clampToolDelayMs(delayMs: number): number {
+  return Math.min(
+    TOOL_DELAY_CLAMP_MAX_MS,
+    Math.max(TOOL_DELAY_CLAMP_MIN_MS, Math.floor(delayMs)),
+  );
+}
+
+function resolveOllamaChatModel(): string {
+  return (
+    cliArgs.model?.trim() ||
+    process.env.AI_VERIFY_OLLAMA_MODEL?.trim() ||
+    process.env.OLLAMA_CHAT_MODEL?.trim() ||
+    "gemma4:12b"
+  );
+}
 
 function assertVerify(condition: unknown, message: string): asserts condition {
   if (!condition) {
@@ -97,117 +148,85 @@ function isConfiguredProvider(
   );
 }
 
-async function runHealthCheck(): Promise<void> {
-  logger.log("===== HEALTH =====");
-  const response = await fetchJson(`${baseUrl}/health`);
-  logger.log(`  Status: ${response.status}`);
-  logger.log(`  Body: ${JSON.stringify(response.body)}`);
-  logger.log("");
+function readElapsedMs(startedAt: number, endedAt: number): number {
+  return endedAt - startedAt;
 }
 
-async function runProvidersCheck(): Promise<IAiProvidersResponse> {
-  logger.log("===== PROVIDERS =====");
-  const response = await fetchJson(`${baseUrl}/ai/providers`);
-  logger.log(`  Status: ${response.status}`);
-  logger.log(`  Body: ${JSON.stringify(response.body)}`);
-  logger.log("");
-  return response.body as IAiProvidersResponse;
-}
-
-async function runChatCheck(
-  label: string,
-  payload: unknown,
-): Promise<void> {
-  logger.log(`===== ${label} =====`);
-  logger.log(`  Request: ${JSON.stringify(payload)}`);
-  const response = await postJson(`${baseUrl}/ai/chat`, payload);
-  logger.log(`  Status: ${response.status}`);
-  logger.log(`  Body: ${JSON.stringify(response.body)}`);
-  assertVerify(response.status === 200, `${label} expected HTTP 200.`);
-  logger.log("");
-}
-
-async function postStreamAndCollect(
-  label: string,
-  payload: unknown,
-): Promise<IPostedApiStream> {
-  logger.log(`===== ${label} =====`);
-  logger.log(`  Request: ${JSON.stringify(payload)}`);
-
-  const response = await fetch(`${baseUrl}/ai/chat/stream`, {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-    },
-    body: JSON.stringify(payload),
-  });
-
-  logger.log(`  Status: ${response.status}`);
-  const contentType = response.headers.get("content-type") ?? "";
-  logger.log(`  Content-Type: ${contentType}`);
-
-  let chunkCount = 0;
-  const collected: unknown[] = [];
-
-  for await (const chunk of streamNdjsonOrJson(response)) {
-    chunkCount += 1;
-    collected.push(chunk);
-    logger.log(`  Chunk ${chunkCount}: ${JSON.stringify(chunk)}`);
+function readDelayMsFromResultValue(value: unknown): number | undefined {
+  if (!value || typeof value !== "object" || !("delayMs" in value)) {
+    return undefined;
   }
 
-  logger.log(`  Chunk Count: ${chunkCount}`);
-  logger.log(`  Body: ${JSON.stringify(collected)}`);
-  logger.log("");
+  return typeof value.delayMs === "number" && Number.isFinite(value.delayMs)
+    ? value.delayMs
+    : undefined;
+}
 
+function readDelayMsFromClientToolResult(
+  toolResults: readonly {
+    name?: string;
+    result?: unknown;
+  }[],
+  toolName: string,
+): number | undefined {
+  const toolResult = toolResults.find((result) => result.name === toolName);
+
+  return toolResult ? readDelayMsFromResultValue(toolResult.result) : undefined;
+}
+
+function readDelayMsFromServerToolResult(
+  toolResult: {
+    result?: unknown;
+  } | undefined,
+): number | undefined {
+  return toolResult ? readDelayMsFromResultValue(toolResult.result) : undefined;
+}
+
+function findFirstChunkElapsedByType(
+  stream: IPostedApiStream,
+  type: string,
+): number | undefined {
+  return stream.timings.chunkTimings.find((timing) => timing.type === type)?.elapsedMs;
+}
+
+function findOwnedToolResult(
+  collected: ReturnType<typeof collectApiStream>,
+  toolName: string,
+) {
+  return collected.toolResults.find((toolResult) => toolResult.name === toolName);
+}
+
+function createWaitThenGetCapitalToolDto(): {
+  name: string;
+  description: string;
+  parameters: Record<string, unknown>;
+  executionMode: "server";
+} {
   return {
-    status: response.status,
-    contentType,
-    chunks: collected,
+    name: "wait_then_get_capital",
+    description:
+      "Waits for the requested duration, then returns the capital city for a country.",
+    parameters: {
+      type: "object",
+      properties: {
+        country: {
+          type: "string",
+        },
+        delayMs: {
+          type: "number",
+        },
+      },
+      required: ["country"],
+    },
+    executionMode: "server",
   };
-}
-
-async function runStreamCheck(
-  label: string,
-  payload: unknown,
-): Promise<void> {
-  const result = await postStreamAndCollect(label, payload);
-  assertVerify(result.status === 200, `${label} expected HTTP 200.`);
-}
-
-async function runEmbeddingsCheck(
-  label: string,
-  payload: unknown,
-): Promise<void> {
-  logger.log(`===== ${label} =====`);
-  logger.log(`  Request: ${JSON.stringify(payload)}`);
-  const response = await postJson(`${baseUrl}/ai/embeddings`, payload);
-  logger.log(`  Status: ${response.status}`);
-  logger.log(`  Body: ${JSON.stringify(response.body)}`);
-  assertVerify(response.status === 200, `${label} expected HTTP 200.`);
-  logger.log("");
-}
-
-async function postChatAndLog(
-  label: string,
-  payload: IAiApiChatRequestPayload,
-): Promise<unknown> {
-  logger.log(`===== ${label} =====`);
-  logger.log(`  Request: ${JSON.stringify(payload)}`);
-
-  const response = await postJson(`${baseUrl}/ai/chat`, payload);
-  logger.log(`  Status: ${response.status}`);
-  logger.log(`  Body: ${JSON.stringify(response.body)}`);
-  logger.log("");
-
-  assertVerify(response.status === 200, `${label} expected HTTP 200.`);
-  return response.body;
 }
 
 function createChatRequestPayload(
   scenario: "ollama" | "deepseek",
   model: string,
   prompt: string,
-  tools: Array<{ name: string; description?: string; parameters?: Record<string, unknown>; executionMode?: "client" | "server" }>,
+  tools: IAiApiChatRequestPayload["tools"],
   smokeTest: string,
   messages?: IAiApiChatMessageDto[],
 ): IAiApiChatRequestPayload {
@@ -235,11 +254,170 @@ function createChatRequestPayload(
   };
 }
 
+const cliArgs = parseAiVerifyArgs();
+
+if (cliArgs.list) {
+  printApiHelp();
+  process.exit(0);
+}
+
+const logger = createAiVerifyLogger({
+  suite: "api",
+  filePrefix: "verify-api",
+});
+const filter = createScenarioFilter(cliArgs.scenarios);
+const baseUrl = normalizeBaseUrl(
+  cliArgs.baseUrl ?? process.env.AI_API_BASE_URL ?? "http://localhost:3000",
+);
+
+async function runHealthCheck(): Promise<void> {
+  logger.log("===== HEALTH =====");
+  const response = await fetchJson(`${baseUrl}/health`, undefined, HTTP_TIMEOUT_MS);
+  logger.log(`  Status: ${response.status}`);
+  logger.log(`  Body: ${JSON.stringify(response.body)}`);
+  logger.log("");
+}
+
+async function runProvidersCheck(): Promise<IAiProvidersResponse> {
+  logger.log("===== PROVIDERS =====");
+  const response = await fetchJson(
+    `${baseUrl}/ai/providers`,
+    undefined,
+    HTTP_TIMEOUT_MS,
+  );
+  logger.log(`  Status: ${response.status}`);
+  logger.log(`  Body: ${JSON.stringify(response.body)}`);
+  logger.log("");
+  return response.body as IAiProvidersResponse;
+}
+
+async function runChatCheck(
+  label: string,
+  payload: unknown,
+): Promise<void> {
+  logger.log(`===== ${label} =====`);
+  logger.log(`  Request: ${JSON.stringify(payload)}`);
+  const response = await postJson(`${baseUrl}/ai/chat`, payload, HTTP_TIMEOUT_MS);
+  logger.log(`  Status: ${response.status}`);
+  logger.log(`  Body: ${JSON.stringify(response.body)}`);
+  assertVerify(response.status === 200, `${label} expected HTTP 200.`);
+  logger.log("");
+}
+
+async function postStreamAndCollect(
+  label: string,
+  payload: unknown,
+): Promise<IPostedApiStream> {
+  logger.log(`===== ${label} =====`);
+  logger.log(`  Request: ${JSON.stringify(payload)}`);
+
+  const startedAt = Date.now();
+  const response = await fetchWithTimeout(
+    `${baseUrl}/ai/chat/stream`,
+    {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    },
+    HTTP_TIMEOUT_MS,
+  );
+
+  logger.log(`  Status: ${response.status}`);
+  const contentType = response.headers.get("content-type") ?? "";
+  logger.log(`  Content-Type: ${contentType}`);
+
+  let chunkCount = 0;
+  const collected: unknown[] = [];
+  const chunkTimings: IPostedApiStream["timings"]["chunkTimings"] = [];
+  let firstChunkAt: number | undefined;
+
+  for await (const chunk of streamNdjsonOrJson(response)) {
+    const at = Date.now();
+    chunkCount += 1;
+    collected.push(chunk);
+
+    if (!firstChunkAt) {
+      firstChunkAt = at;
+    }
+
+    const type =
+      chunk &&
+        typeof chunk === "object" &&
+        "type" in chunk &&
+        typeof chunk.type === "string"
+        ? chunk.type
+        : undefined;
+
+    chunkTimings.push({
+      index: chunkCount,
+      at,
+      elapsedMs: at - startedAt,
+      type,
+    });
+
+    logger.log(`  Chunk ${chunkCount} (+${at - startedAt}ms): ${JSON.stringify(chunk)}`);
+  }
+
+  const completedAt = Date.now();
+
+  logger.log(`  Chunk Count: ${chunkCount}`);
+  logger.log(`  Stream startedAt: ${startedAt}`);
+  logger.log(`  Stream firstChunkAt: ${firstChunkAt ?? "(none)"}`);
+  logger.log(`  Stream completedAt: ${completedAt}`);
+  logger.log(`  Stream elapsedMs: ${completedAt - startedAt}`);
+  logger.log(`  Body: ${JSON.stringify(collected)}`);
+  logger.log("");
+
+  return {
+    status: response.status,
+    contentType,
+    chunks: collected,
+    timings: {
+      startedAt,
+      firstChunkAt,
+      completedAt,
+      chunkTimings,
+    },
+  };
+}
+
+async function runStreamCheck(
+  label: string,
+  payload: unknown,
+): Promise<void> {
+  const result = await postStreamAndCollect(label, payload);
+  assertVerify(result.status === 200, `${label} expected HTTP 200.`);
+}
+
+async function runEmbeddingsCheck(
+  label: string,
+  payload: unknown,
+): Promise<void> {
+  logger.log(`===== ${label} =====`);
+  logger.log(`  Request: ${JSON.stringify(payload)}`);
+  const response = await postJson(
+    `${baseUrl}/ai/embeddings`,
+    payload,
+    HTTP_TIMEOUT_MS,
+  );
+  logger.log(`  Status: ${response.status}`);
+  logger.log(`  Body: ${JSON.stringify(response.body)}`);
+  assertVerify(response.status === 200, `${label} expected HTTP 200.`);
+  logger.log("");
+}
+
 async function runClientToolConversation(
   label: string,
   payload: IAiApiChatRequestPayload,
   expectedText: string,
   expectedClientToolName: string,
+  localTools = [
+    addNumbersTool,
+    getCapitalTool,
+    waitThenAddNumbersTool,
+  ],
 ): Promise<void> {
   let messages = [...payload.messages];
 
@@ -300,10 +478,7 @@ async function runClientToolConversation(
 
     const clientResults = await executeSmokeClientToolCalls(
       clientToolCalls,
-      [
-        addNumbersTool,
-        getCapitalTool,
-      ],
+      localTools,
     );
 
     logger.log(`  Local client tool results: ${JSON.stringify(clientResults)}`);
@@ -385,7 +560,6 @@ async function runServerToolCallingCheck(
     ),
     "Expected streamed get_capital tool result to be marked executionMode='server'.",
   );
-
   assertVerify(
     capitalCollected.text.includes("Lisbon"),
     `Server tool get_capital final text did not include 'Lisbon'. Received: ${capitalCollected.text}`,
@@ -420,7 +594,6 @@ async function runServerToolCallingCheck(
     ),
     "Expected streamed add_numbers tool result to be marked executionMode='server'.",
   );
-
   assertVerify(
     numbersCollected.text.includes("579"),
     `Server tool add_numbers final text did not include '579'. Received: ${numbersCollected.text}`,
@@ -547,6 +720,330 @@ async function runMixedToolCallingCheck(
   throw new Error("Mixed tool scenario exceeded the maximum round count.");
 }
 
+async function runDelayedClientToolCallingCheck(
+  scenario: "ollama" | "deepseek",
+  chatModel: string,
+): Promise<void> {
+  for (let round = 1; round <= TOOL_DELAY_ROUNDS; round += 1) {
+    const clientDelayMs = randomIntInclusive(TOOL_DELAY_MIN_MS, TOOL_DELAY_MAX_MS);
+    const label = `${scenario.toUpperCase()} DELAYED CLIENT TOOL ROUND ${round}`;
+    let messages: IAiApiChatMessageDto[] = [
+      {
+        role: "user",
+        content: `Use the wait_then_add_numbers tool to add 123 and 456 with a delay of ${clientDelayMs} milliseconds. After the tool result is provided, answer with only the numeric result.`,
+      },
+    ];
+
+    logger.log(`===== ${label} =====`);
+    logger.log(`  Requested clientDelayMs: ${clientDelayMs}`);
+
+    const roundOne = await postStreamAndCollect(
+      `${label} ROUND 1`,
+      createChatRequestPayload(
+        scenario,
+        chatModel,
+        "",
+        [createDeclarativeToolDto(waitThenAddNumbersTool, "client")],
+        `api-delayed-client-tool-${scenario}-${round}`,
+        messages,
+      ),
+    );
+    const collected = collectApiStream(roundOne.chunks);
+    const clientToolCall = collected.toolCalls.find(
+      (toolCall) => toolCall.name === "wait_then_add_numbers",
+    );
+
+    assertVerify(clientToolCall, `${label} expected wait_then_add_numbers tool call.`);
+    assertVerify(
+      clientToolCall.executionMode === "client",
+      `${label} expected executionMode='client'.`,
+    );
+    assertVerify(
+      !collected.toolResults.some(
+        (toolResult) => toolResult.name === "wait_then_add_numbers",
+      ),
+      `${label} unexpectedly received server tool_result_delta for wait_then_add_numbers.`,
+    );
+
+    const clientStartedAt = Date.now();
+    const clientResults = await executeSmokeClientToolCalls(
+      [clientToolCall],
+      [waitThenAddNumbersTool],
+    );
+    const clientCompletedAt = Date.now();
+    const clientElapsedMs = readElapsedMs(clientStartedAt, clientCompletedAt);
+    const effectiveClientDelayMs =
+      readDelayMsFromClientToolResult(clientResults, "wait_then_add_numbers") ??
+      clampToolDelayMs(clientDelayMs);
+
+    logger.log(`  Client tool startedAt: ${clientStartedAt}`);
+    logger.log(`  Client tool completedAt: ${clientCompletedAt}`);
+    logger.log(`  Client tool elapsedMs: ${clientElapsedMs}`);
+    logger.log(`  Effective clientDelayMs: ${effectiveClientDelayMs}`);
+    logger.log(`  Local client tool results: ${JSON.stringify(clientResults)}`);
+
+    assertVerify(
+      clientElapsedMs >= Math.max(0, effectiveClientDelayMs - 100),
+      `${label} client tool elapsed ${clientElapsedMs}ms was shorter than effective delay ${effectiveClientDelayMs}ms. Requested delay was ${clientDelayMs}ms.`,
+    );
+
+    messages = appendToolInteractionMessages(
+      messages,
+      collected.toolCalls,
+      collected.toolResults,
+    );
+    messages = [
+      ...messages,
+      ...createToolResultMessages(clientResults),
+    ];
+
+    const roundTwo = await postStreamAndCollect(
+      `${label} ROUND 2`,
+      createChatRequestPayload(
+        scenario,
+        chatModel,
+        "",
+        [createDeclarativeToolDto(waitThenAddNumbersTool, "client")],
+        `api-delayed-client-tool-${scenario}-${round}`,
+        messages,
+      ),
+    );
+    const roundTwoCollected = collectApiStream(roundTwo.chunks);
+
+    assertVerify(
+      roundTwoCollected.text.includes("579"),
+      `${label} final text did not include '579'. Received: ${roundTwoCollected.text}`,
+    );
+    logger.log(`  Final text: ${JSON.stringify(roundTwoCollected.text)}`);
+    logger.log(`  ${label} PASSED.`);
+    logger.log("");
+  }
+}
+
+async function runDelayedServerToolCallingCheck(
+  scenario: "ollama" | "deepseek",
+  chatModel: string,
+): Promise<void> {
+  for (let round = 1; round <= TOOL_DELAY_ROUNDS; round += 1) {
+    const serverDelayMs = randomIntInclusive(TOOL_DELAY_MIN_MS, TOOL_DELAY_MAX_MS);
+    const label = `${scenario.toUpperCase()} DELAYED SERVER TOOL ROUND ${round}`;
+
+    logger.log(`===== ${label} =====`);
+    logger.log(`  Requested serverDelayMs: ${serverDelayMs}`);
+
+    const streamResponse = await postStreamAndCollect(
+      `${label} REQUEST`,
+      createChatRequestPayload(
+        scenario,
+        chatModel,
+        `Use the server wait_then_get_capital tool to find the capital of Portugal with a delay of ${serverDelayMs} milliseconds. Answer with only the capital city name.`,
+        [createWaitThenGetCapitalToolDto()],
+        `api-delayed-server-tool-${scenario}-${round}`,
+      ),
+    );
+    const collected = collectApiStream(streamResponse.chunks);
+    const toolResult = findOwnedToolResult(collected, "wait_then_get_capital");
+    const toolResultTiming = findFirstChunkElapsedByType(
+      streamResponse,
+      "tool_result_delta",
+    );
+    const streamElapsedMs = readElapsedMs(
+      streamResponse.timings.startedAt,
+      streamResponse.timings.completedAt,
+    );
+    const effectiveServerDelayMs =
+      readDelayMsFromServerToolResult(toolResult) ??
+      clampToolDelayMs(serverDelayMs);
+    const shouldExpectHeartbeat =
+      STREAM_HEARTBEAT_INTERVAL_MS > 0 &&
+      effectiveServerDelayMs > STREAM_HEARTBEAT_INTERVAL_MS;
+
+    assertVerify(
+      toolResult?.executionMode === "server",
+      `${label} expected server-owned tool_result_delta for wait_then_get_capital.`,
+    );
+    assertVerify(
+      readDelayMsFromServerToolResult(toolResult) === effectiveServerDelayMs,
+      `${label} expected server tool result to include effective delayMs=${effectiveServerDelayMs}. Requested delay was ${serverDelayMs}ms.`,
+    );
+    assertVerify(
+      streamElapsedMs >= Math.max(0, effectiveServerDelayMs - 100),
+      `${label} stream elapsed ${streamElapsedMs}ms was shorter than effective server delay ${effectiveServerDelayMs}ms. Requested delay was ${serverDelayMs}ms.`,
+    );
+    assertVerify(
+      collected.text.includes("Lisbon"),
+      `${label} final text did not include 'Lisbon'. Received: ${collected.text}`,
+    );
+    if (shouldExpectHeartbeat) {
+      assertVerify(
+        collected.heartbeats.some(
+          (heartbeat) =>
+            heartbeat.phase === "tool_execution" &&
+            heartbeat.toolName === "wait_then_get_capital",
+        ),
+        `${label} expected at least one tool_execution heartbeat for wait_then_get_capital.`,
+      );
+    }
+
+    logger.log(`  Effective serverDelayMs: ${effectiveServerDelayMs}`);
+    logger.log(`  tool_result_delta elapsedMs: ${toolResultTiming ?? "(missing)"}`);
+    logger.log(`  stream elapsedMs: ${streamElapsedMs}`);
+    logger.log(`  Heartbeats: ${JSON.stringify(collected.heartbeats)}`);
+    logger.log(`  Final text: ${JSON.stringify(collected.text)}`);
+    logger.log(`  ${label} PASSED.`);
+    logger.log("");
+  }
+}
+
+async function runDelayedMixedToolCallingCheck(
+  scenario: "ollama" | "deepseek",
+  chatModel: string,
+): Promise<void> {
+  for (let round = 1; round <= TOOL_DELAY_ROUNDS; round += 1) {
+    const serverDelayMs = randomIntInclusive(TOOL_DELAY_MIN_MS, TOOL_DELAY_MAX_MS);
+    const clientDelayMs = randomIntInclusive(TOOL_DELAY_MIN_MS, TOOL_DELAY_MAX_MS);
+    const label = `${scenario.toUpperCase()} DELAYED MIXED TOOL ROUND ${round}`;
+    let messages: IAiApiChatMessageDto[] = [
+      {
+        role: "user",
+        content:
+          `Use wait_then_get_capital to find the capital of Portugal with a delay of ${serverDelayMs} milliseconds. Use wait_then_add_numbers to add 123 and 456 with a delay of ${clientDelayMs} milliseconds. The wait_then_get_capital tool is server-owned. The wait_then_add_numbers tool is client-owned. Final answer format: '<capital> | <sum>'.`,
+      },
+    ];
+
+    const tools = [
+      createWaitThenGetCapitalToolDto(),
+      createDeclarativeToolDto(waitThenAddNumbersTool, "client"),
+    ];
+
+    logger.log(`===== ${label} =====`);
+    logger.log(`  Requested serverDelayMs: ${serverDelayMs}`);
+    logger.log(`  Requested clientDelayMs: ${clientDelayMs}`);
+
+    const roundOne = await postStreamAndCollect(
+      `${label} ROUND 1`,
+      createChatRequestPayload(
+        scenario,
+        chatModel,
+        "",
+        tools,
+        `api-delayed-mixed-tool-${scenario}-${round}`,
+        messages,
+      ),
+    );
+    const collected = collectApiStream(roundOne.chunks);
+    const serverToolResult = findOwnedToolResult(
+      collected,
+      "wait_then_get_capital",
+    );
+    const pendingClientCall = collected.toolCalls.find(
+      (toolCall) => toolCall.name === "wait_then_add_numbers",
+    );
+    const serverResultTiming = findFirstChunkElapsedByType(
+      roundOne,
+      "tool_result_delta",
+    );
+    const streamElapsedMs = readElapsedMs(
+      roundOne.timings.startedAt,
+      roundOne.timings.completedAt,
+    );
+    const effectiveServerDelayMs =
+      readDelayMsFromServerToolResult(serverToolResult) ??
+      clampToolDelayMs(serverDelayMs);
+    const shouldExpectHeartbeat =
+      STREAM_HEARTBEAT_INTERVAL_MS > 0 &&
+      effectiveServerDelayMs > STREAM_HEARTBEAT_INTERVAL_MS;
+
+    assertVerify(
+      serverToolResult?.executionMode === "server",
+      `${label} expected server wait_then_get_capital tool result from API.`,
+    );
+    assertVerify(
+      pendingClientCall?.executionMode === "client",
+      `${label} expected pending client wait_then_add_numbers tool call.`,
+    );
+    assertVerify(
+      !collected.toolResults.some(
+        (toolResult) => toolResult.name === "wait_then_add_numbers",
+      ),
+      `${label} unexpectedly received a server tool result for wait_then_add_numbers.`,
+    );
+    assertVerify(
+      streamElapsedMs >= Math.max(0, effectiveServerDelayMs - 100),
+      `${label} stream elapsed ${streamElapsedMs}ms was shorter than effective server delay ${effectiveServerDelayMs}ms. Requested delay was ${serverDelayMs}ms.`,
+    );
+    if (shouldExpectHeartbeat) {
+      assertVerify(
+        collected.heartbeats.some(
+          (heartbeat) =>
+            heartbeat.phase === "tool_execution" &&
+            heartbeat.toolName === "wait_then_get_capital",
+        ),
+        `${label} expected at least one tool_execution heartbeat for wait_then_get_capital.`,
+      );
+    }
+
+    const clientStartedAt = Date.now();
+    const clientResults = await executeSmokeClientToolCalls(
+      pendingClientCall ? [pendingClientCall] : [],
+      [waitThenAddNumbersTool],
+    );
+    const clientCompletedAt = Date.now();
+    const clientElapsedMs = readElapsedMs(clientStartedAt, clientCompletedAt);
+    const effectiveClientDelayMs =
+      readDelayMsFromClientToolResult(clientResults, "wait_then_add_numbers") ??
+      clampToolDelayMs(clientDelayMs);
+
+    assertVerify(
+      clientElapsedMs >= Math.max(0, effectiveClientDelayMs - 100),
+      `${label} client delayed tool elapsed ${clientElapsedMs}ms was shorter than effective delay ${effectiveClientDelayMs}ms. Requested delay was ${clientDelayMs}ms.`,
+    );
+
+    logger.log(`  Effective serverDelayMs: ${effectiveServerDelayMs}`);
+    logger.log(`  Client tool startedAt: ${clientStartedAt}`);
+    logger.log(`  Client tool completedAt: ${clientCompletedAt}`);
+    logger.log(`  Client tool elapsedMs: ${clientElapsedMs}`);
+    logger.log(`  Effective clientDelayMs: ${effectiveClientDelayMs}`);
+    logger.log(`  tool_result_delta elapsedMs: ${serverResultTiming ?? "(missing)"}`);
+    logger.log(`  stream elapsedMs: ${streamElapsedMs}`);
+    logger.log(`  Heartbeats: ${JSON.stringify(collected.heartbeats)}`);
+    logger.log(`  Local client tool results: ${JSON.stringify(clientResults)}`);
+
+    messages = appendToolInteractionMessages(
+      messages,
+      collected.toolCalls,
+      collected.toolResults,
+    );
+    messages = [
+      ...messages,
+      ...createToolResultMessages(clientResults),
+    ];
+
+    const roundTwo = await postStreamAndCollect(
+      `${label} ROUND 2`,
+      createChatRequestPayload(
+        scenario,
+        chatModel,
+        "",
+        tools,
+        `api-delayed-mixed-tool-${scenario}-${round}`,
+        messages,
+      ),
+    );
+    const roundTwoCollected = collectApiStream(roundTwo.chunks);
+
+    assertVerify(
+      roundTwoCollected.text.includes("Lisbon") &&
+        roundTwoCollected.text.includes("579"),
+      `${label} final text did not include both 'Lisbon' and '579'. Received: ${roundTwoCollected.text}`,
+    );
+
+    logger.log(`  Final text: ${JSON.stringify(roundTwoCollected.text)}`);
+    logger.log(`  ${label} PASSED.`);
+    logger.log("");
+  }
+}
+
 async function runScenario(
   providersResponse: IAiProvidersResponse,
   scenario: "ollama" | "deepseek",
@@ -572,7 +1069,7 @@ async function runScenario(
 
   const chatModel =
     scenario === "ollama"
-      ? "gemma4:12b"
+      ? resolveOllamaChatModel()
       : "deepseek-v4-flash";
   const embeddingModel =
     scenario === "ollama"
@@ -657,10 +1154,18 @@ async function runScenario(
   await runClientToolCallingCheck(scenario, chatModel);
   await runServerToolCallingCheck(scenario, chatModel);
   await runMixedToolCallingCheck(scenario, chatModel);
+  await runDelayedClientToolCallingCheck(scenario, chatModel);
+  await runDelayedServerToolCallingCheck(scenario, chatModel);
+  await runDelayedMixedToolCallingCheck(scenario, chatModel);
 }
 
 logger.log(`Base URL: ${baseUrl}`);
 logger.log(`Log: ${logger.logPath}`);
+logger.log(`HTTP timeout ms: ${HTTP_TIMEOUT_MS}`);
+logger.log(`Stream heartbeat interval ms: ${STREAM_HEARTBEAT_INTERVAL_MS}`);
+logger.log(
+  `Tool delay config: min=${TOOL_DELAY_MIN_MS} max=${TOOL_DELAY_MAX_MS} rounds=${TOOL_DELAY_ROUNDS}`,
+);
 if (filter.values) {
   logger.log(`Filter: ${[...filter.values].join(", ")}`);
 }

@@ -13,6 +13,7 @@ export interface IAiVerifyCliArgs {
   list?: boolean;
   scenarios?: string;
   baseUrl?: string;
+  model?: string;
 }
 
 export interface IAiVerifyScenarioFilter {
@@ -27,6 +28,10 @@ export interface IAiVerifyScenario {
   chatModels: string[];
   embedModel?: string;
   supportsEmbedding: boolean;
+}
+
+export interface IAiVerifyRuntimeOptions {
+  ollamaChatModel?: string;
 }
 
 export interface IAiVerifyLogOptions {

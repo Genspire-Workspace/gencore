@@ -82,15 +82,25 @@ bun run dev:api:verify -- --base-url http://localhost:3000
 bun run dev:api:verify -- -b http://localhost:3000
 ```
 
+Ollama model override:
+
+```bash
+bun run dev:ai:verify -- --ollama-model gemma4:31b-cloud --scenarios ollama
+bun run dev:ai-context:verify -- --ollama-model gemma4:31b-cloud --scenarios ollama
+bun run dev:api:verify -- --ollama-model gemma4:31b-cloud --scenarios ollama
+```
+
 ## Environment
 
 Common scenario filter:
 
 - `AI_VERIFY_SCENARIOS`
+- `AI_VERIFY_OLLAMA_MODEL`
 
 Generation and context verification:
 
 - `OLLAMA_HOST`
+- `OLLAMA_API_KEY`
 - `OLLAMA_CHAT_MODEL`
 - `OLLAMA_EMBED_MODEL`
 - `DEEPSEEK_API_KEY`
@@ -101,10 +111,28 @@ Generation and context verification:
 API verification:
 
 - `AI_API_BASE_URL`
+- `OLLAMA_API_KEY`
 
 Optional generation debug:
 
 - `AI_VERIFY_DUMP_CHUNKS=true`
+
+Ollama authenticated setup:
+
+```env
+OLLAMA_HOST=http://127.0.0.1:11434
+OLLAMA_API_KEY=your-ollama-api-key
+OLLAMA_CHAT_MODEL=gemma4:12b
+OLLAMA_EMBED_MODEL=embeddinggemma:latest
+```
+
+When `OLLAMA_API_KEY` is set, the direct verifier runtime and the playground API runtime send:
+
+```txt
+Authorization: Bearer <OLLAMA_API_KEY>
+```
+
+This mirrors the existing DeepSeek pattern, except Ollama auth is passed through as an HTTP header instead of a dedicated client `apiKey` field.
 
 ## Logs
 
@@ -128,3 +156,22 @@ data/logs/ai-verification/api/verify-api-2026-06-25-20-20-10-123.log
 - Deterministic local preflight checks in `verify-ai-context.ts` are strict and should fail loudly if the tool layer regresses.
 - Ollama may be skipped when the local `ollama` package or runtime is unavailable.
 - `verify-api.ts` assumes the playground API is already running when you execute non-`--list` commands.
+
+
+For PowerShell, use:
+
+$env:AI_VERIFY_TOOL_DELAY_MIN_MS="15000"
+$env:AI_VERIFY_TOOL_DELAY_MAX_MS="25000"
+$env:AI_VERIFY_TOOL_DELAY_ROUNDS="2"
+
+bun run dev:api:verify -- --base-url http://localhost:3000 --scenarios ollama
+
+Then, when you want to clear them:
+
+Remove-Item Env:AI_VERIFY_TOOL_DELAY_MIN_MS
+Remove-Item Env:AI_VERIFY_TOOL_DELAY_MAX_MS
+Remove-Item Env:AI_VERIFY_TOOL_DELAY_ROUNDS
+
+Or run it in one PowerShell line like this:
+
+$env:AI_VERIFY_TOOL_DELAY_MIN_MS="15000"; $env:AI_VERIFY_TOOL_DELAY_MAX_MS="25000"; $env:AI_VERIFY_TOOL_DELAY_ROUNDS="2"; bun run dev:api:verify -- --base-url http://localhost:3000 --scenarios ollama

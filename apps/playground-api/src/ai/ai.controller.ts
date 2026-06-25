@@ -10,6 +10,7 @@ import { AiContext } from "../../../../packages/ai/src/context/index.js";
 import type { AiMessageContent } from "../../../../packages/ai/src/common/ai-content-part.js";
 import type { IChatGenerationRequest } from "../../../../packages/ai/src/chat/chat-generation-request.js";
 import type { IChatGenerationSettings } from "../../../../packages/ai/src/chat/chat-generation-settings.js";
+import type { IChatGenerationChunk } from "../../../../packages/ai/src/chat/chat-generation-chunk.js";
 import type { IChatMessage } from "../../../../packages/ai/src/chat/chat-message.js";
 import type { IAiToolCall } from "../../../../packages/ai/src/tools/ai-tool-call.js";
 import type { IAiToolResult } from "../../../../packages/ai/src/tools/ai-tool-result.js";
@@ -31,6 +32,10 @@ import { aiPlaygroundRuntime } from "./ai-service-factory.js";
   description: "AI playground endpoints",
 })
 export class AiController {
+  private static readonly heartbeatIntervalMs = Number(
+    process.env.AI_STREAM_HEARTBEAT_INTERVAL_MS ?? "1000",
+  );
+
   @AllowAnonymous()
   @Get("/providers", {
     summary: "List configured AI providers",
@@ -92,42 +97,147 @@ export class AiController {
 
     const stream = new ReadableStream<Uint8Array>({
       start: async (controller) => {
+        let streamClosed = false;
+        let streamErrored = false;
+
+        const safeEnqueue = (payload: unknown): boolean => {
+          if (streamClosed || streamErrored) {
+            return false;
+          }
+
+          controller.enqueue(
+            encoder.encode(`${JSON.stringify(payload)}\n`),
+          );
+          return true;
+        };
+
+        const safeClose = (): void => {
+          if (streamClosed || streamErrored) {
+            return;
+          }
+
+          streamClosed = true;
+          this.debugLog("Closing AI stream.", {
+            provider: request.provider,
+            model: request.model,
+          });
+          controller.close();
+        };
+
+        const safeError = (error: unknown): void => {
+          if (streamClosed || streamErrored) {
+            return;
+          }
+
+          this.debugLog("Streaming AI error.", {
+            provider: request.provider,
+            model: request.model,
+            error:
+              error instanceof Error ? error.message : String(error),
+          });
+
+          safeEnqueue({
+            type: "error",
+            provider: request.provider ?? "unknown",
+            model: request.model ?? "unknown",
+            error: error instanceof Error ? error.message : String(error),
+          });
+          streamErrored = true;
+          streamClosed = true;
+          controller.close();
+        };
+
         try {
-          for await (const chunk of aiPlaygroundRuntime.service.streamChatCompletion(
+          const iterator = aiPlaygroundRuntime.service.streamChatCompletion(
             request,
-          )) {
-            if (chunk.toolResult) {
-              this.assertToolResultOwnership(chunk.toolResult, toolExecutionModes);
+          )[Symbol.asyncIterator]();
+          const pendingServerTools = new Map<
+            string,
+            {
+              toolCallId: string;
+              toolName?: string;
+              startedAt: number;
+            }
+          >();
+
+          while (true) {
+            const nextChunk = await this.readNextChunkWithHeartbeats(
+              iterator,
+              safeEnqueue,
+              pendingServerTools,
+              request.provider,
+              request.model,
+            );
+
+            if (nextChunk.done) {
+              break;
             }
 
-            controller.enqueue(
-              encoder.encode(
-                `${JSON.stringify({
-                  id: chunk.id,
-                  type: chunk.type,
-                  provider: chunk.provider,
-                  model: chunk.model,
-                  delta: chunk.delta,
-                  reasoningDelta: chunk.reasoningDelta,
-                  message: chunk.message
-                    ? this.toChatMessageDto(chunk.message)
-                    : undefined,
-                  toolCall: chunk.toolCall
-                    ? this.annotateToolCall(chunk.toolCall, toolExecutionModes)
-                    : undefined,
-                  toolResult: chunk.toolResult
-                    ? this.annotateToolResult(chunk.toolResult, toolExecutionModes)
-                    : undefined,
-                  finishReason: chunk.finishReason,
-                  usage: chunk.usage,
-                  metadata: chunk.metadata,
-                })}\n`,
-              ),
-            );
+            const chunk = nextChunk.value;
+
+            if (chunk.toolCall) {
+              const annotatedToolCall = this.annotateToolCall(
+                chunk.toolCall,
+                toolExecutionModes,
+              );
+              const executionMode = annotatedToolCall.executionMode;
+
+              if (
+                executionMode === "server" &&
+                chunk.toolCall.id
+              ) {
+                pendingServerTools.set(chunk.toolCall.id, {
+                  toolCallId: chunk.toolCall.id,
+                  toolName: chunk.toolCall.name,
+                  startedAt: Date.now(),
+                });
+                this.debugLog("Heartbeat tracking started for server tool.", {
+                  provider: request.provider,
+                  model: request.model,
+                  toolCallId: chunk.toolCall.id,
+                  toolName: chunk.toolCall.name,
+                });
+              }
+            }
+
+            if (chunk.toolResult) {
+              this.assertToolResultOwnership(chunk.toolResult, toolExecutionModes);
+
+              if (chunk.toolResult.toolCallId) {
+                pendingServerTools.delete(chunk.toolResult.toolCallId);
+                this.debugLog("Heartbeat tracking stopped for server tool.", {
+                  provider: request.provider,
+                  model: request.model,
+                  toolCallId: chunk.toolResult.toolCallId,
+                  toolName: chunk.toolResult.name,
+                });
+              }
+            }
+
+            safeEnqueue({
+              id: chunk.id,
+              type: chunk.type,
+              provider: chunk.provider,
+              model: chunk.model,
+              delta: chunk.delta,
+              reasoningDelta: chunk.reasoningDelta,
+              message: chunk.message
+                ? this.toChatMessageDto(chunk.message)
+                : undefined,
+              toolCall: chunk.toolCall
+                ? this.annotateToolCall(chunk.toolCall, toolExecutionModes)
+                : undefined,
+              toolResult: chunk.toolResult
+                ? this.annotateToolResult(chunk.toolResult, toolExecutionModes)
+                : undefined,
+              finishReason: chunk.finishReason,
+              usage: chunk.usage,
+              metadata: chunk.metadata,
+            });
           }
-          controller.close();
+          safeClose();
         } catch (error) {
-          controller.error(error);
+          safeError(error);
         }
       },
     });
@@ -139,6 +249,79 @@ export class AiController {
         connection: "keep-alive",
       },
     });
+  }
+
+  private async readNextChunkWithHeartbeats(
+    iterator: AsyncIterator<IChatGenerationChunk>,
+    enqueue: (payload: unknown) => boolean,
+    pendingServerTools: ReadonlyMap<
+      string,
+      {
+        toolCallId: string;
+        toolName?: string;
+        startedAt: number;
+      }
+    >,
+    provider?: string,
+    model?: string,
+  ): Promise<IteratorResult<IChatGenerationChunk>> {
+    const heartbeatIntervalMs = AiController.heartbeatIntervalMs;
+
+    if (heartbeatIntervalMs <= 0 || pendingServerTools.size === 0) {
+      return iterator.next();
+    }
+
+    const nextPromise = iterator.next();
+
+    while (true) {
+      const result = await Promise.race<
+        | {
+          kind: "chunk";
+          result: IteratorResult<IChatGenerationChunk>;
+        }
+        | { kind: "heartbeat" }
+      >([
+        nextPromise.then((result) => ({
+          kind: "chunk" as const,
+          result,
+        })),
+        Bun.sleep(heartbeatIntervalMs).then(() => ({
+          kind: "heartbeat" as const,
+        })),
+      ]);
+
+      if (result.kind === "chunk") {
+        return result.result;
+      }
+
+      this.debugLog("Emitting tool_execution heartbeat.", {
+        provider,
+        model,
+        heartbeatIntervalMs,
+        pendingServerToolCount: pendingServerTools.size,
+      });
+
+      for (const pendingTool of pendingServerTools.values()) {
+        enqueue({
+          type: "heartbeat",
+          phase: "tool_execution",
+          elapsedMs: Date.now() - pendingTool.startedAt,
+          toolCallId: pendingTool.toolCallId,
+          toolName: pendingTool.toolName,
+        });
+      }
+    }
+  }
+
+  private debugLog(message: string, details: Record<string, unknown>): void {
+    if (
+      process.env.NODE_ENV === "production" &&
+      process.env.AI_DEBUG_STREAM !== "true"
+    ) {
+      return;
+    }
+
+    console.info("[AiController]", message, details);
   }
 
   @AllowAnonymous()

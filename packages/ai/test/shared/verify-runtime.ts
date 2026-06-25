@@ -4,14 +4,33 @@ import { OpenAICompatibleClient } from "../../src/clients/openai-compatible/inde
 import { shouldRunScenario } from "./verify-args.js";
 import type {
   IAiVerifyLogger,
+  IAiVerifyRuntimeOptions,
   IAiVerifyScenario,
   IAiVerifyScenarioFilter,
 } from "./verify-types.js";
 
+function createOllamaHeaders(): Record<string, string> | undefined {
+  const apiKey = process.env.OLLAMA_API_KEY?.trim();
+
+  if (!apiKey) {
+    return undefined;
+  }
+
+  return {
+    Authorization: `Bearer ${apiKey}`,
+  };
+}
+
 export async function createAiVerifyScenarios(
   logger: IAiVerifyLogger,
+  options: IAiVerifyRuntimeOptions = {},
 ): Promise<IAiVerifyScenario[]> {
   const scenarios: IAiVerifyScenario[] = [];
+  const ollamaChatModel =
+    options.ollamaChatModel?.trim() ||
+    process.env.AI_VERIFY_OLLAMA_MODEL?.trim() ||
+    process.env.OLLAMA_CHAT_MODEL?.trim() ||
+    "gemma4:12b";
 
   try {
     const { OllamaClient } = await import("../../src/clients/ollama/index.js");
@@ -20,6 +39,7 @@ export async function createAiVerifyScenarios(
       id: "ollama",
       name: "Ollama",
       host: process.env.OLLAMA_HOST ?? "http://127.0.0.1:11434",
+      headers: createOllamaHeaders(),
     });
 
     const registry = new AiClientRegistry();
@@ -33,7 +53,7 @@ export async function createAiVerifyScenarios(
         embeddingProvider: "ollama",
         embeddingModel: process.env.OLLAMA_EMBED_MODEL ?? "embeddinggemma:latest",
       }),
-      chatModels: [process.env.OLLAMA_CHAT_MODEL ?? "gemma4:12b"],
+      chatModels: [ollamaChatModel],
       embedModel: process.env.OLLAMA_EMBED_MODEL ?? "embeddinggemma:latest",
       supportsEmbedding: true,
     });

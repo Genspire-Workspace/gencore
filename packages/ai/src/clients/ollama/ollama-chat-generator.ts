@@ -155,6 +155,7 @@ export class OllamaChatGenerator implements IChatGenerator {
 
     for (let step = 0; step < maxToolSteps; step++) {
       const stepToolCalls: IAiToolCall[] = [];
+      const seenStepToolCallKeys = new Set<string>();
       let assistantMessage: Message | undefined;
 
       const stream = await this.client.chat({
@@ -173,7 +174,23 @@ export class OllamaChatGenerator implements IChatGenerator {
 
         if (toolCalls.length > 0) {
           assistantMessage = part.message;
-          stepToolCalls.push(...toolCalls);
+
+          for (const toolCall of toolCalls) {
+            const toolCallKey = this.createToolCallKey(toolCall);
+
+            if (seenStepToolCallKeys.has(toolCallKey)) {
+              this.debugLog("Suppressing duplicate streamed tool call.", {
+                modelId,
+                toolName: toolCall.name,
+                toolCallId: toolCall.id,
+                step,
+              });
+              continue;
+            }
+
+            seenStepToolCallKeys.add(toolCallKey);
+            stepToolCalls.push(toolCall);
+          }
         }
       }
 
@@ -184,6 +201,13 @@ export class OllamaChatGenerator implements IChatGenerator {
       }
 
       for (const toolCall of stepToolCalls) {
+        this.debugLog("Starting server tool execution.", {
+          modelId,
+          toolName: toolCall.name,
+          toolCallId: toolCall.id,
+          step,
+        });
+
         yield {
           id: responseId,
           type: "tool_call_delta" as const,
@@ -202,11 +226,20 @@ export class OllamaChatGenerator implements IChatGenerator {
           metadata: request.metadata,
           signal: request.signal ?? request.settings?.signal,
         });
-        const result = toolRun.toolResults[0];
+        const result = toolRun.toolResults[0] ?? {
+          toolCallId: toolCall.id,
+          name: toolCall.name,
+          error: `Tool '${toolCall.name}' execution returned no result.`,
+          raw: toolCall.raw,
+        };
 
-        if (!result) {
-          continue;
-        }
+        this.debugLog("Finished server tool execution.", {
+          modelId,
+          toolName: toolCall.name,
+          toolCallId: toolCall.id,
+          step,
+          hasError: Boolean(result.error),
+        });
 
         yield {
           id: responseId,
@@ -217,9 +250,57 @@ export class OllamaChatGenerator implements IChatGenerator {
           raw: result.raw,
         };
 
+        this.debugLog("Enqueued tool_result_delta.", {
+          modelId,
+          toolName: toolCall.name,
+          toolCallId: toolCall.id,
+          step,
+          hasError: Boolean(result.error),
+        });
+
         messages.push(this.createOllamaToolResultMessage(result));
       }
+
+      this.debugLog("Resuming model loop after tool result append.", {
+        modelId,
+        step,
+        toolCallCount: stepToolCalls.length,
+      });
     }
+  }
+
+  private createToolCallKey(toolCall: IAiToolCall): string {
+    return `${toolCall.name}:${this.stableStringify(toolCall.arguments)}`;
+  }
+
+  private stableStringify(value: unknown): string {
+    if (Array.isArray(value)) {
+      return `[${value.map((item) => this.stableStringify(item)).join(",")}]`;
+    }
+
+    if (value && typeof value === "object") {
+      const entries = Object.entries(value as Record<string, unknown>)
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(
+          ([key, entryValue]) =>
+            `${JSON.stringify(key)}:${this.stableStringify(entryValue)}`,
+        );
+
+      return `{${entries.join(",")}}`;
+    }
+
+    return JSON.stringify(value);
+  }
+
+  private debugLog(message: string, details: Record<string, unknown>): void {
+    if (
+      process.env.NODE_ENV === "production" &&
+      process.env.AI_DEBUG_STREAM !== "true"
+    ) {
+      return;
+    }
+
+    console.info("[OllamaChatGenerator]", message, details);
   }
 
   private resolveModelId(request: IChatGenerationRequest): string {

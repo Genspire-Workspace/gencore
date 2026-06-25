@@ -37,6 +37,15 @@ export interface IAiCollectedApiStream {
   text: string;
   toolCalls: IAiOwnedToolCall[];
   toolResults: IAiOwnedToolResult[];
+  heartbeats: IAiApiHeartbeatChunk[];
+}
+
+export interface IAiApiHeartbeatChunk {
+  type: "heartbeat";
+  phase?: string;
+  elapsedMs?: number;
+  toolCallId?: string;
+  toolName?: string;
 }
 
 function stringifyToolResultContent(result: IAiToolResult): string {
@@ -149,12 +158,36 @@ export function collectToolResultsFromApiChunks(
   return toolResults;
 }
 
+export function collectHeartbeatsFromApiChunks(
+  chunks: readonly unknown[],
+): IAiApiHeartbeatChunk[] {
+  const heartbeats: IAiApiHeartbeatChunk[] = [];
+
+  for (const chunk of chunks) {
+    if (!isRecord(chunk) || chunk.type !== "heartbeat") {
+      continue;
+    }
+
+    heartbeats.push({
+      type: "heartbeat",
+      phase: typeof chunk.phase === "string" ? chunk.phase : undefined,
+      elapsedMs: typeof chunk.elapsedMs === "number" ? chunk.elapsedMs : undefined,
+      toolCallId:
+        typeof chunk.toolCallId === "string" ? chunk.toolCallId : undefined,
+      toolName: typeof chunk.toolName === "string" ? chunk.toolName : undefined,
+    });
+  }
+
+  return heartbeats;
+}
+
 export function collectApiStream(chunks: readonly unknown[]): IAiCollectedApiStream {
   return {
     chunks: [...chunks],
     text: collectTextFromApiChunks(chunks),
     toolCalls: collectToolCallsFromApiChunks(chunks),
     toolResults: collectToolResultsFromApiChunks(chunks),
+    heartbeats: collectHeartbeatsFromApiChunks(chunks),
   };
 }
 

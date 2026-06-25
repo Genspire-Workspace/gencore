@@ -34,6 +34,13 @@ export function parseAiVerifyArgs(
         result.baseUrl = argv[index + 1];
         index += 1;
         break;
+
+      case "--model":
+      case "--ollama-model":
+      case "-m":
+        result.model = argv[index + 1];
+        index += 1;
+        break;
     }
   }
 

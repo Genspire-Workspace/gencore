@@ -25,6 +25,18 @@ export interface IAiPlaygroundRuntime {
   serverToolRegistry: AiToolRegistry;
 }
 
+function createOllamaHeaders(): Record<string, string> | undefined {
+  const apiKey = process.env.OLLAMA_API_KEY?.trim();
+
+  if (!apiKey) {
+    return undefined;
+  }
+
+  return {
+    Authorization: `Bearer ${apiKey}`,
+  };
+}
+
 export function createAiPlaygroundRuntime(): IAiPlaygroundRuntime {
   const registry = new AiClientRegistry();
 
@@ -55,6 +67,7 @@ export function createAiPlaygroundRuntime(): IAiPlaygroundRuntime {
       id: "ollama",
       name: "Ollama",
       baseURL: `${ollamaHost.replace(/\/$/, "")}/v1`,
+      headers: createOllamaHeaders(),
     }),
   );
 

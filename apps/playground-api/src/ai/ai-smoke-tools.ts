@@ -8,6 +8,18 @@ function toRecord(value: unknown): Record<string, unknown> {
     : {};
 }
 
+function clampDelayMs(value: unknown): number {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    return 0;
+  }
+
+  return Math.max(0, Math.min(10_000, Math.floor(value)));
+}
+
+async function sleep(ms: number): Promise<void> {
+  await new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export const playgroundGetCapitalTool = defineAiTool({
   name: "get_capital",
   description: "Gets the capital city for a country.",
@@ -57,9 +69,43 @@ export const playgroundAddNumbersTool = defineAiTool({
   },
 });
 
+export const playgroundWaitThenGetCapitalTool = defineAiTool({
+  name: "wait_then_get_capital",
+  description: "Waits for the requested duration, then returns the capital city for a country.",
+  parameters: {
+    type: "object",
+    properties: {
+      country: {
+        type: "string",
+        description: "Country name",
+      },
+      delayMs: {
+        type: "number",
+        description: "Delay before returning the result, in milliseconds.",
+      },
+    },
+    required: ["country"],
+  },
+  execute: async (args: unknown) => {
+    const input = toRecord(args);
+    const country =
+      typeof input.country === "string" ? input.country : "Portugal";
+    const delayMs = clampDelayMs(input.delayMs);
+
+    await sleep(delayMs);
+
+    return {
+      country,
+      capital: "Lisbon",
+      delayMs,
+    };
+  },
+});
+
 export const playgroundAiSmokeToolRegistry = new AiToolRegistry([
   playgroundGetCapitalTool,
   playgroundAddNumbersTool,
+  playgroundWaitThenGetCapitalTool,
 ]);
 
 export function resolvePlaygroundServerTool(name: string): IAiTool | undefined {

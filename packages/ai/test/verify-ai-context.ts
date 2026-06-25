@@ -33,11 +33,13 @@ function printAiContextHelp(): void {
   console.log("  bun run dev:ai-context:verify -- --scenarios ollama");
   console.log("  bun run dev:ai-context:verify -- --scenario ollama");
   console.log("  bun run dev:ai-context:verify -- --s ollama");
+  console.log("  bun run dev:ai-context:verify -- --ollama-model gemma4:31b-cloud --scenarios ollama");
   console.log("  bun run dev:ai-context:verify -- --list");
   console.log("");
   console.log("Env vars:");
   console.log("  OLLAMA_HOST          - Ollama server URL (default http://127.0.0.1:11434)");
   console.log("  OLLAMA_CHAT_MODEL    - Ollama chat model (default gemma4:12b)");
+  console.log("  AI_VERIFY_OLLAMA_MODEL - Override Ollama chat model for verification");
   console.log("  DEEPSEEK_API_KEY     - DeepSeek API key (required)");
   console.log("  DEEPSEEK_BASE_URL    - DeepSeek base URL (default https://api.deepseek.com/v1)");
   console.log("  DEEPSEEK_CHAT_MODELS - Comma-separated models (default deepseek-v4-flash,deepseek-v4-pro)");
@@ -65,7 +67,9 @@ const logger = createAiVerifyLogger({
 
 logger.log(`Log: ${logger.logPath}`);
 
-const scenarios = await createAiVerifyScenarios(logger);
+const scenarios = await createAiVerifyScenarios(logger, {
+  ollamaChatModel: cliArgs.model,
+});
 logScenarioHeader(logger, scenarios, filter);
 
 const resolvedCapitalOverrideTool = defineAiTool({

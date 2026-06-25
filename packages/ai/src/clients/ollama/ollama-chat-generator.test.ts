@@ -238,4 +238,32 @@ describe("OllamaChatGenerator tool mapping", () => {
     const parsed = JSON.parse(msg.content);
     expect(parsed.capital).toBe("Lisbon");
   });
+
+  maybeTest("createToolCallKey is stable for equivalent argument objects", () => {
+    const generator = createGenerator();
+    const createToolCallKey = Reflect.get(
+      Reflect.getPrototypeOf(generator)!,
+      "createToolCallKey",
+    ).bind(generator) as (toolCall: {
+      name: string;
+      arguments: unknown;
+    }) => string;
+
+    const firstKey = createToolCallKey({
+      name: "wait_then_get_capital",
+      arguments: {
+        delayMs: 10_000,
+        country: "Portugal",
+      },
+    });
+    const secondKey = createToolCallKey({
+      name: "wait_then_get_capital",
+      arguments: {
+        country: "Portugal",
+        delayMs: 10_000,
+      },
+    });
+
+    expect(firstKey).toBe(secondKey);
+  });
 });
