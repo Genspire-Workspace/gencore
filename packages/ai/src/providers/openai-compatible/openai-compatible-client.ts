@@ -157,6 +157,9 @@ export class OpenAiCompatibleClient {
     if (request.settings?.stop !== undefined) {
       body.stop = request.settings.stop;
     }
+    if (request.settings?.reasoningEffort !== undefined) {
+      body.reasoning = { effort: request.settings.reasoningEffort };
+    }
 
     const response = await fetch(`${this.baseUrl}/chat/completions`, {
       method: "POST",
@@ -207,6 +210,9 @@ export class OpenAiCompatibleClient {
     }
     if (request.settings?.stop !== undefined) {
       body.stop = request.settings.stop;
+    }
+    if (request.settings?.reasoningEffort !== undefined) {
+      body.reasoning = { effort: request.settings.reasoningEffort };
     }
 
     const response = await fetch(`${this.baseUrl}/chat/completions`, {
@@ -336,8 +342,13 @@ export class OpenAiCompatibleClient {
       raw: data,
     };
 
-    if (choice?.delta?.content !== undefined) {
+    if (choice?.delta?.content !== undefined && choice.delta.content !== "") {
       chunk.delta = choice.delta.content;
+    }
+
+    const reasoning = choice?.delta?.reasoning_content ?? choice?.delta?.reasoning;
+    if (reasoning !== undefined && reasoning !== "") {
+      chunk.reasoningDelta = reasoning;
     }
 
     if (choice?.finish_reason) {

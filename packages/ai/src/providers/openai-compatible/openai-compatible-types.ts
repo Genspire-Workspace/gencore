@@ -24,14 +24,17 @@ export interface IOpenAiChatCompletionRequest {
   max_tokens?: number;
   stop?: string[];
   stream?: boolean;
+  reasoning?: {
+    effort?: string;
+  };
 }
 
 export interface IOpenAiChatCompletionResponse {
   id: string;
   model: string;
   choices: Array<{
-    message?: { role: string; content: OpenAiMessageContent };
-    delta?: { role?: string; content?: string };
+    message?: { role: string; content: OpenAiMessageContent; reasoning_content?: string; reasoning?: string };
+    delta?: { role?: string; content?: string; reasoning_content?: string; reasoning?: string };
     finish_reason?: string;
   }>;
   usage?: {

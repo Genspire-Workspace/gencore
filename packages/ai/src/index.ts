@@ -11,7 +11,7 @@ export type {
   AiMessageContent,
 } from "./common/ai-content-part.js";
 export type { IAiMessage } from "./common/ai-message.js";
-export type { IAiGenerationSettings } from "./common/ai-generation-settings.js";
+export type { IAiGenerationSettings, AiReasoningEffort } from "./common/ai-generation-settings.js";
 export type { IAiModelRequest } from "./common/ai-model-request.js";
 export type { IAiModelResponse } from "./common/ai-model-response.js";
 export type { IAiModelChunk } from "./common/ai-model-chunk.js";
@@ -41,6 +41,12 @@ export type {
   OpenAiContentBlock,
   OpenAiMessageContent,
 } from "./providers/openai-compatible/openai-compatible-types.js";
+
+export { anthropicCompatibleProvider } from "./providers/anthropic-compatible/anthropic-compatible-provider.js";
+export type { IAnthropicCompatibleProviderOptions } from "./providers/anthropic-compatible/anthropic-compatible-types.js";
+
+export { ollamaProvider } from "./providers/ollama/ollama-provider.js";
+export type { IOllamaProviderOptions } from "./providers/ollama/ollama-provider.js";
 
 export type { IAiModel } from "./models/ai-model.js";
 export type { IAiModelCapabilities } from "./models/ai-model-capabilities.js";

@@ -7,5 +7,6 @@ export interface IChatGenerationChunk
   extends IAiModelChunk<string, IChatMessage> {
   id: string;
   delta?: string;
+  reasoningDelta?: string;
   message?: IChatMessage;
 }
