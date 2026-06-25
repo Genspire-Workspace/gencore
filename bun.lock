@@ -28,6 +28,13 @@
         "reflect-metadata": "^0.2.2",
       },
     },
+    "packages/ai": {
+      "name": "@genspire/ai",
+      "version": "0.0.0",
+      "dependencies": {
+        "@genspire/core": "workspace:*",
+      },
+    },
     "packages/auth": {
       "name": "@genspire/auth",
       "version": "0.0.0",
@@ -153,6 +160,8 @@
     "@aws-sdk/xml-builder": ["@aws-sdk/xml-builder@3.972.31", "", { "dependencies": { "@smithy/types": "^4.14.3", "tslib": "^2.6.2" } }, "sha512-SzE4Pgyl+hDF+BuyuzxUSpwnuUu9lJuO1YGgteG89/4Qv0+2IQiVQqdbPV32IozLvXWQChPQcdkk/sKvb1QHiQ=="],
 
     "@aws/lambda-invoke-store": ["@aws/lambda-invoke-store@0.2.4", "", {}, "sha512-iY8yvjE0y651BixKNPgmv1WrQc+GZ142sb0z4gYnChDDY2YqI4P/jsSopBWrKfAt7LOJAkOXt7rC/hms+WclQQ=="],
+
+    "@genspire/ai": ["@genspire/ai@workspace:packages/ai"],
 
     "@genspire/auth": ["@genspire/auth@workspace:packages/auth"],
 

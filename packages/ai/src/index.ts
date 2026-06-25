@@ -45,18 +45,6 @@ export type { IEmbeddingGenerator } from "./embeddings/embedding-generator.js";
 export type { AiClientKind } from "./clients/ai-client-kind.js";
 export type { IAiClient } from "./clients/ai-client.js";
 export { AiClientRegistry } from "./clients/ai-client-registry.js";
-export { openAiCompatibleProvider } from "./clients/openai-compatible/openai-compatible-provider.js";
-export type {
-  IOpenAiCompatibleProviderOptions,
-  OpenAiContentBlock,
-  OpenAiMessageContent,
-} from "./clients/openai-compatible/openai-compatible-types.js";
-
-export { anthropicCompatibleProvider } from "./clients/anthropic-compatible/anthropic-compatible-provider.js";
-export type { IAnthropicCompatibleProviderOptions } from "./clients/anthropic-compatible/anthropic-compatible-types.js";
-
-export { ollamaProvider } from "./clients/ollama/ollama-provider.js";
-export type { IOllamaProviderOptions } from "./clients/ollama/ollama-provider.js";
 
 export type { AiProviderKind, IAiProvider } from "./common/ai-provider.js";
 export type {

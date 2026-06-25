@@ -16,77 +16,20 @@ export class AiService {
   ) {}
 
   async generateChatCompletion(
-    request: IChatGenerationRequest,
+    _request: IChatGenerationRequest,
   ): Promise<IChatGenerationResponse> {
-    const providerId = request.provider ?? this.defaults?.chatProvider;
-    if (!providerId) {
-      throw new AiError("No chat provider was provided and no default chat provider is configured.");
-    }
-
-    const client = this.registry.get(providerId);
-    if (!client.supportsChat() || !client.chat) {
-      throw new AiError(`AI client '${providerId}' does not support chat.`);
-    }
-
-    const model = request.model ?? this.defaults?.chatModel;
-    if (!model) {
-      throw new AiError("No chat model was provided and no default chat model is configured.");
-    }
-
-    return client.chat.generateChatCompletion({
-      ...request,
-      provider: providerId,
-      model,
-    });
+    throw new AiError("AI generation is not available yet. AI clients have not been implemented.");
   }
 
   streamChatCompletion(
-    request: IChatGenerationRequest,
+    _request: IChatGenerationRequest,
   ): AsyncIterable<IChatGenerationChunk> {
-    const providerId = request.provider ?? this.defaults?.chatProvider;
-    if (!providerId) {
-      throw new AiError("No chat provider was provided and no default chat provider is configured.");
-    }
-
-    const client = this.registry.get(providerId);
-    if (!client.supportsChat() || !client.chat) {
-      throw new AiError(`AI client '${providerId}' does not support chat.`);
-    }
-
-    const model = request.model ?? this.defaults?.chatModel;
-    if (!model) {
-      throw new AiError("No chat model was provided and no default chat model is configured.");
-    }
-
-    return client.chat.streamChatCompletion({
-      ...request,
-      provider: providerId,
-      model,
-    });
+    throw new AiError("AI generation is not available yet. AI clients have not been implemented.");
   }
 
   async generateEmbedding(
-    request: IEmbeddingGenerationRequest,
+    _request: IEmbeddingGenerationRequest,
   ): Promise<IEmbeddingGenerationResponse> {
-    const providerId = request.provider ?? this.defaults?.embeddingProvider;
-    if (!providerId) {
-      throw new AiError("No embedding provider was provided and no default embedding provider is configured.");
-    }
-
-    const client = this.registry.get(providerId);
-    if (!client.supportsEmbeddings() || !client.embeddings) {
-      throw new AiError(`AI client '${providerId}' does not support embeddings.`);
-    }
-
-    const model = request.model ?? this.defaults?.embeddingModel;
-    if (!model) {
-      throw new AiError("No embedding model was provided and no default embedding model is configured.");
-    }
-
-    return client.embeddings.generateEmbedding({
-      ...request,
-      provider: providerId,
-      model,
-    });
+    throw new AiError("AI generation is not available yet. AI clients have not been implemented.");
   }
 }
