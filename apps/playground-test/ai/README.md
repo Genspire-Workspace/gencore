@@ -14,14 +14,14 @@ They are not a replacement for `bun test`. They complement the Bun test suite wi
 
 Main entry points:
 
-- [verify-generation.ts](/C:/Users/PC/Documents/GitHub/Gencore/packages/ai/test/verify-generation.ts)
-- [verify-ai-context.ts](/C:/Users/PC/Documents/GitHub/Gencore/packages/ai/test/verify-ai-context.ts)
-- [verify-api.ts](/C:/Users/PC/Documents/GitHub/Gencore/packages/ai/test/verify-api.ts)
+- [verify-generation.ts](/C:/Users/PC/Documents/GitHub/Gencore/apps/playground-test/ai/verify-generation.ts)
+- [verify-ai-context.ts](/C:/Users/PC/Documents/GitHub/Gencore/apps/playground-test/ai/verify-ai-context.ts)
+- [verify-api.ts](/C:/Users/PC/Documents/GitHub/Gencore/apps/playground-test/ai/verify-api.ts)
 
 Shared support:
 
-- [shared/index.ts](/C:/Users/PC/Documents/GitHub/Gencore/packages/ai/test/shared/index.ts)
-- [tools/test-tools.ts](/C:/Users/PC/Documents/GitHub/Gencore/packages/ai/test/tools/test-tools.ts)
+- [shared/index.ts](/C:/Users/PC/Documents/GitHub/Gencore/apps/playground-test/ai/shared/index.ts)
+- [tools/test-tools.ts](/C:/Users/PC/Documents/GitHub/Gencore/apps/playground-test/ai/tools/test-tools.ts)
 
 ## Suites
 
@@ -53,9 +53,9 @@ Root scripts:
 Direct execution:
 
 ```bash
-bun packages/ai/test/verify-generation.ts
-bun packages/ai/test/verify-ai-context.ts
-bun packages/ai/test/verify-api.ts
+bun apps/playground-test/ai/verify-generation.ts
+bun apps/playground-test/ai/verify-ai-context.ts
+bun apps/playground-test/ai/verify-api.ts
 ```
 
 List help:

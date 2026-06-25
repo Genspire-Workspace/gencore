@@ -29,9 +29,9 @@
     "env:local": "bun run scripts/manage-env.mjs use local",
     "env:docker": "bun run scripts/manage-env.mjs use docker",
     "env:example": "bun run scripts/manage-env.mjs use example",
-    "dev:ai:verify": "bun run packages/ai/test/verify-generation.ts",
-    "dev:ai-context:verify": "bun run packages/ai/test/verify-ai-context.ts",
-    "dev:api:verify": "bun run packages/ai/test/verify-api.ts",
+    "dev:ai:verify": "bun run apps/playground-test/ai/verify-generation.ts",
+    "dev:ai-context:verify": "bun run apps/playground-test/ai/verify-ai-context.ts",
+    "dev:api:verify": "bun run apps/playground-test/ai/verify-api.ts",
     "dev:ai:verify:local": "bun run dev:ai:verify && bun run dev:ai-context:verify"
   },
   "devDependencies": {

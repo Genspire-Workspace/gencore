@@ -1,4 +1,4 @@
-import type { AiService } from "../../src/services/ai-service.js";
+import type { AiService } from "../../../../packages/ai/src/services/ai-service.js";
 
 export type AiVerifySuite =
   | "generation"

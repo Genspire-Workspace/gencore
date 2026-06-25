@@ -1,12 +1,12 @@
-import type { IAiTool } from "../../src/tools/ai-tool.js";
-import type { IAiToolCall } from "../../src/tools/ai-tool-call.js";
-import type { IAiToolResult } from "../../src/tools/ai-tool-result.js";
-import { AiToolExecutor } from "../../src/tools/ai-tool-executor.js";
+import type { IAiTool } from "../../../../packages/ai/src/tools/ai-tool.js";
+import type { IAiToolCall } from "../../../../packages/ai/src/tools/ai-tool-call.js";
+import type { IAiToolResult } from "../../../../packages/ai/src/tools/ai-tool-result.js";
+import { AiToolExecutor } from "../../../../packages/ai/src/tools/ai-tool-executor.js";
 import {
   createToolCallFromUnknown,
   createToolResultFromUnknown,
   isRecord,
-} from "../../src/tools/ai-tool-utils.js";
+} from "../../../../packages/ai/src/tools/ai-tool-utils.js";
 
 export type AiApiToolExecutionMode = "client" | "server";
 
