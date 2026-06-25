@@ -10,6 +10,10 @@ export type {
   AiContentPart,
   AiMessageContent,
 } from "./common/ai-content-part.js";
+export {
+  createTextAiMessageContent,
+  normalizeAiMessageContent,
+} from "./common/ai-message-content.js";
 export type { IAiMessage } from "./common/ai-message.js";
 export type { IAiGenerationSettings, AiReasoningEffort } from "./common/ai-generation-settings.js";
 export type { IAiModelRequest } from "./common/ai-model-request.js";
@@ -78,4 +82,5 @@ export type { IAiDefaults, IAiExtensionOptions } from "./extension/ai-extension.
 
 export { AiError } from "./errors/ai-error.js";
 
+export * from "./context/index.js";
 export * from "./tools/index.js";
