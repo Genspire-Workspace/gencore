@@ -1,35 +1,13 @@
-import { mkdirSync } from "node:fs";
-import path from "node:path";
-
-function parseArgs(): {
-  baseUrl?: string;
-  list?: boolean;
-  scenarios?: string;
-} {
-  const args = process.argv.slice(2);
-  const result: { baseUrl?: string; list?: boolean; scenarios?: string } = {};
-
-  for (let index = 0; index < args.length; index += 1) {
-    switch (args[index]) {
-      case "--base-url":
-      case "-b":
-        result.baseUrl = args[index + 1];
-        index += 1;
-        break;
-      case "--scenarios":
-      case "-s":
-        result.scenarios = args[index + 1];
-        index += 1;
-        break;
-      case "--list":
-      case "-l":
-        result.list = true;
-        break;
-    }
-  }
-
-  return result;
-}
+import {
+  createAiVerifyLogger,
+  createScenarioFilter,
+  fetchJson,
+  normalizeBaseUrl,
+  parseAiVerifyArgs,
+  postJson,
+  readNdjsonOrJson,
+  shouldRunScenario,
+} from "./shared/index.js";
 
 interface IAiProviderInfo {
   id: string;
@@ -41,55 +19,39 @@ interface IAiProvidersResponse {
   defaults: Record<string, unknown>;
 }
 
-const CLI_ARGS = parseArgs();
-
-if (CLI_ARGS.list) {
+function printApiHelp(): void {
   console.log("Available scenarios:");
   console.log("  ollama       - Local Ollama API verification");
   console.log("  deepseek     - DeepSeek API verification");
   console.log("");
   console.log("Usage:");
-  console.log("  bun packages/ai/test/verify-api.ts");
-  console.log("  bun packages/ai/test/verify-api.ts -- --base-url http://localhost:3000");
-  console.log("  bun packages/ai/test/verify-api.ts -- --scenarios ollama");
-  console.log("  bun packages/ai/test/verify-api.ts -- --list");
+  console.log("  bun run dev:api:verify");
+  console.log("  bun run dev:api:verify -- --base-url http://localhost:3000");
+  console.log("  bun run dev:api:verify -- --scenarios ollama");
+  console.log("  bun run dev:api:verify -- --scenario ollama");
+  console.log("  bun run dev:api:verify -- --s ollama");
+  console.log("  bun run dev:api:verify -- --list");
   console.log("");
   console.log("Env vars:");
   console.log("  AI_API_BASE_URL     - Base URL for the playground API");
   console.log("  AI_VERIFY_SCENARIOS - Comma-separated scenario filter");
+}
+
+const cliArgs = parseAiVerifyArgs();
+
+if (cliArgs.list) {
+  printApiHelp();
   process.exit(0);
 }
 
-const BASE_URL = (CLI_ARGS.baseUrl ?? process.env.AI_API_BASE_URL ?? "http://localhost:3000").replace(/\/$/, "");
-const SCENARIO_FILTER_ARG = CLI_ARGS.scenarios ?? process.env.AI_VERIFY_SCENARIOS;
-const SCENARIO_FILTER = SCENARIO_FILTER_ARG
-  ? new Set(
-      SCENARIO_FILTER_ARG.split(",")
-        .map((scenario) => scenario.trim().toLowerCase()),
-    )
-  : null;
-const EXPLICIT_SCENARIOS = Boolean(SCENARIO_FILTER);
-
-const LOG_DIR = path.resolve(import.meta.dirname, "../../../data/logs/test");
-mkdirSync(LOG_DIR, { recursive: true });
-
-function timestamp(): string {
-  const date = new Date();
-  const pad = (value: number) => value.toString().padStart(2, "0");
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}-${pad(date.getHours())}-${pad(date.getMinutes())}-${pad(date.getSeconds())}-${date.getMilliseconds()}`;
-}
-
-const LOG_PATH = path.join(LOG_DIR, `verify-api-${timestamp()}.log`);
-const writer = Bun.file(LOG_PATH).writer();
-
-function log(message: string): void {
-  console.log(message);
-  writer.write(`${message}\n`);
-}
-
-function shouldRunScenario(name: string): boolean {
-  return !SCENARIO_FILTER || SCENARIO_FILTER.has(name);
-}
+const logger = createAiVerifyLogger({
+  suite: "api",
+  filePrefix: "verify-api",
+});
+const filter = createScenarioFilter(cliArgs.scenarios);
+const baseUrl = normalizeBaseUrl(
+  cliArgs.baseUrl ?? process.env.AI_API_BASE_URL ?? "http://localhost:3000",
+);
 
 function isConfiguredProvider(
   providersResponse: IAiProvidersResponse,
@@ -100,32 +62,20 @@ function isConfiguredProvider(
   );
 }
 
-async function fetchJson(
-  url: string,
-  init?: RequestInit,
-): Promise<{ status: number; body: unknown }> {
-  const response = await fetch(url, init);
-  const body = await response.json();
-  return {
-    status: response.status,
-    body,
-  };
-}
-
 async function runHealthCheck(): Promise<void> {
-  log("===== HEALTH =====");
-  const response = await fetchJson(`${BASE_URL}/health`);
-  log(`  Status: ${response.status}`);
-  log(`  Body: ${JSON.stringify(response.body)}`);
-  log("");
+  logger.log("===== HEALTH =====");
+  const response = await fetchJson(`${baseUrl}/health`);
+  logger.log(`  Status: ${response.status}`);
+  logger.log(`  Body: ${JSON.stringify(response.body)}`);
+  logger.log("");
 }
 
 async function runProvidersCheck(): Promise<IAiProvidersResponse> {
-  log("===== PROVIDERS =====");
-  const response = await fetchJson(`${BASE_URL}/ai/providers`);
-  log(`  Status: ${response.status}`);
-  log(`  Body: ${JSON.stringify(response.body)}`);
-  log("");
+  logger.log("===== PROVIDERS =====");
+  const response = await fetchJson(`${baseUrl}/ai/providers`);
+  logger.log(`  Status: ${response.status}`);
+  logger.log(`  Body: ${JSON.stringify(response.body)}`);
+  logger.log("");
   return response.body as IAiProvidersResponse;
 }
 
@@ -133,28 +83,22 @@ async function runChatCheck(
   label: string,
   payload: Record<string, unknown>,
 ): Promise<void> {
-  log(`===== ${label} =====`);
-  log(`  Request: ${JSON.stringify(payload)}`);
-  const response = await fetchJson(`${BASE_URL}/ai/chat`, {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-    },
-    body: JSON.stringify(payload),
-  });
-  log(`  Status: ${response.status}`);
-  log(`  Body: ${JSON.stringify(response.body)}`);
-  log("");
+  logger.log(`===== ${label} =====`);
+  logger.log(`  Request: ${JSON.stringify(payload)}`);
+  const response = await postJson(`${baseUrl}/ai/chat`, payload);
+  logger.log(`  Status: ${response.status}`);
+  logger.log(`  Body: ${JSON.stringify(response.body)}`);
+  logger.log("");
 }
 
 async function runStreamCheck(
   label: string,
   payload: Record<string, unknown>,
 ): Promise<void> {
-  log(`===== ${label} =====`);
-  log(`  Request: ${JSON.stringify(payload)}`);
+  logger.log(`===== ${label} =====`);
+  logger.log(`  Request: ${JSON.stringify(payload)}`);
 
-  const response = await fetch(`${BASE_URL}/ai/chat/stream`, {
+  const response = await fetch(`${baseUrl}/ai/chat/stream`, {
     method: "POST",
     headers: {
       "content-type": "application/json",
@@ -162,62 +106,44 @@ async function runStreamCheck(
     body: JSON.stringify(payload),
   });
 
-  const contentType = response.headers.get("content-type") ?? "";
-  log(`  Status: ${response.status}`);
-  log(`  Content-Type: ${contentType}`);
-
-  if (contentType.includes("application/x-ndjson")) {
-    const text = await response.text();
-    const chunks = text
-      .split("\n")
-      .map((line) => line.trim())
-      .filter(Boolean)
-      .map((line) => JSON.parse(line));
-    log(`  NDJSON chunks: ${JSON.stringify(chunks)}`);
-  } else {
-    const body = await response.json();
-    log(`  Body: ${JSON.stringify(body)}`);
-  }
-
-  log("");
+  logger.log(`  Status: ${response.status}`);
+  logger.log(`  Content-Type: ${response.headers.get("content-type") ?? ""}`);
+  logger.log(`  Body: ${JSON.stringify(await readNdjsonOrJson(response))}`);
+  logger.log("");
 }
 
 async function runEmbeddingsCheck(
   label: string,
   payload: Record<string, unknown>,
 ): Promise<void> {
-  log(`===== ${label} =====`);
-  log(`  Request: ${JSON.stringify(payload)}`);
-  const response = await fetchJson(`${BASE_URL}/ai/embeddings`, {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-    },
-    body: JSON.stringify(payload),
-  });
-  log(`  Status: ${response.status}`);
-  log(`  Body: ${JSON.stringify(response.body)}`);
-  log("");
+  logger.log(`===== ${label} =====`);
+  logger.log(`  Request: ${JSON.stringify(payload)}`);
+  const response = await postJson(`${baseUrl}/ai/embeddings`, payload);
+  logger.log(`  Status: ${response.status}`);
+  logger.log(`  Body: ${JSON.stringify(response.body)}`);
+  logger.log("");
 }
 
 async function runScenario(
   providersResponse: IAiProvidersResponse,
   scenario: "ollama" | "deepseek",
 ): Promise<void> {
-  if (!shouldRunScenario(scenario)) {
+  if (!shouldRunScenario(filter, scenario)) {
     return;
   }
 
   const configured = isConfiguredProvider(providersResponse, scenario);
-  if (!configured && !EXPLICIT_SCENARIOS) {
-    log(`SKIP ${scenario}: provider is not configured.`);
-    log("");
+  if (!configured && !filter.explicit) {
+    logger.log(`SKIP ${scenario}: provider is not configured.`);
+    logger.log("");
     return;
   }
 
   if (!configured) {
-    log(`SKIP ${scenario}: provider is not configured, but scenario was explicitly requested.`);
-    log("");
+    logger.log(
+      `SKIP ${scenario}: provider is not configured, but scenario was explicitly requested.`,
+    );
+    logger.log("");
     return;
   }
 
@@ -299,22 +225,24 @@ async function runScenario(
       },
     });
   } else {
-    log(`SKIP ${scenario} embeddings: no explicit embedding model configured for this provider.`);
-    log("");
+    logger.log(
+      `SKIP ${scenario} embeddings: no explicit embedding model configured for this provider.`,
+    );
+    logger.log("");
   }
 }
 
-log(`Base URL: ${BASE_URL}`);
-log(`Log: ${LOG_PATH}`);
-if (SCENARIO_FILTER) {
-  log(`Filter: ${[...SCENARIO_FILTER].join(", ")}`);
+logger.log(`Base URL: ${baseUrl}`);
+logger.log(`Log: ${logger.logPath}`);
+if (filter.values) {
+  logger.log(`Filter: ${[...filter.values].join(", ")}`);
 }
-log("");
+logger.log("");
 
 await runHealthCheck();
 const providersResponse = await runProvidersCheck();
 await runScenario(providersResponse, "ollama");
 await runScenario(providersResponse, "deepseek");
 
-await writer.end();
-log("Verification complete.");
+logger.log("Verification complete.");
+await logger.close();
