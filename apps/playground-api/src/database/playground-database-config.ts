@@ -20,6 +20,17 @@ export function resolvePlaygroundMigrationsPath(repoRoot = process.cwd()): strin
   return path.resolve(repoRoot, "apps", "playground-api", "src", "migrations");
 }
 
+function parsePostgresUrl(url: string): { host: string; port: number; user: string; password: string; dbName: string } {
+  const u = new URL(url);
+  return {
+    host: u.hostname,
+    port: parseInt(u.port || "5432", 10),
+    user: decodeURIComponent(u.username),
+    password: decodeURIComponent(u.password),
+    dbName: u.pathname.replace(/^\//, ""),
+  };
+}
+
 export async function createPlaygroundMikroOrmConfig(
   env: IPlaygroundEnv,
   repoRoot = process.cwd(),
@@ -27,24 +38,40 @@ export async function createPlaygroundMikroOrmConfig(
   const dbConfig = env.database;
   const runtimeDriver = dbConfig.provider === "postgres" ? "postgresql" as const : "libsql" as const;
 
-  const dbName = runtimeDriver === "libsql"
-    ? path.resolve(repoRoot, dbConfig.libsqlDbPath)
-    : dbConfig.postgresUrl;
+  const entities = [FileEntity, TodoEntity, PlaygroundAuthUserEntity, AuthRefreshTokenEntity, AuthRoleEntity, AuthUserRoleEntity, AuthEventEntity, AuthBannedIpEntity];
+
+  const baseOptions = {
+    runtimeDriver,
+    entities,
+    allowGlobalContext: true,
+    debug: false,
+    extensions: [Migrator],
+  } satisfies Partial<MikroOrmExtensionOptions>;
 
   if (runtimeDriver === "libsql") {
-    await mkdir(path.dirname(dbName), { recursive: true });
+    const dbPath = path.resolve(repoRoot, dbConfig.libsqlDbPath);
+    await mkdir(path.dirname(dbPath), { recursive: true });
+
+    return {
+      ...baseOptions,
+      entities,
+      dbName: dbPath,
+    } as unknown as MikroOrmExtensionOptions;
   }
+
+  const pg = parsePostgresUrl(dbConfig.postgresUrl);
 
   const migrationsPath = resolvePlaygroundMigrationsPath(repoRoot);
   await mkdir(migrationsPath, { recursive: true });
 
   return {
-    runtimeDriver,
-    entities: [FileEntity, TodoEntity, PlaygroundAuthUserEntity, AuthRefreshTokenEntity, AuthRoleEntity, AuthUserRoleEntity, AuthEventEntity, AuthBannedIpEntity],
-    dbName,
-    allowGlobalContext: true,
-    debug: false,
-    extensions: [Migrator],
+    ...baseOptions,
+    entities,
+    host: pg.host,
+    port: pg.port,
+    user: pg.user,
+    password: pg.password,
+    dbName: pg.dbName,
     migrations: {
       path: migrationsPath,
       pathTs: migrationsPath,
@@ -52,5 +79,5 @@ export async function createPlaygroundMikroOrmConfig(
       transactional: true,
       disableForeignKeys: false,
     },
-  };
+  } as unknown as MikroOrmExtensionOptions;
 }

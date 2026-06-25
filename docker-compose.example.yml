@@ -21,7 +21,7 @@ services:
       POSTGRES_PASSWORD: gencore
       POSTGRES_DB: gencore_playground
     ports:
-      - "5432:5432"
+      - "5434:5432"
     volumes:
       - gencore_postgres_data:/var/lib/postgresql/data
     healthcheck:

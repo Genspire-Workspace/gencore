@@ -392,7 +392,7 @@ Both modes seed roles and a default admin user on first start. Controlled by env
 | `GENCORE_PLAYGROUND_SEED_ADMIN_PASSWORD` | Admin password |
 | `GENCORE_PLAYGROUND_SEED_ADMIN_ROLES` | Comma-separated roles to assign |
 
-Default admin: `admin@example.com` / `change-me-admin-password` (change these in production).
+Default admin: `admin@admin.com` / `@Dmin123!` (change these in production).
 
 ### `.env.local` vs `.env.local.docker`
 

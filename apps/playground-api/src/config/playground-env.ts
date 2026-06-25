@@ -179,8 +179,8 @@ export function readPlaygroundEnv(
       roles: parseRoles(env["GENCORE_PLAYGROUND_SEED_ROLES"]),
       admin: {
         enabled: seedAdminEnabled,
-        email: env["GENCORE_PLAYGROUND_SEED_ADMIN_EMAIL"]?.trim() || "admin@example.com",
-        password: env["GENCORE_PLAYGROUND_SEED_ADMIN_PASSWORD"]?.trim() || "change-me-admin-password",
+        email: env["GENCORE_PLAYGROUND_SEED_ADMIN_EMAIL"]?.trim() || "admin@admin.com",
+        password: env["GENCORE_PLAYGROUND_SEED_ADMIN_PASSWORD"]?.trim() || "@Dmin123!",
         displayName: env["GENCORE_PLAYGROUND_SEED_ADMIN_DISPLAY_NAME"]?.trim() || "Admin",
         roles: parseAdminRoles(env["GENCORE_PLAYGROUND_SEED_ADMIN_ROLES"]),
         overwritePassword: seedAdminOverwritePassword,
