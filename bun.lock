@@ -79,7 +79,13 @@
       "dependencies": {
         "@aws-sdk/client-s3": "^3.758.0",
         "@aws-sdk/s3-request-presigner": "^3.758.0",
+        "@genspire/auth": "workspace:*",
         "@genspire/core": "workspace:*",
+        "@genspire/data": "workspace:*",
+        "@genspire/data-mikroorm": "workspace:*",
+        "@genspire/server": "workspace:*",
+        "@mikro-orm/core": "^7.1.4",
+        "@mikro-orm/decorators": "^7.1.4",
       },
     },
     "packages/swagger": {

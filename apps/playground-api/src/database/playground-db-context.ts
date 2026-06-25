@@ -1,18 +1,10 @@
 // file: apps\playground-api\src\database\playground-db-context.ts
 
 import { Scoped } from "@genspire/core";
-import { EntityManagerProvider, MikroOrmDbContext } from "@genspire/data-mikroorm";
-import { FileEntity } from "../files/file.entity.js";
+import { StorageDbContext } from "@genspire/storage";
 import { TodoEntity } from "../todos/todo.entity.js";
 
 @Scoped()
-export class PlaygroundDbContext extends MikroOrmDbContext {
-  static inject = [EntityManagerProvider];
-
-  readonly files = this.set<FileEntity, string>(FileEntity);
+export class PlaygroundDbContext extends StorageDbContext {
   readonly todos = this.set<TodoEntity, string>(TodoEntity);
-
-  constructor(entityManagerProvider: EntityManagerProvider) {
-    super(entityManagerProvider);
-  }
 }

@@ -10,7 +10,7 @@ import {
 import { serverExtension, Server } from "@genspire/server";
 import { swaggerExtension } from "@genspire/swagger";
 import { authExtension, AuthConfiguration, AuthController, RoleController, bearerAuthMiddleware, authGuardMiddleware, ipBanMiddleware } from "@genspire/auth";
-import { storageExtension } from "@genspire/storage";
+import { storageExtension, FileController, StorageDbContext } from "@genspire/storage";
 import path from "node:path";
 import { mkdirSync } from "node:fs";
 import { PlaygroundAuthUserEntity } from "./auth/playground-auth-user.entity.js";
@@ -19,10 +19,10 @@ import { readPlaygroundEnv, type IPlaygroundEnv } from "./config/playground-env.
 import {
   createPlaygroundMikroOrmConfig,
 } from "./database/playground-database-config.js";
+import { PlaygroundDbContext } from "./database/playground-db-context.js";
 import { createPlaygroundStorageProvider } from "./storage/playground-storage-provider.js";
 import { AuthActivityController } from "./auth/auth-activity.controller.js";
 import { AuthBanController } from "./auth/auth-ban.controller.js";
-import { FileController } from "./files/file.controller.js";
 import { HealthController } from "./health/health.controller.js";
 import { TodoController } from "./todos/todo.controller.js";
 
@@ -53,6 +53,8 @@ export async function createPlaygroundApp(
       provider: createPlaygroundStorageProvider(playgroundEnv),
     }),
   );
+
+  app.registerScoped(StorageDbContext, PlaygroundDbContext);
 
   await app.use(
     mikroOrmExtension(

@@ -1,5 +1,3 @@
-// file: apps\playground-api\src\files\file.controller.ts
-
 import { Authorize, Controller, Delete, Get, Post, defineProblemDetailsType, json, problem } from "@genspire/server";
 import type { RequestContext } from "@genspire/server";
 import { requireCurrentUser } from "@genspire/auth";
@@ -38,14 +36,36 @@ export class FileController {
   })
   async upload(ctx: RequestContext) {
     const currentUser = requireCurrentUser(ctx);
+    const reqContentType = ctx.req.headers.get("content-type") ?? "";
 
-    const contentType = ctx.req.headers.get("content-type") ?? "";
+    if (reqContentType.includes("application/json")) {
+      const body = await ctx.json<{ originalName?: string }>();
+      const originalName = body.originalName?.trim();
 
-    if (!contentType.includes("multipart/form-data")) {
+      if (!originalName) {
+        return problem({
+          status: 400,
+          title: "originalName is required",
+          detail: "Provide a JSON body with originalName.",
+        });
+      }
+
+      const result = await this.service.prepareUpload({
+        originalName,
+        bucket: "playground",
+        userId: currentUser.id,
+        uploadedBy: currentUser.id,
+        uploaderIp: ctx.clientIp,
+      });
+
+      return json(result, { status: 201 });
+    }
+
+    if (!reqContentType.includes("multipart/form-data")) {
       return problem({
         status: 400,
-        title: "Upload requires multipart/form-data",
-        detail: "Send the file as a multipart form field named 'file'.",
+        title: "Upload requires multipart/form-data or application/json",
+        detail: "For direct upload, send multipart/form-data with a 'file' field. For S3 presigned upload, send application/json with { originalName }.",
       });
     }
 

@@ -1,11 +1,8 @@
-// file: apps\playground-api\src\files\file.service.ts
-
 import { GenError, Scoped } from "@genspire/core";
-import { StorageService } from "@genspire/storage";
-import { PlaygroundDbContext } from "../database/playground-db-context.js";
+import { StorageService } from "../services/storage-service.js";
+import { StorageDbContext } from "./storage-db-context.js";
 import { FileEntity } from "./file.entity.js";
-import type { FileListResponseDto, FileResponseDto } from "./file.dto.js";
-import type { IGetObjectResult } from "@genspire/storage";
+import type { FileListResponseDto, FileResponseDto, PrepareUploadResponseDTO } from "./file.dto.js";
 
 function toFileResponse(entity: {
   id: string;
@@ -45,12 +42,20 @@ export interface UploadFileInput {
   uploaderIp?: string | null;
 }
 
+export interface PrepareUploadInput {
+  originalName: string;
+  bucket: string;
+  userId: string;
+  uploadedBy?: string;
+  uploaderIp?: string | null;
+}
+
 @Scoped()
 export class FileService {
-  static inject = [PlaygroundDbContext, StorageService];
+  static inject = [StorageDbContext, StorageService];
 
   constructor(
-    private readonly db: PlaygroundDbContext,
+    private readonly db: StorageDbContext,
     private readonly storage: StorageService,
   ) {}
 
@@ -101,6 +106,54 @@ export class FileService {
     await this.db.saveChanges();
 
     return toFileResponse(entity);
+  }
+
+  async prepareUpload(input: PrepareUploadInput): Promise<PrepareUploadResponseDTO> {
+    const bucket = input.bucket.trim();
+
+    if (!bucket) {
+      throw new GenError("Bucket is required.", "FILE_VALIDATION_ERROR");
+    }
+
+    const ext = input.originalName.includes(".")
+      ? input.originalName.substring(input.originalName.lastIndexOf("."))
+      : "";
+
+    const id = crypto.randomUUID();
+    const key = `${input.userId}/${id}${ext}`;
+    const now = new Date();
+
+    const uploadUrl = await this.storage.createSignedUrl({
+      bucket,
+      key,
+      method: "PUT",
+    });
+
+    if (!uploadUrl) {
+      throw new GenError("Storage provider does not support presigned uploads.", "FILE_UPLOAD_NOT_SUPPORTED");
+    }
+
+    const entity = new FileEntity();
+    entity.id = id;
+    entity.bucket = bucket;
+    entity.key = key;
+    entity.originalName = input.originalName;
+    entity.contentType = null;
+    entity.size = 0;
+    entity.etag = null;
+    entity.metadata = null;
+    entity.uploadedBy = input.uploadedBy ?? null;
+    entity.uploaderIp = input.uploaderIp ?? null;
+    entity.createdAt = now;
+    entity.updatedAt = now;
+
+    await this.db.files.add(entity);
+    await this.db.saveChanges();
+
+    return {
+      entity: toFileResponse(entity),
+      uploadUrl,
+    };
   }
 
   async list(

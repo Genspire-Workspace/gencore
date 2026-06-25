@@ -1,5 +1,3 @@
-// file: apps\playground-api\src\files\file.dto.ts
-
 import { ApiDto, ApiField } from "@genspire/server";
 
 @ApiDto({
@@ -75,4 +73,23 @@ export class DeleteFileResponseDto {
     description: "Whether the file was deleted.",
   })
   deleted!: boolean;
+}
+
+@ApiDto({
+  description: "Request to prepare a presigned upload URL",
+})
+export class PrepareUploadRequestDTO {
+  @ApiField({ type: "string", description: "Original file name" })
+  originalName!: string;
+}
+
+@ApiDto({
+  description: "Presigned upload URL response",
+})
+export class PrepareUploadResponseDTO {
+  @ApiField({ type: "object", dto: FileResponseDto })
+  entity!: FileResponseDto;
+
+  @ApiField({ type: "string", description: "Presigned PUT URL to upload the file directly to storage" })
+  uploadUrl!: string;
 }
