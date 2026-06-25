@@ -1,10 +1,10 @@
 // file: packages\ai\src\providers\ai-provider-registry.test.ts
 
 import { describe, expect, test, beforeEach } from "bun:test";
-import { AiRuntimeProviderRegistry } from "./ai-runtime-provider-registry.js";
-import type { IAiRuntimeProvider } from "./ai-runtime-provider.js";
+import { AiProviderRegistry } from "./ai-provider-registry.js";
+import type { IAiProvider } from "./ai-provider.js";
 
-function createMockProvider(id: string): IAiRuntimeProvider {
+function createMockProvider(id: string): IAiProvider {
   return {
     id,
     displayName: `Mock ${id}`,
@@ -25,11 +25,11 @@ function createMockProvider(id: string): IAiRuntimeProvider {
   };
 }
 
-describe("AiRuntimeProviderRegistry", () => {
-  let registry: AiRuntimeProviderRegistry;
+describe("AiProviderRegistry", () => {
+  let registry: AiProviderRegistry;
 
   beforeEach(() => {
-    registry = new AiRuntimeProviderRegistry();
+    registry = new AiProviderRegistry();
   });
 
   test("registers provider", () => {
@@ -42,7 +42,7 @@ describe("AiRuntimeProviderRegistry", () => {
   test("rejects duplicate provider ID", () => {
     registry.register(createMockProvider("openai"));
     expect(() => registry.register(createMockProvider("openai"))).toThrow(
-      "AI runtime provider 'openai' is already registered.",
+      "AI provider 'openai' is already registered.",
     );
   });
 
@@ -60,7 +60,7 @@ describe("AiRuntimeProviderRegistry", () => {
 
   test("throws from get for missing provider", () => {
     expect(() => registry.get("nonexistent")).toThrow(
-      "AI runtime provider 'nonexistent' is not registered.",
+      "AI provider 'nonexistent' is not registered.",
     );
   });
 

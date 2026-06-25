@@ -2,7 +2,7 @@
 
 import { describe, expect, test, beforeEach, afterEach, mock } from "bun:test";
 import { openAiCompatibleProvider } from "./openai-compatible-provider.js";
-import type { IAiRuntimeProvider } from "../runtime/ai-runtime-provider.js";
+import type { IAiProvider } from "../ai-provider.js";
 
 type FetchMock = ReturnType<typeof mock>;
 
@@ -21,7 +21,7 @@ function mockFetchJson(body: unknown, status = 200): FetchMock {
 }
 
 describe("OpenAI-compatible chat", () => {
-  let provider: IAiRuntimeProvider;
+  let provider: IAiProvider;
   let fetchMock: FetchMock;
 
   beforeEach(() => {
@@ -141,7 +141,7 @@ describe("OpenAI-compatible chat", () => {
 });
 
 describe("OpenAI-compatible streaming", () => {
-  let provider: IAiRuntimeProvider;
+  let provider: IAiProvider;
 
   function createStreamResponse(chunks: string[]): Response {
     const encoder = new TextEncoder();
@@ -292,7 +292,7 @@ describe("OpenAI-compatible streaming", () => {
 });
 
 describe("OpenAI-compatible embeddings", () => {
-  let provider: IAiRuntimeProvider;
+  let provider: IAiProvider;
 
   beforeEach(() => {
     provider = openAiCompatibleProvider({
@@ -448,7 +448,7 @@ describe("OpenAI-compatible embeddings", () => {
 });
 
 describe("OpenAI-compatible content mapping", () => {
-  let provider: IAiRuntimeProvider;
+  let provider: IAiProvider;
 
   beforeEach(() => {
     provider = openAiCompatibleProvider({
@@ -601,7 +601,7 @@ describe("OpenAI-compatible content mapping", () => {
 });
 
 describe("Common/chat compatibility", () => {
-  let provider: IAiRuntimeProvider;
+  let provider: IAiProvider;
 
   beforeEach(() => {
     provider = openAiCompatibleProvider({

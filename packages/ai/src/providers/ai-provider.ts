@@ -1,9 +1,9 @@
 // file: packages\ai\src\providers\ai-provider.ts
 
-import type { IChatGenerator } from "../../chat/chat-generator.js";
-import type { IEmbeddingGenerator } from "../../embeddings/embedding-generator.js";
+import type { IChatGenerator } from "../chat/chat-generator.js";
+import type { IEmbeddingGenerator } from "../embeddings/embedding-generator.js";
 
-export interface IAiRuntimeProvider {
+export interface IAiProvider {
   id: string;
   displayName: string;
   chat?: IChatGenerator;

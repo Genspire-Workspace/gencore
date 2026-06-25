@@ -1,6 +1,10 @@
 // file: packages\ai\src\models\ai-model.ts
 
-export type {
-  AiModelKind,
-  IAiModel,
-} from "../catalogue/ai-model.js";
+import type { IAiModelCapabilities } from "./ai-model-capabilities.js";
+
+export interface IAiModel {
+  id: string;
+  displayName: string;
+  providerId: string;
+  capabilities?: IAiModelCapabilities;
+}

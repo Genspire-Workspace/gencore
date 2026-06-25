@@ -6,12 +6,12 @@ import type { IChatGenerationChunk } from "../chat/chat-generation-chunk.js";
 import type { IEmbeddingGenerationRequest } from "../embeddings/embedding-generation-request.js";
 import type { IEmbeddingGenerationResponse } from "../embeddings/embedding-generation-response.js";
 import type { IAiDefaults } from "../extension/ai-extension.js";
+import { AiProviderRegistry } from "../providers/ai-provider-registry.js";
 import { AiError } from "../errors/ai-error.js";
-import { AiRuntimeProviderRegistry } from "../providers/runtime/ai-runtime-provider-registry.js";
 
 export class AiService {
   constructor(
-    private readonly registry: AiRuntimeProviderRegistry,
+    private readonly registry: AiProviderRegistry,
     private readonly defaults?: IAiDefaults,
   ) {}
 

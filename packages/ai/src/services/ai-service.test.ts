@@ -2,8 +2,8 @@
 
 import { describe, expect, test, beforeEach } from "bun:test";
 import { AiService } from "./ai-service.js";
-import { AiRuntimeProviderRegistry } from "../providers/runtime/ai-runtime-provider-registry.js";
-import type { IAiRuntimeProvider } from "../providers/runtime/ai-runtime-provider.js";
+import { AiProviderRegistry } from "../providers/ai-provider-registry.js";
+import type { IAiProvider } from "../providers/ai-provider.js";
 import type { IChatGenerationRequest } from "../chat/chat-generation-request.js";
 import type { IChatGenerationResponse } from "../chat/chat-generation-response.js";
 import type { IEmbeddingGenerationRequest } from "../embeddings/embedding-generation-request.js";
@@ -15,7 +15,7 @@ function createChatProvider(
   chatImpl?: {
     generate: (req: IChatGenerationRequest) => Promise<IChatGenerationResponse>;
   },
-): IAiRuntimeProvider {
+): IAiProvider {
   return {
     id,
     displayName: `Mock ${id}`,
@@ -46,7 +46,7 @@ function createEmbeddingProvider(
   embeddingImpl?: {
     generate: (req: IEmbeddingGenerationRequest) => Promise<IEmbeddingGenerationResponse>;
   },
-): IAiRuntimeProvider {
+): IAiProvider {
   return {
     id,
     displayName: `Mock ${id}`,
@@ -69,11 +69,11 @@ function createEmbeddingProvider(
 }
 
 describe("AiService", () => {
-  let registry: AiRuntimeProviderRegistry;
+  let registry: AiProviderRegistry;
   let defaults: IAiDefaults;
 
   beforeEach(() => {
-    registry = new AiRuntimeProviderRegistry();
+    registry = new AiProviderRegistry();
     defaults = {
       chatProvider: "openai",
       chatModel: "gpt-4",
