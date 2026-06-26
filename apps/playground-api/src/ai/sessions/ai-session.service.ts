@@ -7,6 +7,7 @@ import { AiSessionEntity } from "./ai-session.entity.js";
 import { AiSessionMessageEntity, type AiSessionMessageRole } from "./ai-session-message.entity.js";
 import { aiPlaygroundRuntime } from "../runtime/ai-service-factory.js";
 import { AiRequestComposerService } from "../generation/ai-request-composer.service.js";
+import { createSessionLogger } from "./session-logger.js";
 import {
   annotateToolCall,
   annotateToolResult,
@@ -292,12 +293,16 @@ export class AiSessionService {
       throw new GenError("Message content is required.", "AI_SESSION_VALIDATION_ERROR");
     }
 
+    const logger = createSessionLogger(sessionId);
+    logger.appendJson("requests.log", "Generate request", input);
+
     const now = new Date();
     const userMessage = new AiSessionMessageEntity();
     userMessage.id = crypto.randomUUID();
     userMessage.sessionId = sessionId;
     userMessage.role = "user";
     userMessage.content = input.content;
+    userMessage.metadata = { requestId: logger.requestId };
     userMessage.createdAt = now;
 
     await this.db.aiSessionMessages.add(userMessage);
@@ -322,8 +327,10 @@ export class AiSessionService {
       { id: userId, email: "", roles: [] } satisfies ICurrentUser,
       aiPlaygroundRuntime,
     );
+    logger.appendJson("requests.log", "Composed chat request", request);
     const response: IChatGenerationResponse =
       await aiPlaygroundRuntime.service.generateChatCompletion(request);
+    logger.appendJson("responses.log", "Generate response", response);
 
     assertNoClientToolResults(response.toolResults, toolExecutionModes);
 
@@ -348,7 +355,10 @@ export class AiSessionService {
           annotateToolResult(toolResult, toolExecutionModes),
         )
       : null;
-    assistantMessage.metadata = response.metadata ?? null;
+    assistantMessage.metadata = {
+      ...(response.metadata ?? {}),
+      requestId: logger.requestId,
+    };
     assistantMessage.createdAt = new Date();
 
     await this.db.aiSessionMessages.add(assistantMessage);
@@ -366,7 +376,7 @@ export class AiSessionService {
         toolMessage.name = toolResult.name;
         toolMessage.provider = response.provider;
         toolMessage.model = response.model;
-        toolMessage.metadata = null;
+        toolMessage.metadata = { requestId: logger.requestId };
         toolMessage.createdAt = new Date();
         return toolMessage;
       })
@@ -385,6 +395,12 @@ export class AiSessionService {
 
     await this.db.aiSessions.update(session);
     await this.db.saveChanges();
+
+    logger.appendJson("messages.log", "Persisted user message", userMessage);
+    logger.appendJson("messages.log", "Persisted assistant message", assistantMessage);
+    for (const toolMessage of toolMessages) {
+      logger.appendJson("messages.log", "Persisted tool message", toolMessage);
+    }
 
     return {
       sessionId,
@@ -412,12 +428,16 @@ export class AiSessionService {
       throw new GenError("Message content is required.", "AI_SESSION_VALIDATION_ERROR");
     }
 
+    const logger = createSessionLogger(sessionId);
+    logger.appendJson("requests.log", "Stream request", input);
+
     const now = new Date();
     const userMessage = new AiSessionMessageEntity();
     userMessage.id = crypto.randomUUID();
     userMessage.sessionId = sessionId;
     userMessage.role = "user";
     userMessage.content = input.content;
+    userMessage.metadata = { requestId: logger.requestId };
     userMessage.createdAt = now;
 
     await this.db.aiSessionMessages.add(userMessage);
@@ -442,6 +462,7 @@ export class AiSessionService {
       { id: userId, email: "", roles: [] } satisfies ICurrentUser,
       aiPlaygroundRuntime,
     );
+    logger.appendJson("requests.log", "Composed chat request", request);
     const encoder = new TextEncoder();
 
     const assistantMessageId = crypto.randomUUID();
@@ -475,14 +496,20 @@ export class AiSessionService {
           if (streamClosed || streamErrored) {
             return;
           }
-          safeEnqueue({
+          const errorPayload = {
             type: "error",
             sessionId,
             userMessageId: userMessage.id,
             assistantMessageId,
             provider: request.provider ?? "unknown",
             model: request.model ?? "unknown",
+            requestId: logger.requestId,
             error: error instanceof Error ? error.message : String(error),
+          };
+          safeEnqueue(errorPayload);
+          logger.appendJson("errors.log", "Stream error", {
+            error: errorPayload,
+            stack: error instanceof Error ? error.stack : undefined,
           });
           streamErrored = true;
           streamClosed = true;
@@ -511,6 +538,7 @@ export class AiSessionService {
               sessionId,
               userMessage.id,
               assistantMessageId,
+              logger.requestId,
             );
 
             if (nextChunk.done) {
@@ -553,7 +581,7 @@ export class AiSessionService {
               }
             }
 
-            safeEnqueue({
+            const emittedPayload = {
               id: chunk.id,
               type: chunk.type,
               provider: chunk.provider,
@@ -570,10 +598,13 @@ export class AiSessionService {
               finishReason: chunk.finishReason,
               usage: chunk.usage,
               metadata: chunk.metadata,
+              requestId: logger.requestId,
               sessionId,
               userMessageId: userMessage.id,
               assistantMessageId,
-            });
+            };
+            safeEnqueue(emittedPayload);
+            logger.appendJson("stream.log", `Chunk ${emittedChunkCount}`, emittedPayload);
           }
 
           const assistantMessage = await this.persistAssistantFromStream(
@@ -587,10 +618,13 @@ export class AiSessionService {
             accumulatedAssistantText,
             request.provider,
             request.model,
+            logger.requestId,
           );
+          logger.appendJson("messages.log", "Persisted user message", userMessage);
+          logger.appendJson("messages.log", "Persisted assistant message", assistantMessage);
 
           if (emittedChunkCount === 0) {
-            safeEnqueue({
+            const fallbackPayload = {
               type: "message",
               provider: assistantMessage.provider ?? request.provider,
               model: assistantMessage.model ?? request.model,
@@ -603,10 +637,13 @@ export class AiSessionService {
               finishReason: assistantMessage.finishReason ?? undefined,
               usage: assistantMessage.usage ?? undefined,
               metadata: assistantMessage.metadata ?? undefined,
+              requestId: logger.requestId,
               sessionId,
               userMessageId: userMessage.id,
               assistantMessageId,
-            });
+            };
+            safeEnqueue(fallbackPayload);
+            logger.appendJson("stream.log", "Fallback message (no chunks emitted)", fallbackPayload);
           }
 
           safeClose();
@@ -641,6 +678,7 @@ export class AiSessionService {
     sessionId: string,
     userMessageId: string,
     assistantMessageId: string,
+    requestId: string,
   ): Promise<IteratorResult<IChatGenerationChunk>> {
     if (STREAM_HEARTBEAT_INTERVAL_MS <= 0 || pendingServerTools.size === 0) {
       return iterator.next();
@@ -678,6 +716,7 @@ export class AiSessionService {
           toolName: pendingTool.toolName,
           provider,
           model,
+          requestId,
           sessionId,
           userMessageId,
           assistantMessageId,
@@ -697,6 +736,7 @@ export class AiSessionService {
     accumulatedAssistantText: string,
     provider: string | undefined,
     model: string | undefined,
+    requestId: string,
   ): Promise<AiSessionMessageEntity> {
     const resolvedContent = finalMessageChunk?.message?.content;
 
@@ -719,10 +759,10 @@ export class AiSessionService {
         | Record<string, unknown>
         | undefined;
     assistantMessage.usage = usage ?? null;
-    assistantMessage.metadata =
-      finalMessageChunk?.metadata ??
-      terminalChunk?.metadata ??
-      null;
+    assistantMessage.metadata = {
+      ...(finalMessageChunk?.metadata ?? terminalChunk?.metadata ?? {}),
+      requestId,
+    };
     assistantMessage.createdAt = new Date();
 
     await this.db.aiSessionMessages.add(assistantMessage);

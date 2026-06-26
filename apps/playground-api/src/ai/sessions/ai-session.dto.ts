@@ -289,6 +289,9 @@ export class GenerateAiSessionMessageStreamChunkDto {
   assistantMessageId?: string;
 
   @ApiField({ type: "string", required: false })
+  requestId?: string;
+
+  @ApiField({ type: "string", required: false })
   phase?: string;
 
   @ApiField({ type: "number", required: false })

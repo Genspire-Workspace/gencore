@@ -114,6 +114,7 @@ export class AiRequestComposerService {
         const rendered = this.promptRenderer.render(prompt, {
           variables: input.promptVariables,
           metadata: input.metadata,
+          keepUnresolvedPlaceholders: true,
         });
 
         messages.push(

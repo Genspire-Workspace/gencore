@@ -43,6 +43,20 @@ import { AuthService } from './features/auth/auth.service';
                 >
                   AI Session
                 </a>
+                <a
+                  class="rounded-full px-3 py-1.5 text-sm font-medium text-slate-600 transition hover:bg-slate-100 hover:text-slate-900"
+                  routerLink="/ai/prompts"
+                  routerLinkActive="bg-sky-100 text-sky-800"
+                >
+                  AI Prompts
+                </a>
+                <a
+                  class="rounded-full px-3 py-1.5 text-sm font-medium text-slate-600 transition hover:bg-slate-100 hover:text-slate-900"
+                  routerLink="/ai/skills"
+                  routerLinkActive="bg-sky-100 text-sky-800"
+                >
+                  AI Skills
+                </a>
               </nav>
             }
           </div>

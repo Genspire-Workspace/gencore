@@ -227,7 +227,7 @@ async function extractZipArchive(zipPath: string, outputDirectory: string): Prom
       centralDirectoryOffset + 46,
       centralDirectoryOffset + 46 + fileNameLength,
     );
-    const fileName = decoder.decode(fileNameBytes);
+    const fileName = decoder.decode(fileNameBytes).replaceAll("\\", "/");
 
     centralDirectoryOffset += 46 + fileNameLength + extraFieldLength + commentLength;
 

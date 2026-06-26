@@ -55,6 +55,9 @@ export interface IAiSessionMessageRequest {
   apiKey?: string;
   apiKeyId?: string;
   systemPrompt?: string;
+  promptIds?: string[];
+  skillIds?: string[];
+  promptVariables?: Record<string, unknown>;
   tools?: unknown[];
   settings?: Record<string, unknown>;
   metadata?: Record<string, unknown>;
@@ -80,5 +83,6 @@ export interface IAiSessionStreamChunk {
   sessionId?: string;
   userMessageId?: string;
   assistantMessageId?: string;
+  requestId?: string;
   error?: string;
 }

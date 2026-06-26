@@ -14,6 +14,7 @@ export interface IAiPromptVariable {
 export interface IAiPromptRenderInput {
   variables?: Record<string, unknown>;
   metadata?: Record<string, unknown>;
+  keepUnresolvedPlaceholders?: boolean;
 }
 
 export interface IAiRenderedPrompt {

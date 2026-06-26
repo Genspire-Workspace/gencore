@@ -43,6 +43,22 @@ export const routes: Routes = [
       ),
   },
   {
+    path: 'ai/prompts',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/ai/prompts/ai-prompt-page.component').then(
+        (module) => module.AiPromptPageComponent,
+      ),
+  },
+  {
+    path: 'ai/skills',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/ai/skills/ai-skill-page.component').then(
+        (module) => module.AiSkillPageComponent,
+      ),
+  },
+  {
     path: '**',
     redirectTo: '',
   },

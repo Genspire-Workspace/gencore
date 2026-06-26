@@ -120,4 +120,41 @@ describe("AiPromptRenderer", () => {
       "AI prompt 'capital-answer' could not resolve variable 'country'.",
     );
   });
+
+  test("keeps unresolved placeholders when keepUnresolvedPlaceholders is set", () => {
+    const prompt = defineAiPrompt({
+      id: "directory-task",
+      template:
+        "Work only inside {{targetDirectory}}. Find images and {{expectedAiFile}}.",
+      variables: [
+        { name: "targetDirectory", required: true },
+        { name: "expectedAiFile", required: true },
+      ],
+    });
+
+    const renderer = new AiPromptRenderer();
+    const rendered = renderer.render(prompt, {
+      keepUnresolvedPlaceholders: true,
+    });
+
+    expect(rendered.messages[0]?.content).toBe(
+      "Work only inside {{targetDirectory}}. Find images and {{expectedAiFile}}.",
+    );
+  });
+
+  test("keeps placeholders for undeclared variables when keepUnresolvedPlaceholders is set", () => {
+    const prompt = defineAiPrompt({
+      id: "free-form",
+      template: "Summarize {{topic}} for {{audience}}.",
+    });
+
+    const renderer = new AiPromptRenderer();
+    const rendered = renderer.render(prompt, {
+      keepUnresolvedPlaceholders: true,
+    });
+
+    expect(rendered.messages[0]?.content).toBe(
+      "Summarize {{topic}} for {{audience}}.",
+    );
+  });
 });
