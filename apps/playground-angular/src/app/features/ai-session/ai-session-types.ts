@@ -26,6 +26,10 @@ export interface IAiSessionMessageDto {
   createdAt: string;
 }
 
+export interface IAiSessionListResponse {
+  items: IAiSessionResponse[];
+}
+
 export interface IAiSessionMessageListResponse {
   items: IAiSessionMessageDto[];
 }

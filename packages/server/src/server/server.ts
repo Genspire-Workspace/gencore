@@ -15,6 +15,7 @@ import { type IClientIpOptions, resolveClientIp } from "../ip/client-ip.js";
 
 export interface ServerOptions {
   port?: number;
+  idleTimeout?: number;
   container: Container;
   loggerFactory: LoggerFactory;
   middlewares?: readonly HttpMiddleware[];
@@ -180,7 +181,11 @@ export class Server {
         : null;
     }
 
-    return originPolicy(requestOrigin) ? (requestOrigin ?? "*") : null;
+    if (typeof originPolicy === "function") {
+      return originPolicy(requestOrigin) ? (requestOrigin ?? "*") : null;
+    }
+
+    return null;
   }
 
   private applyCorsHeaders(request: Request, response: Response): Response {
@@ -414,6 +419,9 @@ export class Server {
 
     this.bunServer = Bun.serve({
       port: this.port,
+      ...(this.config.idleTimeout !== undefined
+        ? { idleTimeout: this.config.idleTimeout }
+        : {}),
       fetch: async (req) => await this.handle(req),
     });
 

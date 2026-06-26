@@ -41,8 +41,8 @@ interface IUiChatMessage {
               Session playground
             </h1>
             <p class="mt-3 max-w-2xl text-sm text-slate-500">
-              Create one session, stream replies from the backend, and reload the
-              persisted message history after each turn.
+              Create one session, stream replies from the backend, and navigate
+              across saved sessions from the sidebar.
             </p>
           </div>
 
@@ -55,59 +55,108 @@ interface IUiChatMessage {
             >
               Refresh history
             </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-6 grid min-h-0 flex-1 auto-rows-fr gap-6 overflow-hidden lg:grid-cols-[20rem_minmax(0,1fr)]">
+        <aside class="flex h-full min-h-0 flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div class="flex items-center justify-between gap-3">
+            <h2 class="text-lg font-semibold text-slate-900">Sessions</h2>
+            <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
+              {{ sessions().length }}
+            </span>
+          </div>
+
+          <div class="mt-4 space-y-3">
             <button
-              class="rounded-2xl bg-slate-900 px-4 py-3 text-sm font-medium text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:bg-slate-400"
+              class="w-full rounded-2xl bg-slate-900 px-4 py-3 text-sm font-medium text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:bg-slate-400"
               type="button"
               (click)="newSession()"
               [disabled]="loading() || sending()"
             >
               New session
             </button>
-          </div>
-        </div>
-      </div>
 
-      <div class="mt-6 grid min-h-0 flex-1 auto-rows-fr gap-6 overflow-hidden lg:grid-cols-[20rem_minmax(0,1fr)]">
-        <aside class="h-full min-h-0 overflow-auto rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h2 class="text-lg font-semibold text-slate-900">Session config</h2>
-
-          <div class="mt-6 space-y-4">
-            <label class="block space-y-2">
-              <span class="text-sm font-medium text-slate-700">Provider</span>
-              <input
-                class="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-sky-500"
-                type="text"
-                [ngModel]="provider()"
-                (ngModelChange)="provider.set($event)"
-              />
-            </label>
-
-            <label class="block space-y-2">
-              <span class="text-sm font-medium text-slate-700">Model</span>
-              <input
-                class="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-sky-500"
-                type="text"
-                [ngModel]="model()"
-                (ngModelChange)="model.set($event)"
-              />
-            </label>
+            <button
+              class="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm font-medium text-slate-700 transition hover:border-slate-400 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+              type="button"
+              (click)="reloadSessionList()"
+              [disabled]="loading() || sending()"
+            >
+              Refresh sessions
+            </button>
           </div>
 
-          <div class="mt-6 rounded-2xl bg-slate-50 p-4 text-sm text-slate-600">
-            <div class="font-medium text-slate-900">Active session</div>
-            <div class="mt-2 break-all">
-              {{ session()?.id || 'No session yet' }}
+          <div class="mt-6 min-h-0 flex-1 overflow-hidden">
+            @if (sessions().length === 0 && !loading()) {
+              <div class="rounded-2xl border border-dashed border-slate-300 px-4 py-6 text-center text-sm text-slate-500">
+                No sessions yet.
+              </div>
+            } @else {
+              <div class="h-full space-y-3 overflow-y-auto pr-2">
+                @for (item of sessions(); track item.id) {
+                  <button
+                    class="block w-full rounded-2xl border px-4 py-3 text-left transition"
+                    [class.border-sky-300]="item.id === session()?.id"
+                    [class.bg-sky-50]="item.id === session()?.id"
+                    [class.text-sky-900]="item.id === session()?.id"
+                    [class.border-slate-200]="item.id !== session()?.id"
+                    [class.bg-white]="item.id !== session()?.id"
+                    [class.text-slate-800]="item.id !== session()?.id"
+                    type="button"
+                    (click)="openSession(item.id)"
+                    [disabled]="sending()"
+                  >
+                    <div class="text-sm font-semibold">
+                      {{ item.title || 'Untitled session' }}
+                    </div>
+                    <div class="mt-1 text-xs text-slate-500">
+                      {{ item.provider || 'provider?' }} / {{ item.model || 'model?' }}
+                    </div>
+                    <div class="mt-2 break-all text-[11px] text-slate-400">
+                      {{ item.id }}
+                    </div>
+                  </button>
+                }
+              </div>
+            }
+          </div>
+
+          <div class="mt-8 shrink-0 border-t border-slate-200 pt-6">
+            <h3 class="text-lg font-semibold text-slate-900">Session config</h3>
+
+            <div class="mt-6 space-y-4">
+              <label class="block space-y-2">
+                <span class="text-sm font-medium text-slate-700">Provider</span>
+                <input
+                  class="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-sky-500"
+                  type="text"
+                  [ngModel]="provider()"
+                  (ngModelChange)="provider.set($event)"
+                />
+              </label>
+
+              <label class="block space-y-2">
+                <span class="text-sm font-medium text-slate-700">Model</span>
+                <input
+                  class="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-sky-500"
+                  type="text"
+                  [ngModel]="model()"
+                  (ngModelChange)="model.set($event)"
+                />
+              </label>
             </div>
           </div>
 
           @if (streamStatus()) {
-            <div class="mt-4 rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-700">
+            <div class="mt-4 shrink-0 rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-700">
               {{ streamStatus() }}
             </div>
           }
 
           @if (error()) {
-            <div class="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+            <div class="mt-4 shrink-0 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
               {{ error() }}
             </div>
           }
@@ -115,7 +164,9 @@ interface IUiChatMessage {
 
         <div class="flex h-full min-h-0 flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
           <div class="flex items-center justify-between gap-4">
-            <h2 class="text-lg font-semibold text-slate-900">Messages</h2>
+            <h2 class="text-lg font-semibold text-slate-900">
+              {{ session()?.title || 'Untitled session' }}
+            </h2>
             <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
               {{ messages().length }} message{{ messages().length === 1 ? '' : 's' }}
             </span>
@@ -185,6 +236,7 @@ export class AiSessionPageComponent {
   private readonly aiSessionService = inject(AiSessionService);
 
   protected readonly session = signal<IAiSessionResponse | null>(null);
+  protected readonly sessions = signal<IAiSessionResponse[]>([]);
   protected readonly messages = signal<IUiChatMessage[]>([]);
   protected readonly loading = signal(false);
   protected readonly sending = signal(false);
@@ -204,8 +256,11 @@ export class AiSessionPageComponent {
     this.streamStatus.set('');
 
     try {
+      await this.reloadSessionListInternal();
       const session = await this.aiSessionService.ensureSession();
       this.session.set(session);
+      this.provider.set(session.provider || appEnv.defaultAiProvider);
+      this.model.set(session.model || appEnv.defaultAiModel);
       this.messages.set(await this.loadMessages(session.id));
     } catch (error) {
       this.error.set(this.readErrorMessage(error));
@@ -230,6 +285,49 @@ export class AiSessionPageComponent {
 
       this.session.set(session);
       this.messages.set([]);
+      this.provider.set(session.provider || appEnv.defaultAiProvider);
+      this.model.set(session.model || appEnv.defaultAiModel);
+      await this.reloadSessionListInternal();
+    } catch (error) {
+      this.error.set(this.readErrorMessage(error));
+    } finally {
+      this.loading.set(false);
+    }
+  }
+
+  protected async openSession(sessionId: string): Promise<void> {
+    if (this.loading() || this.sending()) {
+      return;
+    }
+
+    this.loading.set(true);
+    this.error.set('');
+    this.streamStatus.set('');
+
+    try {
+      const session = await this.aiSessionService.activateSession(sessionId);
+      if (!session) {
+        await this.reloadSessionListInternal();
+        throw new Error('Session was not found.');
+      }
+
+      this.session.set(session);
+      this.provider.set(session.provider || appEnv.defaultAiProvider);
+      this.model.set(session.model || appEnv.defaultAiModel);
+      this.messages.set(await this.loadMessages(session.id));
+    } catch (error) {
+      this.error.set(this.readErrorMessage(error));
+    } finally {
+      this.loading.set(false);
+    }
+  }
+
+  protected async reloadSessionList(): Promise<void> {
+    this.loading.set(true);
+    this.error.set('');
+
+    try {
+      await this.reloadSessionListInternal();
     } catch (error) {
       this.error.set(this.readErrorMessage(error));
     } finally {
@@ -321,6 +419,7 @@ export class AiSessionPageComponent {
       }
 
       this.messages.set(await this.loadMessages(session.id));
+      await this.reloadSessionListInternal();
       this.streamStatus.set('Latest assistant turn saved.');
     } catch (error) {
       this.error.set(this.readErrorMessage(error));
@@ -346,6 +445,10 @@ export class AiSessionPageComponent {
   private async loadMessages(sessionId: string): Promise<IUiChatMessage[]> {
     const messages = await this.aiSessionService.listMessages(sessionId);
     return messages.map((message) => this.toUiMessage(message));
+  }
+
+  private async reloadSessionListInternal(): Promise<void> {
+    this.sessions.set(await this.aiSessionService.listSessions());
   }
 
   private toUiMessage(message: IAiSessionMessageDto): IUiChatMessage {

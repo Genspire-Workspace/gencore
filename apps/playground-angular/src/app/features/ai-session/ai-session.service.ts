@@ -6,6 +6,7 @@ import { AuthService } from '../auth/auth.service';
 import { readNdjsonLines } from './ai-session-stream';
 import type {
   IAiSessionCreateRequest,
+  IAiSessionListResponse,
   IAiSessionMessageDto,
   IAiSessionMessageListResponse,
   IAiSessionMessageRequest,
@@ -49,6 +50,16 @@ export class AiSessionService {
     writeStoredSessionId(sessionId);
   }
 
+  async listSessions(): Promise<IAiSessionResponse[]> {
+    const response = await firstValueFrom(
+      this.http.get<IAiSessionListResponse>(
+        `${appEnv.apiBaseUrl}/ai/sessions`,
+      ),
+    );
+
+    return response.items;
+  }
+
   async createSession(
     input: IAiSessionCreateRequest = {},
   ): Promise<IAiSessionResponse> {
@@ -58,6 +69,20 @@ export class AiSessionService {
         input,
       ),
     );
+
+    this.setActiveSessionId(session.id);
+    return session;
+  }
+
+  async activateSession(sessionId: string): Promise<IAiSessionResponse | null> {
+    const session = await this.getSession(sessionId);
+    if (!session) {
+      if (this.getActiveSessionId() === sessionId) {
+        this.setActiveSessionId(null);
+      }
+
+      return null;
+    }
 
     this.setActiveSessionId(session.id);
     return session;

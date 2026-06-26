@@ -99,6 +99,7 @@ export async function createPlaygroundApp(
   await app.use(
     serverExtension({
       port: options.port ?? playgroundEnv.port,
+      idleTimeout: 120,
       trustProxy: true,
       cors: {
         origin: [
