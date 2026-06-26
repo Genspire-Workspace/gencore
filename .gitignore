@@ -148,5 +148,5 @@ vite.config.ts.timestamp-*
 old_spirecorejs/
 
 # Local development databases
-data/
-data/test-directory/
+data/*
+!data/test-directory/
