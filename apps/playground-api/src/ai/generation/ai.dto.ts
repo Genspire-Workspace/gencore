@@ -1,4 +1,4 @@
-// file: apps\playground-api\src\ai\ai.dto.ts
+// file: apps\playground-api\src\ai\generation\ai.dto.ts
 
 import { ApiDto, ApiField, defineApiType } from "@genspire/server";
 
@@ -131,6 +131,24 @@ export class AiChatRequestDto {
 
   @ApiField({ type: "string", required: false })
   systemPrompt?: string;
+
+  @ApiField({
+    arrayOf: () => defineApiType({ type: "string" }),
+    required: false,
+  })
+  promptIds?: string[];
+
+  @ApiField({
+    arrayOf: () => defineApiType({ type: "string" }),
+    required: false,
+  })
+  skillIds?: string[];
+
+  @ApiField({
+    type: "object",
+    required: false,
+  })
+  promptVariables?: Record<string, unknown>;
 
   @ApiField({
     arrayOf: AiChatMessageDto,

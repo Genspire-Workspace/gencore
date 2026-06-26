@@ -1,9 +1,7 @@
-// file: apps\playground-api\src\ai\ai-session.entity.ts
-
 import { Entity, Index, PrimaryKey, Property } from "@mikro-orm/decorators";
 
 @Entity({ tableName: "ai_sessions" })
-@Index({ name: "ai_sessions_user_id_index", properties: ["userId"] })
+@Index({ name: "ai_sessions_user_updated_index", properties: ["userId", "updatedAt"] })
 export class AiSessionEntity {
   @PrimaryKey({ type: "string" })
   id!: string;
@@ -12,19 +10,19 @@ export class AiSessionEntity {
   userId!: string;
 
   @Property({ type: "string", nullable: true })
-  title: string | null = null;
+  title?: string | null;
 
   @Property({ type: "string", nullable: true })
-  provider: string | null = null;
+  provider?: string | null;
 
   @Property({ type: "string", nullable: true })
-  model: string | null = null;
+  model?: string | null;
 
   @Property({ type: "text", nullable: true })
-  systemPrompt: string | null = null;
+  systemPrompt?: string | null;
 
   @Property({ type: "json", nullable: true })
-  metadata: Record<string, unknown> | null = null;
+  metadata?: Record<string, unknown> | null;
 
   @Property({ type: "datetime" })
   createdAt: Date = new Date();

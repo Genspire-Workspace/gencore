@@ -1,50 +1,8 @@
-// file: apps\playground-api\src\ai\ai-session.dto.ts
-
 import { ApiDto, ApiField, defineApiType } from "@genspire/server";
-import { AiChatMessageDto, AiChatSettingsDto, AiChatToolDto } from "./ai.dto.js";
+import { AiChatMessageDto, AiChatSettingsDto, AiChatToolDto } from "../generation/ai.dto.js";
 
 @ApiDto({
-  description: "Request payload for creating an AI session",
-})
-export class CreateAiSessionRequestDto {
-  @ApiField({ type: "string", required: false })
-  title?: string;
-
-  @ApiField({ type: "string", required: false })
-  provider?: string;
-
-  @ApiField({ type: "string", required: false })
-  model?: string;
-
-  @ApiField({ type: "string", required: false })
-  systemPrompt?: string;
-
-  @ApiField({ type: "object", required: false })
-  metadata?: Record<string, unknown>;
-}
-
-@ApiDto({
-  description: "Request payload for updating an AI session",
-})
-export class UpdateAiSessionRequestDto {
-  @ApiField({ type: "string", required: false })
-  title?: string;
-
-  @ApiField({ type: "string", required: false })
-  provider?: string;
-
-  @ApiField({ type: "string", required: false })
-  model?: string;
-
-  @ApiField({ type: "string", required: false })
-  systemPrompt?: string;
-
-  @ApiField({ type: "object", required: false })
-  metadata?: Record<string, unknown>;
-}
-
-@ApiDto({
-  description: "A persisted AI session",
+  description: "AI session",
 })
 export class AiSessionResponseDto {
   @ApiField({ type: "string" })
@@ -76,29 +34,65 @@ export class AiSessionResponseDto {
 }
 
 @ApiDto({
-  description: "A list of AI sessions",
+  description: "AI session list response",
 })
 export class AiSessionListResponseDto {
   @ApiField({
     arrayOf: AiSessionResponseDto,
-    description: "AI sessions",
   })
   items!: AiSessionResponseDto[];
+}
+
+@ApiDto({
+  description: "Create AI session request",
+})
+export class CreateAiSessionRequestDto {
+  @ApiField({ type: "string", required: false })
+  title?: string;
+
+  @ApiField({ type: "string", required: false })
+  provider?: string;
+
+  @ApiField({ type: "string", required: false })
+  model?: string;
+
+  @ApiField({ type: "string", required: false })
+  systemPrompt?: string;
+
+  @ApiField({ type: "object", required: false })
+  metadata?: Record<string, unknown>;
+}
+
+@ApiDto({
+  description: "Update AI session request",
+})
+export class UpdateAiSessionRequestDto {
+  @ApiField({ type: "string", required: false })
+  title?: string | null;
+
+  @ApiField({ type: "string", required: false })
+  provider?: string | null;
+
+  @ApiField({ type: "string", required: false })
+  model?: string | null;
+
+  @ApiField({ type: "string", required: false })
+  systemPrompt?: string | null;
+
+  @ApiField({ type: "object", required: false })
+  metadata?: Record<string, unknown> | null;
 }
 
 @ApiDto({
   description: "Delete AI session response",
 })
 export class DeleteAiSessionResponseDto {
-  @ApiField({
-    type: "boolean",
-    description: "Whether the session was deleted.",
-  })
+  @ApiField({ type: "boolean" })
   deleted!: boolean;
 }
 
 @ApiDto({
-  description: "A persisted AI session message",
+  description: "AI session message",
 })
 export class AiSessionMessageDto {
   @ApiField({ type: "string" })
@@ -108,9 +102,9 @@ export class AiSessionMessageDto {
   sessionId!: string;
 
   @ApiField({ type: "string" })
-  role!: "system" | "user" | "assistant" | "tool";
+  role!: "user" | "assistant" | "system" | "tool";
 
-  @ApiField({ type: "object", description: "Message content" })
+  @ApiField({ type: "object" })
   content!: unknown;
 
   @ApiField({ type: "string", required: false })
@@ -148,25 +142,21 @@ export class AiSessionMessageDto {
 }
 
 @ApiDto({
-  description: "A list of AI session messages",
+  description: "AI session message list response",
 })
 export class AiSessionMessageListResponseDto {
   @ApiField({
     arrayOf: AiSessionMessageDto,
-    description: "AI session messages ordered oldest-first",
   })
   items!: AiSessionMessageDto[];
 }
 
 @ApiDto({
-  description: "Request payload for generating a new AI session message turn",
+  description: "Generate AI session assistant message request",
 })
 export class GenerateAiSessionMessageRequestDto {
-  @ApiField({
-    type: "object",
-    description: "Message content for the new user turn (string or content parts)",
-  })
-  content!: unknown;
+  @ApiField({ type: "object" })
+  content!: string | unknown[];
 
   @ApiField({ type: "string", required: false })
   provider?: string;
@@ -182,6 +172,21 @@ export class GenerateAiSessionMessageRequestDto {
 
   @ApiField({ type: "string", required: false })
   systemPrompt?: string;
+
+  @ApiField({
+    arrayOf: () => defineApiType({ type: "string" }),
+    required: false,
+  })
+  promptIds?: string[];
+
+  @ApiField({
+    arrayOf: () => defineApiType({ type: "string" }),
+    required: false,
+  })
+  skillIds?: string[];
+
+  @ApiField({ type: "object", required: false })
+  promptVariables?: Record<string, unknown>;
 
   @ApiField({
     arrayOf: AiChatToolDto,
@@ -200,7 +205,7 @@ export class GenerateAiSessionMessageRequestDto {
 }
 
 @ApiDto({
-  description: "Response payload for generating a new AI session message turn",
+  description: "Generate AI session assistant message response",
 })
 export class GenerateAiSessionMessageResponseDto {
   @ApiField({ type: "string" })
@@ -235,7 +240,7 @@ export class GenerateAiSessionMessageResponseDto {
 }
 
 @ApiDto({
-  description: "AI session stream chunk payload",
+  description: "Streaming AI session message chunk",
 })
 export class GenerateAiSessionMessageStreamChunkDto {
   @ApiField({ type: "string", required: false })
@@ -275,6 +280,15 @@ export class GenerateAiSessionMessageStreamChunkDto {
   metadata?: Record<string, unknown>;
 
   @ApiField({ type: "string", required: false })
+  sessionId?: string;
+
+  @ApiField({ type: "string", required: false })
+  userMessageId?: string;
+
+  @ApiField({ type: "string", required: false })
+  assistantMessageId?: string;
+
+  @ApiField({ type: "string", required: false })
   phase?: string;
 
   @ApiField({ type: "number", required: false })
@@ -285,13 +299,4 @@ export class GenerateAiSessionMessageStreamChunkDto {
 
   @ApiField({ type: "string", required: false })
   toolName?: string;
-
-  @ApiField({ type: "string", required: false })
-  sessionId?: string;
-
-  @ApiField({ type: "string", required: false })
-  userMessageId?: string;
-
-  @ApiField({ type: "string", required: false })
-  assistantMessageId?: string;
 }

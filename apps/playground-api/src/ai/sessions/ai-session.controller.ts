@@ -1,4 +1,4 @@
-// file: apps\playground-api\src\ai\ai-session.controller.ts
+// file: apps\playground-api\src\ai\sessions\ai-session.controller.ts
 
 import {
   Authorize,

@@ -1,52 +1,40 @@
-// file: apps\playground-api\src\ai\ai.controller.ts
+// file: apps\playground-api\src\ai\generation\ai-chat.controller.ts
 
 import {
   AllowAnonymous,
   Controller,
-  Get,
   Post,
   RequestContext,
 } from "@genspire/server";
-import type { IChatGenerationChunk } from "../../../../packages/ai/src/chat/chat-generation-chunk.js";
+import { getCurrentUser } from "@genspire/auth";
+import type { IChatGenerationChunk } from "../../../../../packages/ai/src/chat/chat-generation-chunk.js";
 import {
   AiChatRequestDto,
   AiChatResponseDto,
   AiChatStreamChunkDto,
-  AiEmbeddingRequestDto,
-  AiEmbeddingResponseDto,
-  AiProvidersResponseDto,
 } from "./ai.dto.js";
-import { aiPlaygroundRuntime } from "./ai-service-factory.js";
+import { aiPlaygroundRuntime } from "../runtime/ai-service-factory.js";
+import { AiRequestComposerService } from "./ai-request-composer.service.js";
 import {
   annotateToolCall,
   annotateToolResult,
   assertNoClientToolResults,
   assertToolResultOwnership,
-  buildChatRequest,
-  createToolExecutionModeMap,
   toChatMessageDto,
-} from "./ai-chat-helpers.js";
+} from "../shared/ai-chat-helpers.js";
 
 @Controller("/ai", {
   tag: "AI",
-  description: "AI playground endpoints",
+  description: "AI chat generation endpoints",
 })
-export class AiController {
+export class AiChatController {
+  static inject = [AiRequestComposerService];
+
   private static readonly heartbeatIntervalMs = Number(
     process.env.AI_STREAM_HEARTBEAT_INTERVAL_MS ?? "1000",
   );
 
-  @AllowAnonymous()
-  @Get("/providers", {
-    summary: "List configured AI providers",
-    response: AiProvidersResponseDto,
-  })
-  getProviders() {
-    return {
-      providers: aiPlaygroundRuntime.providers,
-      defaults: aiPlaygroundRuntime.resolver.getDefaults(),
-    };
-  }
+  constructor(private readonly composer: AiRequestComposerService) {}
 
   @AllowAnonymous()
   @Post("/chat", {
@@ -56,9 +44,13 @@ export class AiController {
   })
   async generateChat(ctx: RequestContext) {
     const body = await ctx.json<AiChatRequestDto>();
-    const toolExecutionModes = createToolExecutionModeMap(body.tools);
+    const { request, toolExecutionModes } = await this.composer.composeChatRequest(
+      body,
+      getCurrentUser(ctx),
+      aiPlaygroundRuntime,
+    );
     const response = await aiPlaygroundRuntime.service.generateChatCompletion(
-      buildChatRequest(body, aiPlaygroundRuntime),
+      request,
     );
 
     assertNoClientToolResults(
@@ -91,8 +83,11 @@ export class AiController {
   })
   async streamChat(ctx: RequestContext) {
     const body = await ctx.json<AiChatRequestDto>();
-    const request = buildChatRequest(body, aiPlaygroundRuntime);
-    const toolExecutionModes = createToolExecutionModeMap(body.tools);
+    const { request, toolExecutionModes } = await this.composer.composeChatRequest(
+      body,
+      getCurrentUser(ctx),
+      aiPlaygroundRuntime,
+    );
     const encoder = new TextEncoder();
 
     const stream = new ReadableStream<Uint8Array>({
@@ -265,7 +260,7 @@ export class AiController {
     provider?: string,
     model?: string,
   ): Promise<IteratorResult<IChatGenerationChunk>> {
-    const heartbeatIntervalMs = AiController.heartbeatIntervalMs;
+    const heartbeatIntervalMs = AiChatController.heartbeatIntervalMs;
 
     if (heartbeatIntervalMs <= 0 || pendingServerTools.size === 0) {
       return iterator.next();
@@ -281,9 +276,9 @@ export class AiController {
         }
         | { kind: "heartbeat" }
       >([
-        nextPromise.then((result) => ({
+        nextPromise.then((nextResult) => ({
           kind: "chunk" as const,
-          result,
+          result: nextResult,
         })),
         Bun.sleep(heartbeatIntervalMs).then(() => ({
           kind: "heartbeat" as const,
@@ -321,45 +316,6 @@ export class AiController {
       return;
     }
 
-    console.info("[AiController]", message, details);
-  }
-
-  @AllowAnonymous()
-  @Post("/embeddings", {
-    summary: "Generate embeddings",
-    request: AiEmbeddingRequestDto,
-    response: AiEmbeddingResponseDto,
-  })
-  async generateEmbedding(ctx: RequestContext) {
-    const body = await ctx.json<AiEmbeddingRequestDto>();
-    const resolved = this.resolveEmbedding(body);
-    const response = await aiPlaygroundRuntime.service.generateEmbedding({
-      provider: resolved.provider,
-      model: resolved.model,
-      apiKey: body.apiKey,
-      apiKeyId: body.apiKeyId,
-      userId: body.userId,
-      input: body.input,
-      dimensions: body.dimensions,
-      metadata: body.metadata,
-    });
-
-    return {
-      provider: response.provider,
-      model: response.model,
-      embeddings: response.embeddings,
-      usage: response.usage as Record<string, unknown> | undefined,
-      metadata: response.metadata,
-    };
-  }
-
-  private resolveEmbedding(
-    body: AiEmbeddingRequestDto,
-  ): { provider?: string; model?: string } {
-    return aiPlaygroundRuntime.resolver.resolve({
-      provider: body.provider,
-      model: body.model,
-      kind: "embedding",
-    });
+    console.info("[AiChatController]", message, details);
   }
 }

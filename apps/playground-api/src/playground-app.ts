@@ -23,8 +23,12 @@ import { PlaygroundDbContext } from "./database/playground-db-context.js";
 import { createPlaygroundStorageProvider } from "./storage/playground-storage-provider.js";
 import { AuthActivityController } from "./auth/auth-activity.controller.js";
 import { AuthBanController } from "./auth/auth-ban.controller.js";
-import { AiController } from "./ai/ai.controller.js";
-import { AiSessionController } from "./ai/ai-session.controller.js";
+import { AiChatController } from "./ai/generation/ai-chat.controller.js";
+import { AiEmbeddingController } from "./ai/generation/ai-embedding.controller.js";
+import { AiProviderController } from "./ai/providers/ai-provider.controller.js";
+import { AiSessionController } from "./ai/sessions/ai-session.controller.js";
+import { AiPromptController } from "./ai/prompts/ai-prompt.controller.js";
+import { AiSkillController } from "./ai/skills/ai-skill.controller.js";
 import { HealthController } from "./health/health.controller.js";
 import { TodoController } from "./todos/todo.controller.js";
 
@@ -129,7 +133,7 @@ export async function createPlaygroundApp(
     }),
   );
 
-  app.get(Server).registerControllers(FileController, HealthController, AiController, AiSessionController, AuthController, RoleController, AuthActivityController, AuthBanController, TodoController);
+  app.get(Server).registerControllers(FileController, HealthController, AiChatController, AiEmbeddingController, AiProviderController, AiSessionController, AiPromptController, AiSkillController, AuthController, RoleController, AuthActivityController, AuthBanController, TodoController);
 
   return app;
 }

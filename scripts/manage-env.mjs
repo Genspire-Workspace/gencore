@@ -19,6 +19,7 @@ const PROFILE_TO_FILE = {
 
 const SENSITIVE_KEY_PATTERN =
   /(API_KEY|SECRET|TOKEN|PASSWORD|PRIVATE_KEY|ACCESS_KEY)/i;
+const HIDDEN_VALUE = "<hidden>";
 
 function resolveRepoPath(relativePath) {
   return path.join(ROOT_DIR, relativePath);
@@ -83,7 +84,26 @@ function maskValue(key, value) {
     return value;
   }
 
-  return "<hidden>";
+  return HIDDEN_VALUE;
+}
+
+function materializeHiddenValues(templateContent, activeEnv) {
+  return templateContent.replace(
+    /^(\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)=)(.*)$/gm,
+    (line, prefix, key, value) => {
+      if (value !== HIDDEN_VALUE) {
+        return line;
+      }
+
+      const activeEntry = activeEnv.map.get(key);
+
+      if (!activeEntry) {
+        return line;
+      }
+
+      return `${prefix}${activeEntry.value}`;
+    },
+  );
 }
 
 async function syncActiveEnvIntoTemplates() {
@@ -142,6 +162,9 @@ async function useProfile(profileName) {
     );
   }
 
+  const activeContent = await readText(ENV_FILES.active);
+  const active = parseEnvEntries(activeContent);
+
   await syncActiveEnvIntoTemplates();
 
   const sourceContent = await readText(sourcePath);
@@ -150,7 +173,9 @@ async function useProfile(profileName) {
     throw new Error(`Profile file '${sourcePath}' is empty or missing.`);
   }
 
-  await writeText(ENV_FILES.active, sourceContent);
+  const nextActiveContent = materializeHiddenValues(sourceContent, active);
+
+  await writeText(ENV_FILES.active, nextActiveContent);
   console.log(`Copied ${sourcePath} -> ${ENV_FILES.active}`);
 }
 

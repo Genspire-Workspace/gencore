@@ -1,19 +1,19 @@
-// file: apps\playground-api\src\ai\ai-session.service.ts
+// file: apps\playground-api\src\ai\sessions\ai-session.service.ts
 
 import { GenError, Scoped } from "@genspire/core";
-import { PlaygroundDbContext } from "../database/playground-db-context.js";
+import type { ICurrentUser } from "@genspire/auth";
+import { PlaygroundDbContext } from "../../database/playground-db-context.js";
 import { AiSessionEntity } from "./ai-session.entity.js";
 import { AiSessionMessageEntity, type AiSessionMessageRole } from "./ai-session-message.entity.js";
-import { aiPlaygroundRuntime } from "./ai-service-factory.js";
+import { aiPlaygroundRuntime } from "../runtime/ai-service-factory.js";
+import { AiRequestComposerService } from "../generation/ai-request-composer.service.js";
 import {
   annotateToolCall,
   annotateToolResult,
   assertNoClientToolResults,
   assertToolResultOwnership,
-  buildChatRequest,
-  createToolExecutionModeMap,
   toChatMessageDto,
-} from "./ai-chat-helpers.js";
+} from "../shared/ai-chat-helpers.js";
 import type {
   AiSessionListResponseDto,
   AiSessionMessageDto,
@@ -25,10 +25,10 @@ import type {
   GenerateAiSessionMessageResponseDto,
   UpdateAiSessionRequestDto,
 } from "./ai-session.dto.js";
-import type { AiChatRequestDto } from "./ai.dto.js";
-import type { IChatGenerationChunk } from "../../../../packages/ai/src/chat/chat-generation-chunk.js";
-import type { IChatGenerationResponse } from "../../../../packages/ai/src/chat/chat-generation-response.js";
-import type { IChatMessage } from "../../../../packages/ai/src/chat/chat-message.js";
+import type { AiChatRequestDto } from "../generation/ai.dto.js";
+import type { IChatGenerationChunk } from "../../../../../packages/ai/src/chat/chat-generation-chunk.js";
+import type { IChatGenerationResponse } from "../../../../../packages/ai/src/chat/chat-generation-response.js";
+import type { IChatMessage } from "../../../../../packages/ai/src/chat/chat-message.js";
 
 const TITLE_MAX_LENGTH = 80;
 const STREAM_HEARTBEAT_INTERVAL_MS = Number(
@@ -120,6 +120,9 @@ function toChatRequestInput(
   input: GenerateAiSessionMessageRequestDto,
 ): Pick<AiChatRequestDto, "provider" | "model" | "apiKey" | "apiKeyId" | "systemPrompt" | "tools" | "settings" | "metadata"> & {
   messages: AiChatRequestDto["messages"];
+  promptIds?: string[];
+  skillIds?: string[];
+  promptVariables?: Record<string, unknown>;
 } {
   return {
     provider: input.provider,
@@ -131,6 +134,9 @@ function toChatRequestInput(
     tools: input.tools,
     settings: input.settings,
     metadata: input.metadata,
+    promptIds: input.promptIds,
+    skillIds: input.skillIds,
+    promptVariables: input.promptVariables,
   };
 }
 
@@ -148,9 +154,12 @@ function asContentMessage(
 
 @Scoped()
 export class AiSessionService {
-  static inject = [PlaygroundDbContext];
+  static inject = [PlaygroundDbContext, AiRequestComposerService];
 
-  constructor(private readonly db: PlaygroundDbContext) {}
+  constructor(
+    private readonly db: PlaygroundDbContext,
+    private readonly composer: AiRequestComposerService,
+  ) {}
 
   async listForUser(userId: string): Promise<AiSessionListResponseDto> {
     const sessions = await this.db.aiSessions.list({
@@ -308,8 +317,11 @@ export class AiSessionService {
     requestInput.systemPrompt = resolvedSystemPrompt;
     requestInput.messages = historyMessages as AiChatRequestDto["messages"];
 
-    const toolExecutionModes = createToolExecutionModeMap(input.tools);
-    const request = buildChatRequest(requestInput, aiPlaygroundRuntime);
+    const { request, toolExecutionModes } = await this.composer.composeChatRequest(
+      requestInput,
+      { id: userId, email: "", roles: [] } satisfies ICurrentUser,
+      aiPlaygroundRuntime,
+    );
     const response: IChatGenerationResponse =
       await aiPlaygroundRuntime.service.generateChatCompletion(request);
 
@@ -425,8 +437,11 @@ export class AiSessionService {
     requestInput.systemPrompt = resolvedSystemPrompt;
     requestInput.messages = historyMessages as AiChatRequestDto["messages"];
 
-    const toolExecutionModes = createToolExecutionModeMap(input.tools);
-    const request = buildChatRequest(requestInput, aiPlaygroundRuntime);
+    const { request, toolExecutionModes } = await this.composer.composeChatRequest(
+      requestInput,
+      { id: userId, email: "", roles: [] } satisfies ICurrentUser,
+      aiPlaygroundRuntime,
+    );
     const encoder = new TextEncoder();
 
     const assistantMessageId = crypto.randomUUID();
