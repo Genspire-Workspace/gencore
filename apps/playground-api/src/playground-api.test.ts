@@ -532,4 +532,118 @@ describe("playground api", () => {
       await app.stop();
     }
   });
+
+  test("rate limit returns 429 when max is exceeded and sets rate-limit headers", async () => {
+    const app = await createPlaygroundApp({
+      port: 0,
+      env: {
+        ...process.env,
+        GENCORE_PLAYGROUND_LIBSQL_DB_PATH: dbPath,
+      },
+      rateLimit: { windowMs: 60_000, max: 3 },
+    });
+
+    await app.start();
+
+    try {
+      const server = app.get(Server);
+      const ip = "203.0.113.7";
+
+      const r1 = await server.handle(
+        new Request("http://localhost/health", { headers: { "x-forwarded-for": ip } }),
+      );
+      const r2 = await server.handle(
+        new Request("http://localhost/health", { headers: { "x-forwarded-for": ip } }),
+      );
+      const r3 = await server.handle(
+        new Request("http://localhost/health", { headers: { "x-forwarded-for": ip } }),
+      );
+      const r4 = await server.handle(
+        new Request("http://localhost/health", { headers: { "x-forwarded-for": ip } }),
+      );
+
+      expect(r1.status).toBe(200);
+      expect(r2.status).toBe(200);
+      expect(r3.status).toBe(200);
+      expect(r4.status).toBe(429);
+      expect(r4.headers.get("content-type")).toContain("application/problem+json");
+
+      const body = await r4.json() as Record<string, unknown>;
+      expect(body["status"]).toBe(429);
+      expect(body["code"]).toBe("RATE_LIMIT_EXCEEDED");
+
+      expect(r4.headers.get("Retry-After")).toBeTruthy();
+      expect(r4.headers.get("X-RateLimit-Limit")).toBe("3");
+      expect(r4.headers.get("X-RateLimit-Remaining")).toBe("0");
+      expect(r4.headers.get("X-RateLimit-Reset")).toBeTruthy();
+
+      expect(r1.headers.get("X-RateLimit-Limit")).toBe("3");
+      expect(r1.headers.get("X-RateLimit-Remaining")).toBe("2");
+    } finally {
+      await app.stop();
+    }
+  });
+
+  test("rate limit is scoped per route in the playground app", async () => {
+    const app = await createPlaygroundApp({
+      port: 0,
+      env: {
+        ...process.env,
+        GENCORE_PLAYGROUND_LIBSQL_DB_PATH: dbPath,
+      },
+      rateLimit: { windowMs: 60_000, max: 1 },
+    });
+
+    await app.start();
+
+    try {
+      const server = app.get(Server);
+      const ip = "203.0.113.8";
+
+      const healthFirst = await server.handle(
+        new Request("http://localhost/health", { headers: { "x-forwarded-for": ip } }),
+      );
+      const healthSecond = await server.handle(
+        new Request("http://localhost/health", { headers: { "x-forwarded-for": ip } }),
+      );
+      const swaggerFirst = await server.handle(
+        new Request("http://localhost/swagger.json", { headers: { "x-forwarded-for": ip } }),
+      );
+
+      expect(healthFirst.status).toBe(200);
+      expect(healthSecond.status).toBe(429);
+      expect(swaggerFirst.status).toBe(200);
+    } finally {
+      await app.stop();
+    }
+  });
+
+  test("rate limit is scoped per client IP in the playground app", async () => {
+    const app = await createPlaygroundApp({
+      port: 0,
+      env: {
+        ...process.env,
+        GENCORE_PLAYGROUND_LIBSQL_DB_PATH: dbPath,
+      },
+      rateLimit: { windowMs: 60_000, max: 1 },
+    });
+
+    await app.start();
+
+    try {
+      const server = app.get(Server);
+
+      const ip1 = await server.handle(
+        new Request("http://localhost/health", { headers: { "x-forwarded-for": "203.0.113.9" } }),
+      );
+      const ip2 = await server.handle(
+        new Request("http://localhost/health", { headers: { "x-forwarded-for": "203.0.113.10" } }),
+      );
+
+      expect(ip1.status).toBe(200);
+      expect(ip2.status).toBe(200);
+    } finally {
+      await app.stop();
+    }
+  });
 });

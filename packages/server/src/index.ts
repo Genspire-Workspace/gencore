@@ -72,6 +72,10 @@ export type {
 } from "./auth/route-authorization.js";
 
 export type { HttpMiddleware, HttpMiddlewareContext, NextHttpMiddleware } from "./middleware/middleware.js";
+export { rateLimitMiddleware } from "./middleware/rate-limit.middleware.js";
+export type { RateLimitOptions } from "./middleware/rate-limit.middleware.js";
+export { InMemoryRateLimitStore } from "./middleware/rate-limit-store.js";
+export type { IRateLimitBucket, IRateLimitStore } from "./middleware/rate-limit-store.js";
 
 export { HttpError } from "./responses/http-error.js";
 export type { HttpErrorOptions } from "./responses/http-error.js";

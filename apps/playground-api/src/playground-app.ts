@@ -7,7 +7,7 @@ import {
   MikroOrmService,
   mikroOrmExtension,
 } from "@genspire/data-mikroorm";
-import { serverExtension, Server } from "@genspire/server";
+import { serverExtension, Server, rateLimitMiddleware, type RateLimitOptions } from "@genspire/server";
 import { swaggerExtension } from "@genspire/swagger";
 import { authExtension, AuthConfiguration, AuthController, RoleController, bearerAuthMiddleware, authGuardMiddleware, ipBanMiddleware } from "@genspire/auth";
 import { storageExtension, FileController, StorageDbContext } from "@genspire/storage";
@@ -32,6 +32,7 @@ export interface PlaygroundAppOptions {
   port?: number;
   repoRoot?: string;
   env?: NodeJS.ProcessEnv;
+  rateLimit?: RateLimitOptions;
 }
 
 export async function createPlaygroundApp(
@@ -112,6 +113,7 @@ export async function createPlaygroundApp(
         maxAge: 86400,
       },
       middlewares: [
+        rateLimitMiddleware({ windowMs: 60_000, max: 120, ...options.rateLimit }),
         ipBanMiddleware(),
         bearerAuthMiddleware(authConfig),
         authGuardMiddleware(),
