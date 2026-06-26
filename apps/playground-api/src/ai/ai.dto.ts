@@ -1,3 +1,5 @@
+// file: apps\playground-api\src\ai\ai.dto.ts
+
 import { ApiDto, ApiField, defineApiType } from "@genspire/server";
 
 export type AiToolExecutionModeDto = "client" | "server";

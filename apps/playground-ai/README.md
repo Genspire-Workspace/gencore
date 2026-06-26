@@ -1,3 +1,5 @@
+<!-- file: apps\playground-ai\README.md -->
+
 # AI Verification
 
 This folder contains manual and smoke-style verification scripts for `@genspire/ai`.

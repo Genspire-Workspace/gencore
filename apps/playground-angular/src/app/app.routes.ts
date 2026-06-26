@@ -1,3 +1,5 @@
+// file: apps\playground-angular\src\app\app.routes.ts
+
 import type { Routes } from '@angular/router';
 import { authGuard } from './features/auth/auth.guard';
 

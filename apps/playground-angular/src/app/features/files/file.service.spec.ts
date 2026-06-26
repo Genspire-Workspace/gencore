@@ -1,3 +1,5 @@
+// file: apps\playground-angular\src\app\features\files\file.service.spec.ts
+
 import '@angular/compiler';
 import { createEnvironmentInjector, runInInjectionContext } from '@angular/core';
 import { of } from 'rxjs';

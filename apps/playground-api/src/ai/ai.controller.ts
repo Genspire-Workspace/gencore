@@ -1,3 +1,5 @@
+// file: apps\playground-api\src\ai\ai.controller.ts
+
 import {
   AllowAnonymous,
   Controller,

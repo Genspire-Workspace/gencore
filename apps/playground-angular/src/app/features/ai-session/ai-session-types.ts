@@ -1,3 +1,5 @@
+// file: apps\playground-angular\src\app\features\ai-session\ai-session-types.ts
+
 export interface IAiSessionResponse {
   id: string;
   userId: string;

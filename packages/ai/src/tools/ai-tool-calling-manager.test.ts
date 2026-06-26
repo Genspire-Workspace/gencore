@@ -1,3 +1,5 @@
+// file: packages\ai\src\tools\ai-tool-calling-manager.test.ts
+
 import { describe, expect, test } from "bun:test";
 import { AiToolCallingManager } from "./ai-tool-calling-manager.js";
 import type { IAiTool } from "./ai-tool.js";

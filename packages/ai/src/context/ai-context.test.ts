@@ -1,3 +1,5 @@
+// file: packages\ai\src\context\ai-context.test.ts
+
 import { describe, expect, test } from "bun:test";
 import { AiContext } from "./ai-context.js";
 import type { IAiTool } from "../tools/ai-tool.js";

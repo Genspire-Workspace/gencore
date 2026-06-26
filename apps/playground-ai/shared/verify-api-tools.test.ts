@@ -1,3 +1,5 @@
+// file: apps\playground-ai\shared\verify-api-tools.test.ts
+
 import { describe, expect, test } from "bun:test";
 import { executeSmokeClientToolCalls } from "./verify-api-tools.js";
 import { addNumbersTool } from "../tools/test-tools.js";

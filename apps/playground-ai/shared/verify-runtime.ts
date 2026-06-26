@@ -1,3 +1,5 @@
+// file: apps\playground-ai\shared\verify-runtime.ts
+
 import { AiClientRegistry } from "../../../packages/ai/src/clients/ai-client-registry.js";
 import { AiService } from "../../../packages/ai/src/services/ai-service.js";
 import { OpenAICompatibleClient } from "../../../packages/ai/src/clients/openai-compatible/index.js";

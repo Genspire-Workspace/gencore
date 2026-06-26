@@ -1,3 +1,5 @@
+// file: apps\playground-angular\src\app\features\auth\auth.interceptor.ts
+
 import type { HttpInterceptorFn } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { from, switchMap } from 'rxjs';

@@ -1,3 +1,5 @@
+// file: apps\playground-angular\src\app\features\ai-session\ai-session.service.ts
+
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';

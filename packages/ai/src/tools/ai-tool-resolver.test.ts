@@ -1,3 +1,5 @@
+// file: packages\ai\src\tools\ai-tool-resolver.test.ts
+
 import { describe, expect, test } from "bun:test";
 import { AiToolRegistry } from "./ai-tool-registry.js";
 import { AiToolResolver } from "./ai-tool-resolver.js";

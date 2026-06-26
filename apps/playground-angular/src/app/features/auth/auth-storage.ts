@@ -1,3 +1,5 @@
+// file: apps\playground-angular\src\app\features\auth\auth-storage.ts
+
 import type { IStoredAuthState } from './auth-types';
 
 const AUTH_STORAGE_KEY = 'playground-angular.auth';

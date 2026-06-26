@@ -1,3 +1,5 @@
+// file: apps\playground-angular\src\app\features\auth\auth-types.ts
+
 export interface IAuthUser {
   id: string;
   email: string;

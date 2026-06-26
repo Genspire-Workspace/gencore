@@ -1,3 +1,5 @@
+// file: apps\playground-angular\src\app\core\app-env.ts
+
 export interface IPlaygroundAngularEnv {
   apiBaseUrl: string;
   defaultAiProvider: string;

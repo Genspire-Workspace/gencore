@@ -1,3 +1,5 @@
+// file: apps\playground-angular\src\app\features\files\files-page.component.ts
+
 import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';

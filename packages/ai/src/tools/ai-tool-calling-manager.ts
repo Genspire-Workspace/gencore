@@ -1,3 +1,5 @@
+// file: packages\ai\src\tools\ai-tool-calling-manager.ts
+
 import type { IAiTool } from "./ai-tool.js";
 import type { IAiToolCall } from "./ai-tool-call.js";
 import type { IAiToolResult } from "./ai-tool-result.js";

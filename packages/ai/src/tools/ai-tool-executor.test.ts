@@ -1,3 +1,5 @@
+// file: packages\ai\src\tools\ai-tool-executor.test.ts
+
 import { describe, expect, test } from "bun:test";
 import { AiToolExecutor } from "./ai-tool-executor.js";
 import type { IAiTool } from "./ai-tool.js";

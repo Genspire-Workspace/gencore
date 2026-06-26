@@ -1,3 +1,5 @@
+// file: apps\playground-api\src\ai\ai-service-factory.ts
+
 import { AiClientRegistry } from "../../../../packages/ai/src/clients/ai-client-registry.js";
 import { OpenAICompatibleClient } from "../../../../packages/ai/src/clients/openai-compatible/index.js";
 import { AiService } from "../../../../packages/ai/src/services/ai-service.js";

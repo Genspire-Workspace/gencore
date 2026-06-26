@@ -1,3 +1,5 @@
+// file: apps\playground-ai\verify-ai-sessions.test.ts
+
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import os from "node:os";

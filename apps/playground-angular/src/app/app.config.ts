@@ -1,3 +1,5 @@
+// file: apps\playground-angular\src\app\app.config.ts
+
 import {
   provideBrowserGlobalErrorListeners,
 } from '@angular/core';

@@ -1,3 +1,5 @@
+// file: apps\playground-angular\src\app\app.ts
+
 import { Component, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {

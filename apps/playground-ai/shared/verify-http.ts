@@ -1,3 +1,5 @@
+// file: apps\playground-ai\shared\verify-http.ts
+
 export interface IVerifyHttpJsonResponse {
   status: number;
   headers: Headers;

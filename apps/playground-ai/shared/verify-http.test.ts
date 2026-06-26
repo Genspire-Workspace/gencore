@@ -1,3 +1,5 @@
+// file: apps\playground-ai\shared\verify-http.test.ts
+
 import { describe, expect, test } from "bun:test";
 import { streamNdjsonOrJson } from "./verify-http.js";
 

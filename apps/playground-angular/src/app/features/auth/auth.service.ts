@@ -1,3 +1,5 @@
+// file: apps\playground-angular\src\app\features\auth\auth.service.ts
+
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';

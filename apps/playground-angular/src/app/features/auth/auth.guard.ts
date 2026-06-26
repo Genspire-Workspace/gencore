@@ -1,3 +1,5 @@
+// file: apps\playground-angular\src\app\features\auth\auth.guard.ts
+
 import { inject } from '@angular/core';
 import type { CanActivateFn } from '@angular/router';
 import { Router } from '@angular/router';

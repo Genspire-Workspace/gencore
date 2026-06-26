@@ -1,3 +1,5 @@
+// file: packages\ai\src\tools\ai-tool-executor.ts
+
 import type { IAiTool, IAiToolExecutionContext } from "./ai-tool.js";
 import type { IAiToolCall } from "./ai-tool-call.js";
 import type { IAiToolResult } from "./ai-tool-result.js";

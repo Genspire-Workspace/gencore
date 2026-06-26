@@ -1,3 +1,5 @@
+// file: apps\playground-angular\src\app\features\auth\auth-storage.spec.ts
+
 import {
   clearStoredAuthState,
   readStoredAuthState,

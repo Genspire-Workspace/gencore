@@ -1,3 +1,5 @@
+// file: packages\ai\src\tools\define-ai-tool.test.ts
+
 import { describe, expect, test } from "bun:test";
 import { defineAiTool } from "./define-ai-tool.js";
 

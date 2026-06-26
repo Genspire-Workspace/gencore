@@ -83,4 +83,6 @@ export type { IAiDefaults, IAiExtensionOptions } from "./extension/ai-extension.
 export { AiError } from "./errors/ai-error.js";
 
 export * from "./context/index.js";
+export * from "./prompts/index.js";
+export * from "./skills/index.js";
 export * from "./tools/index.js";

@@ -1,3 +1,5 @@
+// file: apps\playground-ai\verify-ai-sessions.ts
+
 import {
   authHeaders,
   createAiVerifyLogger,

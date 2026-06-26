@@ -1,3 +1,5 @@
+// file: apps\playground-ai\tools\test-tools.ts
+
 import { defineAiTool } from "../../../packages/ai/src/tools/define-ai-tool.js";
 
 function toRecord(value: unknown): Record<string, unknown> {
@@ -33,12 +35,22 @@ export const getCapitalTool = defineAiTool({
   },
   execute: async (args: unknown) => {
     const input = toRecord(args);
-    const country =
+    const requestedCountry =
       typeof input.country === "string" ? input.country : "Portugal";
+    const normalizedCountry = requestedCountry.trim().toLowerCase();
+    const capitalByCountry: Record<string, string> = {
+      portugal: "Lisbon",
+      japan: "Tokyo",
+      brazil: "Brasilia",
+      germany: "Berlin",
+      canada: "Ottawa",
+    };
+    const country = requestedCountry.trim() || "Portugal";
+    const capital = capitalByCountry[normalizedCountry] ?? "Lisbon";
 
     return {
       country,
-      capital: "Lisbon",
+      capital,
     };
   },
 });

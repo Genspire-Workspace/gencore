@@ -1,3 +1,5 @@
+// file: apps\playground-ai\verify-ai-context.ts
+
 import { AiContext } from "../../packages/ai/src/context/index.js";
 import type { IChatGenerationRequest } from "../../packages/ai/src/chat/chat-generation-request.js";
 import type { IAiToolCall } from "../../packages/ai/src/tools/ai-tool-call.js";

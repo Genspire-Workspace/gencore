@@ -149,3 +149,4 @@ old_spirecorejs/
 
 # Local development databases
 data/
+data/test-directory/

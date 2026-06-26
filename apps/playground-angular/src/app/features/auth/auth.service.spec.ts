@@ -1,3 +1,5 @@
+// file: apps\playground-angular\src\app\features\auth\auth.service.spec.ts
+
 import '@angular/compiler';
 import { createEnvironmentInjector, runInInjectionContext } from '@angular/core';
 import { of } from 'rxjs';

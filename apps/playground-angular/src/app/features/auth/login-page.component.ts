@@ -1,3 +1,5 @@
+// file: apps\playground-angular\src\app\features\auth\login-page.component.ts
+
 import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';

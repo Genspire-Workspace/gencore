@@ -1,3 +1,5 @@
+// file: apps\playground-api\src\ai\ai-smoke-tools.ts
+
 import type { IAiTool } from "../../../../packages/ai/src/tools/ai-tool.js";
 import { defineAiTool } from "../../../../packages/ai/src/tools/define-ai-tool.js";
 import { AiToolRegistry } from "../../../../packages/ai/src/tools/ai-tool-registry.js";

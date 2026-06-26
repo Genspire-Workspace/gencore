@@ -1,3 +1,5 @@
+// file: apps\playground-ai\shared\verify-args.ts
+
 import type {
   IAiVerifyCliArgs,
   IAiVerifyScenarioFilter,

@@ -1,3 +1,5 @@
+// file: packages\ai\src\tools\define-ai-tool.ts
+
 import { AiError } from "../errors/ai-error.js";
 import type { IAiTool } from "./ai-tool.js";
 

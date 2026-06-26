@@ -1,7 +1,10 @@
+// file: apps\playground-ai\shared\verify-types.ts
+
 import type { AiService } from "../../../packages/ai/src/services/ai-service.js";
 
 export type AiVerifySuite =
   | "generation"
+  | "skill-generation"
   | "ai-context"
   | "api"
   | "sessions";

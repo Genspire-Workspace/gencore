@@ -1,3 +1,5 @@
+// file: packages\ai\src\context\ai-context.ts
+
 import type { IChatMessage } from "../chat/chat-message.js";
 import type { IChatGenerationRequest } from "../chat/chat-generation-request.js";
 import type { IChatGenerationSettings } from "../chat/chat-generation-settings.js";

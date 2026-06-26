@@ -1,3 +1,5 @@
+// file: apps\playground-ai\verify-api.ts
+
 import {
   appendToolInteractionMessages,
   collectApiStream,

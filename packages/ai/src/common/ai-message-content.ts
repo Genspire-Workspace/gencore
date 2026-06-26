@@ -1,3 +1,5 @@
+// file: packages\ai\src\common\ai-message-content.ts
+
 import type { AiContentPart, AiMessageContent } from "./ai-content-part.js";
 
 export function createTextAiMessageContent(text: string): AiMessageContent {

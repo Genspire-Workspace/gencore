@@ -1,3 +1,5 @@
+// file: apps\playground-angular\src\app\features\files\file-types.ts
+
 export interface IFileResponse {
   id: string;
   bucket: string;

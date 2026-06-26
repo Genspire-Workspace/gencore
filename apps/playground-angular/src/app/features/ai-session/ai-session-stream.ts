@@ -1,3 +1,5 @@
+// file: apps\playground-angular\src\app\features\ai-session\ai-session-stream.ts
+
 import type { IAiSessionStreamChunk } from './ai-session-types';
 
 export interface IAiSessionStreamAssembly {

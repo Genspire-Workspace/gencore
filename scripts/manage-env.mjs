@@ -1,3 +1,5 @@
+// file: scripts\manage-env.mjs
+
 import path from "node:path";
 
 const ROOT_DIR = path.resolve(import.meta.dirname, "..");
