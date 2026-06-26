@@ -1,4 +1,4 @@
-import { defineAiTool } from "../../../../packages/ai/src/tools/define-ai-tool.js";
+import { defineAiTool } from "../../../packages/ai/src/tools/define-ai-tool.js";
 
 function toRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === "object"

@@ -3,7 +3,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { Server } from "@genspire/server";
-import { createPlaygroundApp } from "../../playground-api/src/playground-app.js";
+import { createPlaygroundApp } from "../playground-api/src/playground-app.js";
 
 async function registerAndGetToken(
   server: Server,

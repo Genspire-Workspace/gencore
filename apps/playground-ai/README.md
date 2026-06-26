@@ -14,16 +14,16 @@ They are not a replacement for `bun test`. They complement the Bun test suite wi
 
 Main entry points:
 
-- [verify-generation.ts](/C:/Users/PC/Documents/GitHub/Gencore/apps/playground-test/ai/verify-generation.ts)
-- [verify-ai-context.ts](/C:/Users/PC/Documents/GitHub/Gencore/apps/playground-test/ai/verify-ai-context.ts)
-- [verify-api.ts](/C:/Users/PC/Documents/GitHub/Gencore/apps/playground-test/ai/verify-api.ts)
-- [verify-ai-sessions.ts](/C:/Users/PC/Documents/GitHub/Gencore/apps/playground-test/ai/verify-ai-sessions.ts)
-- [verify-ai-sessions.test.ts](/C:/Users/PC/Documents/GitHub/Gencore/apps/playground-test/ai/verify-ai-sessions.test.ts)
+- [verify-generation.ts](/C:/Users/PC/Documents/GitHub/Gencore/apps/playground-ai/verify-generation.ts)
+- [verify-ai-context.ts](/C:/Users/PC/Documents/GitHub/Gencore/apps/playground-ai/verify-ai-context.ts)
+- [verify-api.ts](/C:/Users/PC/Documents/GitHub/Gencore/apps/playground-ai/verify-api.ts)
+- [verify-ai-sessions.ts](/C:/Users/PC/Documents/GitHub/Gencore/apps/playground-ai/verify-ai-sessions.ts)
+- [verify-ai-sessions.test.ts](/C:/Users/PC/Documents/GitHub/Gencore/apps/playground-ai/verify-ai-sessions.test.ts)
 
 Shared support:
 
-- [shared/index.ts](/C:/Users/PC/Documents/GitHub/Gencore/apps/playground-test/ai/shared/index.ts)
-- [tools/test-tools.ts](/C:/Users/PC/Documents/GitHub/Gencore/apps/playground-test/ai/tools/test-tools.ts)
+- [shared/index.ts](/C:/Users/PC/Documents/GitHub/Gencore/apps/playground-ai/shared/index.ts)
+- [tools/test-tools.ts](/C:/Users/PC/Documents/GitHub/Gencore/apps/playground-ai/tools/test-tools.ts)
 
 ## Suites
 
@@ -62,13 +62,13 @@ Run the deterministic `bun:test` suites (no live model calls, boot the playgroun
 
 ```bash
 # All AI verification bun:test suites in this folder
-bun test apps/playground-test/ai
+bun test apps/playground-ai
 
 # Session persistence suite only (CRUD, ownership, cascade, auth)
-bun test apps/playground-test/ai/verify-ai-sessions.test.ts
+bun test apps/playground-ai/verify-ai-sessions.test.ts
 
 # Shared deterministic tool-layer preflight tests
-bun test apps/playground-test/ai/shared/verify-api-tools.test.ts
+bun test apps/playground-ai/shared/verify-api-tools.test.ts
 ```
 
 ### Live HTTP verification scripts
@@ -86,10 +86,10 @@ Root scripts:
 Direct execution:
 
 ```bash
-bun apps/playground-test/ai/verify-generation.ts
-bun apps/playground-test/ai/verify-ai-context.ts
-bun apps/playground-test/ai/verify-api.ts
-bun apps/playground-test/ai/verify-ai-sessions.ts
+bun apps/playground-ai/verify-generation.ts
+bun apps/playground-ai/verify-ai-context.ts
+bun apps/playground-ai/verify-api.ts
+bun apps/playground-ai/verify-ai-sessions.ts
 ```
 
 List help:

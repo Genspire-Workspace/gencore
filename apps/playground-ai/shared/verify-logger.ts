@@ -17,7 +17,7 @@ export function createAiVerifyLogger(
 ): IAiVerifyLogger {
   const logDir = path.resolve(
     import.meta.dirname,
-    "../../../../data/logs/ai-verification",
+    "../../../data/logs/ai-verification",
     options.suite,
   );
 
