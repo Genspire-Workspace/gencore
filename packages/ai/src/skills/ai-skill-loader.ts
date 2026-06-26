@@ -37,6 +37,38 @@ export interface IAiSkillMarkdownParseResult {
   prompts: IAiPrompt[];
 }
 
+function createSkillPromptTemplate(
+  skillName: string,
+  description: string,
+  instructions: string,
+  metadata?: Record<string, unknown>,
+): IAiPrompt | undefined {
+  const normalizedInstructions = instructions.trim();
+
+  if (!normalizedInstructions) {
+    return undefined;
+  }
+
+  const frontmatterMetadata = metadata?.frontmatter && typeof metadata.frontmatter === "object"
+    ? metadata.frontmatter as Record<string, unknown>
+    : undefined;
+  const argumentHint = typeof frontmatterMetadata?.["argument-hint"] === "string"
+    ? frontmatterMetadata["argument-hint"]
+    : undefined;
+
+  return defineAiPrompt({
+    id: skillName,
+    name: skillName,
+    description,
+    argumentHint,
+    template: normalizedInstructions,
+    metadata: {
+      source: "skill-markdown",
+      skillName,
+    },
+  });
+}
+
 function isToolCandidate(value: unknown): value is IAiTool {
   return Boolean(
     value &&
@@ -314,6 +346,12 @@ export async function loadAiSkillFromDirectory(
         classifySkillFile(absoluteSkillDirectory, filePath)
       );
   const promptFiles = skillFiles.filter((file) => file.kind === "prompt");
+  const skillPrompt = createSkillPromptTemplate(
+    frontmatter.name,
+    frontmatter.description,
+    instructions,
+    frontmatter.metadata,
+  );
   const filePrompts = options?.includePrompts === false
     ? []
     : await Promise.all(
@@ -326,7 +364,11 @@ export async function loadAiSkillFromDirectory(
       );
   const prompts = options?.includePrompts === false
     ? []
-    : [...markdownPrompts, ...filePrompts];
+    : [
+        ...(skillPrompt ? [skillPrompt] : []),
+        ...markdownPrompts,
+        ...filePrompts,
+      ];
   const tools = options?.includeTools === false
     ? []
     : await loadScriptTools(skillFiles, frontmatter.allowedTools);

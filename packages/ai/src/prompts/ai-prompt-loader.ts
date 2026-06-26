@@ -11,6 +11,23 @@ export interface IAiPromptMarkdownParseResult {
   template: string;
 }
 
+function getFirstNonEmptyLine(value: string): string | undefined {
+  return value
+    .split("\n")
+    .map((line) => line.trim())
+    .find(Boolean);
+}
+
+function derivePromptIdFromFilePath(filePath: string): string {
+  const fileName = path.basename(filePath).toLowerCase();
+
+  if (fileName.endsWith(".prompt.md")) {
+    return path.basename(filePath, ".prompt.md");
+  }
+
+  return path.basename(filePath, path.extname(filePath));
+}
+
 function parseScalarValue(value: string): unknown {
   const trimmedValue = value.trim();
 
@@ -212,25 +229,23 @@ export function parseAiPromptMarkdown(content: string): IAiPromptMarkdownParseRe
   const rawFrontmatter = frontmatterMatch[1] ?? "";
   const rawTemplate = (frontmatterMatch[2] ?? "").trim();
   const parsedFrontmatter = parseFrontmatterEntries(rawFrontmatter);
-  const id = parsedFrontmatter.id;
-
-  if (typeof id !== "string") {
-    throw new AiError("PROMPT.md frontmatter requires 'id'.");
-  }
-
   const variables = Array.isArray(parsedFrontmatter.variables)
     ? parsedFrontmatter.variables as IAiPromptVariable[]
     : undefined;
   const metadata = parsedFrontmatter.metadata && typeof parsedFrontmatter.metadata === "object"
     ? parsedFrontmatter.metadata as Record<string, unknown>
     : undefined;
+  const description = typeof parsedFrontmatter.description === "string"
+    ? parsedFrontmatter.description
+    : getFirstNonEmptyLine(rawTemplate);
 
   return {
     frontmatter: {
-      id,
+      id: typeof parsedFrontmatter.id === "string" ? parsedFrontmatter.id : undefined,
       name: typeof parsedFrontmatter.name === "string" ? parsedFrontmatter.name : undefined,
-      description: typeof parsedFrontmatter.description === "string"
-        ? parsedFrontmatter.description
+      description,
+      argumentHint: typeof parsedFrontmatter["argument-hint"] === "string"
+        ? parsedFrontmatter["argument-hint"]
         : undefined,
       version: typeof parsedFrontmatter.version === "string"
         ? parsedFrontmatter.version
@@ -251,9 +266,12 @@ export async function loadAiPromptFromMarkdownFile(filePath: string): Promise<IA
   }
 
   const { frontmatter, template } = parseAiPromptMarkdown(await file.text());
+  const derivedPromptId = derivePromptIdFromFilePath(absolutePath);
 
   return defineAiPrompt({
     ...frontmatter,
+    id: frontmatter.id ?? derivedPromptId,
+    name: frontmatter.name ?? derivedPromptId,
     template,
   });
 }

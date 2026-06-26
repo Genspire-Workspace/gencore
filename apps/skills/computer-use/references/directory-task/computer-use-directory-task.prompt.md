@@ -1,6 +1,4 @@
 ---
-id: computer-use-directory-task
-name: Computer Use Directory Task
 description: Prompts the model to inspect a directory with computer-use tools.
 variables:
   - name: targetDirectory

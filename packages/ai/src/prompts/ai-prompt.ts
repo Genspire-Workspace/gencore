@@ -25,6 +25,7 @@ export interface IAiPrompt {
   id: string;
   name?: string;
   description?: string;
+  argumentHint?: string;
   version?: string;
   variables?: readonly IAiPromptVariable[];
   template: AiPromptTemplate;

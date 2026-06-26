@@ -47,6 +47,7 @@ export function defineAiPrompt(prompt: IAiPrompt): IAiPrompt {
     id,
     name: prompt.name?.trim(),
     description: prompt.description?.trim(),
+    argumentHint: prompt.argumentHint?.trim(),
     variables,
   };
 }

@@ -10,9 +10,9 @@ import {
 describe("parseAiPromptMarkdown", () => {
   test("parses frontmatter, metadata, variables, and body template", () => {
     const result = parseAiPromptMarkdown(`---
-id: directory-task
 name: Directory Task
 description: Uses a directory task prompt.
+argument-hint: "<directory> [extension]"
 version: v1
 metadata:
   source: prompt-markdown
@@ -28,7 +28,8 @@ variables:
 Find files in {{directory}} with extension {{extension}}.
 `);
 
-    expect(result.frontmatter.id).toBe("directory-task");
+    expect(result.frontmatter.id).toBeUndefined();
+    expect(result.frontmatter.argumentHint).toBe("<directory> [extension]");
     expect(result.frontmatter.metadata).toEqual({
       source: "prompt-markdown",
       enabled: true,
@@ -46,6 +47,21 @@ Find files in {{directory}} with extension {{extension}}.
     ]);
     expect(result.template).toBe("Find files in {{directory}} with extension {{extension}}.");
   });
+
+  test("uses the first non-empty template line as description when omitted", () => {
+    const result = parseAiPromptMarkdown(`---
+variables:
+  - name: directory
+    required: true
+---
+
+Summarize the contents of {{directory}}.
+
+Return concise notes.
+`);
+
+    expect(result.frontmatter.description).toBe("Summarize the contents of {{directory}}.");
+  });
 });
 
 describe("loadAiPromptFromMarkdownFile", () => {
@@ -55,6 +71,7 @@ describe("loadAiPromptFromMarkdownFile", () => {
     );
 
     expect(prompt.id).toBe("computer-use-directory-task");
+    expect(prompt.name).toBe("computer-use-directory-task");
     expect(prompt.variables?.map((variable) => variable.name)).toEqual([
       "targetDirectory",
       "expectedImages",

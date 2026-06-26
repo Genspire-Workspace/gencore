@@ -62,8 +62,12 @@ describe("loadAiSkillFromDirectory", () => {
 
     expect(skill.name).toBe("computer-use");
     expect(skill.prompts?.map((prompt) => prompt.id)).toEqual([
+      "computer-use",
       "computer-use-directory-task",
     ]);
+    expect(skill.prompts?.find((prompt) => prompt.id === "computer-use")?.template).toContain(
+      "Use the trusted computer-use tools",
+    );
     expect(skill.tools?.map((tool) => tool.name).sort()).toEqual([
       "bash",
       "list",
@@ -83,7 +87,7 @@ describe("loadAiSkillFromDirectory", () => {
       "references/directory-task/computer-use-directory-task.prompt.md",
     );
 
-    expect(promptMarkdown).toContain("computer-use-directory-task");
+    expect(promptMarkdown).toContain("AI_FILE={{expectedAiFile}}");
   });
 
   test("rejects a skill directory when SKILL.md frontmatter is missing description", async () => {
