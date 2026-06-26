@@ -1,6 +1,7 @@
-// file: apps\playground-angular\src\app\features\ai-session\ai-session-stream.ts
+// file: apps\playground-angular\src\app\features\ai\sessions\ai-session-stream.ts
 
 import type { IAiSessionStreamChunk } from './ai-session-types';
+import { readAiContentText } from '../shared/ai-content';
 
 export interface IAiSessionStreamAssembly {
   assistantText: string;
@@ -16,45 +17,6 @@ export function createAiSessionStreamAssembly(): IAiSessionStreamAssembly {
     finished: false,
     error: null,
   };
-}
-
-export function readAiContentText(content: unknown): string {
-  if (typeof content === 'string') {
-    return content;
-  }
-
-  if (Array.isArray(content)) {
-    return content
-      .map((part) => {
-        if (typeof part === 'string') {
-          return part;
-        }
-
-        if (
-          part &&
-          typeof part === 'object' &&
-          'type' in part &&
-          'text' in part &&
-          (part as { type?: unknown }).type === 'text' &&
-          typeof (part as { text?: unknown }).text === 'string'
-        ) {
-          return (part as { text: string }).text;
-        }
-
-        return '';
-      })
-      .join('');
-  }
-
-  if (content === null || content === undefined) {
-    return '';
-  }
-
-  try {
-    return JSON.stringify(content, null, 2);
-  } catch {
-    return String(content);
-  }
 }
 
 export function applyAiSessionStreamChunk(
@@ -90,19 +52,4 @@ export function resolveAiSessionAssistantText(
 ): string {
   const finalText = readAiContentText(state.finalContent);
   return finalText || state.assistantText;
-}
-
-export function readNdjsonLines(buffer: string): {
-  lines: string[];
-  remainder: string;
-} {
-  const parts = buffer.split('\n');
-  const remainder = parts.pop() ?? '';
-
-  return {
-    lines: parts
-      .map((line) => line.trim())
-      .filter(Boolean),
-    remainder,
-  };
 }

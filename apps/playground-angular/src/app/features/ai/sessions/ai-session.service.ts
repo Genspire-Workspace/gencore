@@ -1,11 +1,11 @@
-// file: apps\playground-angular\src\app\features\ai-session\ai-session.service.ts
+// file: apps\playground-angular\src\app\features\ai\sessions\ai-session.service.ts
 
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
-import { appEnv } from '../../core/app-env';
-import { AuthService } from '../auth/auth.service';
-import { readNdjsonLines } from './ai-session-stream';
+import { appEnv } from '../../../core/app-env';
+import { AuthService } from '../../auth/auth.service';
+import { readNdjsonLines } from '../shared/ai-ndjson';
 import type {
   IAiSessionCreateRequest,
   IAiSessionListResponse,

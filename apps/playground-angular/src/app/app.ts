@@ -38,7 +38,7 @@ import { AuthService } from './features/auth/auth.service';
                 </a>
                 <a
                   class="rounded-full px-3 py-1.5 text-sm font-medium text-slate-600 transition hover:bg-slate-100 hover:text-slate-900"
-                  routerLink="/ai-session"
+                  routerLink="/ai/sessions"
                   routerLinkActive="bg-sky-100 text-sky-800"
                 >
                   AI Session

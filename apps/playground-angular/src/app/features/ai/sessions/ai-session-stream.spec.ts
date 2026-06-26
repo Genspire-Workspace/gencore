@@ -1,11 +1,11 @@
-// file: apps\playground-angular\src\app\features\ai-session\ai-session-stream.spec.ts
+// file: apps\playground-angular\src\app\features\ai\sessions\ai-session-stream.spec.ts
 
 import {
   applyAiSessionStreamChunk,
   createAiSessionStreamAssembly,
-  readNdjsonLines,
   resolveAiSessionAssistantText,
 } from './ai-session-stream';
+import { readNdjsonLines } from '../shared/ai-ndjson';
 
 describe('ai session stream helpers', () => {
   it('assembles assistant text from deltas and final message content', () => {

@@ -1,22 +1,22 @@
-// file: apps\playground-angular\src\app\features\ai-session\ai-session-page.component.ts
+// file: apps\playground-angular\src\app\features\ai\sessions\ai-session-page.component.ts
 
 import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
-import { appEnv } from '../../core/app-env';
+import { appEnv } from '../../../core/app-env';
 import { AiSessionService } from './ai-session.service';
 import {
   applyAiSessionStreamChunk,
   createAiSessionStreamAssembly,
-  readAiContentText,
   resolveAiSessionAssistantText,
 } from './ai-session-stream';
+import { readAiContentText } from '../shared/ai-content';
 import type {
   IAiSessionMessageDto,
   IAiSessionResponse,
 } from './ai-session-types';
-import type { IProblemDetails } from '../../core/problem-details';
+import type { IProblemDetails } from '../../../core/problem-details';
 
 interface IUiChatMessage {
   id: string;

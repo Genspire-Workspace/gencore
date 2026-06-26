@@ -1,4 +1,8 @@
-// file: apps\playground-angular\src\app\features\ai-session\ai-session-types.ts
+// file: apps\playground-angular\src\app\features\ai\sessions\ai-session-types.ts
+
+import type { IAiChatMessageDto } from '../shared/ai-chat.types';
+
+export type { IAiChatMessageDto };
 
 export interface IAiSessionResponse {
   id: string;
@@ -53,13 +57,6 @@ export interface IAiSessionMessageRequest {
   systemPrompt?: string;
   tools?: unknown[];
   settings?: Record<string, unknown>;
-  metadata?: Record<string, unknown>;
-}
-
-export interface IAiChatMessageDto {
-  role: 'system' | 'user' | 'assistant' | 'tool';
-  content: unknown;
-  name?: string;
   metadata?: Record<string, unknown>;
 }
 

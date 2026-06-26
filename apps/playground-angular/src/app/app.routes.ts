@@ -35,10 +35,10 @@ export const routes: Routes = [
       ),
   },
   {
-    path: 'ai-session',
+    path: 'ai/sessions',
     canActivate: [authGuard],
     loadComponent: () =>
-      import('./features/ai-session/ai-session-page.component').then(
+      import('./features/ai/sessions/ai-session-page.component').then(
         (module) => module.AiSessionPageComponent,
       ),
   },
