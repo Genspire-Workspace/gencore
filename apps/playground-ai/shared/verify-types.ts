@@ -5,6 +5,7 @@ import type { AiService } from "../../../packages/ai/src/services/ai-service.js"
 export type AiVerifySuite =
   | "generation"
   | "skill-generation"
+  | "skill-api"
   | "ai-context"
   | "api"
   | "sessions";

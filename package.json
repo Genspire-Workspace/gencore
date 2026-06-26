@@ -33,6 +33,7 @@
     "env:example": "bun run scripts/manage-env.mjs use example",
     "dev:ai:verify": "bun run apps/playground-ai/verify-generation.ts",
     "dev:ai-skill:verify": "bun run apps/playground-ai/verify-skill-generation.ts",
+    "dev:ai-skill-api:verify": "bun run apps/playground-ai/verify-skill-api.ts",
     "dev:ai-context:verify": "bun run apps/playground-ai/verify-ai-context.ts",
     "dev:api:verify": "bun run apps/playground-ai/verify-api.ts",
     "dev:ai-sessions:verify": "bun run apps/playground-ai/verify-ai-sessions.ts",
