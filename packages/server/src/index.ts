@@ -85,6 +85,6 @@ export { Router, RouterGroup } from "./routing/router.js";
 export type { RegisteredRoute, RouteRegistrationOptions } from "./routing/router.js";
 
 export { Server } from "./server/server.js";
-export type { ServerOptions } from "./server/server.js";
+export type { ServerCorsOptions, ServerOptions } from "./server/server.js";
 
 export type { WebSocketContext, WebSocketRouteDefinition } from "./websocket/websocket-types.js";

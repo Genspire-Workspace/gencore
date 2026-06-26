@@ -100,6 +100,16 @@ export async function createPlaygroundApp(
     serverExtension({
       port: options.port ?? playgroundEnv.port,
       trustProxy: true,
+      cors: {
+        origin: [
+          "http://localhost:4200",
+          "http://127.0.0.1:4200",
+        ],
+        methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"],
+        headers: ["Content-Type", "Authorization"],
+        credentials: true,
+        maxAge: 86400,
+      },
       middlewares: [
         ipBanMiddleware(),
         bearerAuthMiddleware(authConfig),

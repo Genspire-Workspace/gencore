@@ -104,6 +104,18 @@ function deriveTitle(content: unknown): string {
   return "Untitled session";
 }
 
+function hasMeaningfulContent(content: unknown): boolean {
+  if (typeof content === "string") {
+    return content.trim().length > 0;
+  }
+
+  if (Array.isArray(content)) {
+    return content.length > 0;
+  }
+
+  return content !== null && content !== undefined;
+}
+
 function toChatRequestInput(
   input: GenerateAiSessionMessageRequestDto,
 ): Pick<AiChatRequestDto, "provider" | "model" | "apiKey" | "apiKeyId" | "systemPrompt" | "tools" | "settings" | "metadata"> & {
@@ -422,7 +434,9 @@ export class AiSessionService {
       start: async (controller) => {
         let streamClosed = false;
         let streamErrored = false;
-        let finalChunk: IChatGenerationChunk | null = null;
+        let finalMessageChunk: IChatGenerationChunk | null = null;
+        let terminalChunk: IChatGenerationChunk | null = null;
+        let accumulatedAssistantText = "";
         let emittedChunkCount = 0;
 
         const safeEnqueue = (payload: unknown): boolean => {
@@ -488,9 +502,14 @@ export class AiSessionService {
               break;
             }
             const chunk = nextChunk.value;
+            terminalChunk = chunk;
 
             if (chunk.message) {
-              finalChunk = chunk;
+              finalMessageChunk = chunk;
+            }
+
+            if (typeof chunk.delta === "string") {
+              accumulatedAssistantText += chunk.delta;
             }
 
             if (chunk.toolCall) {
@@ -548,7 +567,9 @@ export class AiSessionService {
             assistantMessageId,
             userMessage,
             input,
-            finalChunk,
+            finalMessageChunk,
+            terminalChunk,
+            accumulatedAssistantText,
             request.provider,
             request.model,
           );
@@ -656,22 +677,37 @@ export class AiSessionService {
     assistantMessageId: string,
     _userMessage: AiSessionMessageEntity,
     input: GenerateAiSessionMessageRequestDto,
-    finalChunk: IChatGenerationChunk | null,
+    finalMessageChunk: IChatGenerationChunk | null,
+    terminalChunk: IChatGenerationChunk | null,
+    accumulatedAssistantText: string,
     provider: string | undefined,
     model: string | undefined,
   ): Promise<AiSessionMessageEntity> {
+    const resolvedContent = finalMessageChunk?.message?.content;
+
     const assistantMessage = new AiSessionMessageEntity();
     assistantMessage.id = assistantMessageId;
     assistantMessage.sessionId = sessionId;
     assistantMessage.role = "assistant";
-    assistantMessage.content = (finalChunk?.message?.content ?? "") as unknown;
-    assistantMessage.name = finalChunk?.message?.name ?? null;
+    assistantMessage.content = (
+      hasMeaningfulContent(resolvedContent)
+        ? resolvedContent
+        : accumulatedAssistantText
+    ) as unknown;
+    assistantMessage.name = finalMessageChunk?.message?.name ?? null;
     assistantMessage.provider = provider ?? null;
     assistantMessage.model = model ?? null;
-    assistantMessage.finishReason = finalChunk?.finishReason ?? null;
-    assistantMessage.usage =
-      (finalChunk?.usage as Record<string, unknown> | undefined) ?? null;
-    assistantMessage.metadata = finalChunk?.metadata ?? null;
+    assistantMessage.finishReason =
+      terminalChunk?.finishReason ?? finalMessageChunk?.finishReason ?? null;
+    const usage =
+      (terminalChunk?.usage ?? finalMessageChunk?.usage) as
+        | Record<string, unknown>
+        | undefined;
+    assistantMessage.usage = usage ?? null;
+    assistantMessage.metadata =
+      finalMessageChunk?.metadata ??
+      terminalChunk?.metadata ??
+      null;
     assistantMessage.createdAt = new Date();
 
     await this.db.aiSessionMessages.add(assistantMessage);

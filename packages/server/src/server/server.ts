@@ -20,6 +20,16 @@ export interface ServerOptions {
   middlewares?: readonly HttpMiddleware[];
   clientIp?: IClientIpOptions;
   trustProxy?: boolean;
+  cors?: ServerCorsOptions;
+}
+
+export interface ServerCorsOptions {
+  origin?: string | readonly string[] | ((origin: string | null) => boolean);
+  methods?: readonly string[];
+  headers?: readonly string[];
+  exposedHeaders?: readonly string[];
+  credentials?: boolean;
+  maxAge?: number;
 }
 
 export class Server {
@@ -151,23 +161,128 @@ export class Server {
     return { trustProxy: this.config.trustProxy ?? false };
   }
 
+  private resolveCorsOrigin(requestOrigin: string | null): string | null {
+    const cors = this.config.cors;
+    const originPolicy = cors?.origin;
+    if (!originPolicy) {
+      return null;
+    }
+
+    if (typeof originPolicy === "string") {
+      return originPolicy === "*" || originPolicy === requestOrigin
+        ? originPolicy
+        : null;
+    }
+
+    if (Array.isArray(originPolicy)) {
+      return requestOrigin && originPolicy.includes(requestOrigin)
+        ? requestOrigin
+        : null;
+    }
+
+    return originPolicy(requestOrigin) ? (requestOrigin ?? "*") : null;
+  }
+
+  private applyCorsHeaders(request: Request, response: Response): Response {
+    const cors = this.config.cors;
+    if (!cors) {
+      return response;
+    }
+
+    const requestOrigin = request.headers.get("origin");
+    const allowedOrigin = this.resolveCorsOrigin(requestOrigin);
+    if (!allowedOrigin) {
+      return response;
+    }
+
+    const headers = new Headers(response.headers);
+    headers.set("Access-Control-Allow-Origin", allowedOrigin);
+
+    if (allowedOrigin !== "*") {
+      headers.append("Vary", "Origin");
+    }
+
+    if (cors.credentials) {
+      headers.set("Access-Control-Allow-Credentials", "true");
+    }
+
+    if (cors.exposedHeaders && cors.exposedHeaders.length > 0) {
+      headers.set("Access-Control-Expose-Headers", cors.exposedHeaders.join(", "));
+    }
+
+    return new Response(response.body, {
+      status: response.status,
+      statusText: response.statusText,
+      headers,
+    });
+  }
+
+  private handleCorsPreflight(request: Request): Response | null {
+    const cors = this.config.cors;
+    if (!cors || request.method !== "OPTIONS") {
+      return null;
+    }
+
+    const requestOrigin = request.headers.get("origin");
+    const requestMethod = request.headers.get("access-control-request-method");
+    if (!requestOrigin || !requestMethod) {
+      return null;
+    }
+
+    const allowedOrigin = this.resolveCorsOrigin(requestOrigin);
+    if (!allowedOrigin) {
+      return new Response(null, { status: 403 });
+    }
+
+    const headers = new Headers();
+    headers.set("Access-Control-Allow-Origin", allowedOrigin);
+    headers.append("Vary", "Origin");
+    headers.append("Vary", "Access-Control-Request-Method");
+    headers.append("Vary", "Access-Control-Request-Headers");
+
+    const allowedMethods = cors.methods ?? ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"];
+    headers.set("Access-Control-Allow-Methods", allowedMethods.join(", "));
+
+    const requestedHeaders = request.headers.get("access-control-request-headers");
+    const allowedHeaders = cors.headers?.join(", ") ?? requestedHeaders ?? "Content-Type, Authorization";
+    headers.set("Access-Control-Allow-Headers", allowedHeaders);
+
+    if (cors.credentials) {
+      headers.set("Access-Control-Allow-Credentials", "true");
+    }
+
+    if (typeof cors.maxAge === "number" && Number.isFinite(cors.maxAge)) {
+      headers.set("Access-Control-Max-Age", String(cors.maxAge));
+    }
+
+    return new Response(null, {
+      status: 204,
+      headers,
+    });
+  }
+
   async handle(req: Request): Promise<Response> {
     const logger = this.config.loggerFactory.createLogger("Server");
+    const preflightResponse = this.handleCorsPreflight(req);
+    if (preflightResponse) {
+      return preflightResponse;
+    }
 
     try {
       const clientIpOptions = this.resolveClientIpConfig();
       const resolvedIp = resolveClientIp(req, clientIpOptions);
-      return await this.router.handle(req, this.middlewares, undefined, resolvedIp);
+      const response = await this.router.handle(req, this.middlewares, undefined, resolvedIp);
+      return this.applyCorsHeaders(req, response);
     } catch (error) {
       if (error instanceof InvalidJsonBodyError) {
         logger.warn("Invalid JSON request body", {
           method: req.method,
           url: req.url,
         });
-        return problem({
+        return this.applyCorsHeaders(req, problem({
           status: 400,
           title: "Invalid JSON body",
-        });
+        }));
       }
 
       const mappedError = this.mapErrorToProblemDetails(error);
@@ -176,7 +291,7 @@ export class Server {
         method: req.method,
         url: req.url,
       });
-      return problem(mappedError);
+      return this.applyCorsHeaders(req, problem(mappedError));
     }
   }
 
