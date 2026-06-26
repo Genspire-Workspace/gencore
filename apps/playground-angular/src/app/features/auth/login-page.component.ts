@@ -8,9 +8,12 @@ import type { IProblemDetails } from '../../core/problem-details';
 
 @Component({
   selector: 'app-login-page',
+  host: {
+    class: 'block h-full min-h-0 flex-1 overflow-hidden',
+  },
   imports: [CommonModule, FormsModule, RouterLink],
   template: `
-    <section class="flex min-h-full flex-1 items-center justify-center">
+    <section class="flex h-full min-h-0 w-full flex-1 items-center justify-center overflow-hidden">
       <div class="mx-auto w-full max-w-md">
         <div class="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
           <div class="mb-8">
