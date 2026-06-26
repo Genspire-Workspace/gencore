@@ -25,9 +25,12 @@ interface IUiChatMessage {
 
 @Component({
   selector: 'app-ai-session-page',
+  host: {
+    class: 'block h-full min-h-0 flex-1 overflow-hidden',
+  },
   imports: [CommonModule, FormsModule],
   template: `
-    <section class="flex h-full min-h-0 flex-1 flex-col gap-6 overflow-hidden">
+    <section class="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
       <div class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
         <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
@@ -64,8 +67,8 @@ interface IUiChatMessage {
         </div>
       </div>
 
-      <div class="grid min-h-0 flex-1 gap-6 overflow-hidden lg:grid-cols-[20rem_minmax(0,1fr)]">
-        <aside class="min-h-0 overflow-auto rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+      <div class="mt-6 grid min-h-0 flex-1 auto-rows-fr gap-6 overflow-hidden lg:grid-cols-[20rem_minmax(0,1fr)]">
+        <aside class="h-full min-h-0 overflow-auto rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
           <h2 class="text-lg font-semibold text-slate-900">Session config</h2>
 
           <div class="mt-6 space-y-4">
@@ -118,59 +121,61 @@ interface IUiChatMessage {
             </span>
           </div>
 
-          <div class="mt-6 flex min-h-0 flex-1 flex-col overflow-hidden rounded-3xl bg-slate-50 p-4">
-            @if (messages().length === 0 && !loading()) {
-              <div class="flex flex-1 items-center justify-center rounded-2xl border border-dashed border-slate-300 px-6 py-12 text-center text-sm text-slate-500">
-                Start a session and send a message to see streamed responses.
-              </div>
-            } @else {
-              <div class="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto pr-2">
-                @for (message of messages(); track message.id) {
-                  <article
-                    class="max-w-[85%] rounded-2xl px-4 py-3 text-sm shadow-sm"
-                    [class.self-end]="message.role === 'user'"
-                    [class.bg-slate-900]="message.role === 'user'"
-                    [class.text-white]="message.role === 'user'"
-                    [class.bg-white]="message.role !== 'user'"
-                    [class.text-slate-800]="message.role !== 'user'"
-                    [class.border]="message.role !== 'user'"
-                    [class.border-slate-200]="message.role !== 'user'"
-                  >
-                    <div class="mb-1 text-[11px] font-semibold uppercase tracking-[0.2em] opacity-60">
-                      {{ message.role }}
-                    </div>
-                    <div class="whitespace-pre-wrap">
-                      {{ message.content || (message.pending ? 'Streaming...' : '') }}
-                    </div>
-                  </article>
-                }
-              </div>
-            }
-          </div>
-
-          <form class="mt-6 space-y-3" (ngSubmit)="sendMessage()">
-            <textarea
-              class="min-h-28 w-full resize-y rounded-3xl border border-slate-300 bg-white px-4 py-4 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-sky-500"
-              [ngModel]="prompt()"
-              (ngModelChange)="prompt.set($event)"
-              name="prompt"
-              placeholder="Ask something like: What is the capital of Spain?"
-              required
-            ></textarea>
-
-            <div class="flex items-center justify-between gap-3">
-              <p class="text-xs text-slate-500">
-                Stream endpoint: <code>/ai/sessions/:id/messages/stream</code>
-              </p>
-              <button
-                class="rounded-2xl bg-sky-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:bg-sky-300"
-                type="submit"
-                [disabled]="sending() || !prompt().trim()"
-              >
-                {{ sending() ? 'Streaming...' : 'Send message' }}
-              </button>
+          <div class="mt-6 flex min-h-0 flex-1 flex-col overflow-hidden">
+            <div class="flex min-h-0 flex-1 flex-col overflow-hidden rounded-3xl bg-slate-50 p-4">
+              @if (messages().length === 0 && !loading()) {
+                <div class="flex flex-1 items-center justify-center rounded-2xl border border-dashed border-slate-300 px-6 py-12 text-center text-sm text-slate-500">
+                  Start a session and send a message to see streamed responses.
+                </div>
+              } @else {
+                <div class="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto pr-2">
+                  @for (message of messages(); track message.id) {
+                    <article
+                      class="max-w-[85%] rounded-2xl px-4 py-3 text-sm shadow-sm"
+                      [class.self-end]="message.role === 'user'"
+                      [class.bg-slate-900]="message.role === 'user'"
+                      [class.text-white]="message.role === 'user'"
+                      [class.bg-white]="message.role !== 'user'"
+                      [class.text-slate-800]="message.role !== 'user'"
+                      [class.border]="message.role !== 'user'"
+                      [class.border-slate-200]="message.role !== 'user'"
+                    >
+                      <div class="mb-1 text-[11px] font-semibold uppercase tracking-[0.2em] opacity-60">
+                        {{ message.role }}
+                      </div>
+                      <div class="whitespace-pre-wrap">
+                        {{ message.content || (message.pending ? 'Streaming...' : '') }}
+                      </div>
+                    </article>
+                  }
+                </div>
+              }
             </div>
-          </form>
+
+            <form class="mt-6 flex flex-col gap-3" (ngSubmit)="sendMessage()">
+              <textarea
+                class="min-h-28 w-full resize-y rounded-3xl border border-slate-300 bg-white px-4 py-4 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-sky-500"
+                [ngModel]="prompt()"
+                (ngModelChange)="prompt.set($event)"
+                name="prompt"
+                placeholder="Ask something like: What is the capital of Spain?"
+                required
+              ></textarea>
+
+              <div class="flex items-center justify-between gap-3">
+                <p class="text-xs text-slate-500">
+                  Stream endpoint: <code>/ai/sessions/:id/messages/stream</code>
+                </p>
+                <button
+                  class="rounded-2xl bg-sky-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:bg-sky-300"
+                  type="submit"
+                  [disabled]="sending() || !prompt().trim()"
+                >
+                  {{ sending() ? 'Streaming...' : 'Send message' }}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       </div>
     </section>

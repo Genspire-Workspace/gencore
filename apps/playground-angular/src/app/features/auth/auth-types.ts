@@ -17,4 +17,6 @@ export interface IAuthResponse {
   tokenType: string;
 }
 
-export interface IStoredAuthState extends IAuthResponse {}
+export interface IStoredAuthState extends IAuthResponse {
+  expiresAt: number;
+}

@@ -111,7 +111,7 @@ export class AiSessionService {
     input: IAiSessionMessageRequest,
     onChunk: (chunk: IAiSessionStreamChunk) => void,
   ): Promise<void> {
-    const accessToken = this.authService.getAccessToken();
+    const accessToken = await this.authService.ensureValidAccessToken();
     if (!accessToken) {
       throw new Error('Authentication is required.');
     }

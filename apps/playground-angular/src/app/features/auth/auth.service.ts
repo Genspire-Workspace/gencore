@@ -13,12 +13,33 @@ import {
   writeStoredAuthState,
 } from './auth-storage';
 
+const ACCESS_TOKEN_REFRESH_LEEWAY_MS = 60_000;
+
+function readJwtExpiration(accessToken: string): number | null {
+  const parts = accessToken.split('.');
+  if (parts.length < 2) {
+    return null;
+  }
+
+  try {
+    const payload = JSON.parse(atob(parts[1] ?? ''));
+    const exp = payload?.exp;
+
+    return typeof exp === 'number' && Number.isFinite(exp)
+      ? exp * 1000
+      : null;
+  } catch {
+    return null;
+  }
+}
+
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly http = inject(HttpClient);
   private readonly state = signal<IStoredAuthState | null>(
     readStoredAuthState(),
   );
+  private refreshPromise: Promise<string | null> | null = null;
 
   readonly authState = computed(() => this.state());
   readonly isAuthenticated = computed(() => !!this.state()?.accessToken);
@@ -30,6 +51,19 @@ export class AuthService {
 
   getRefreshToken(): string | null {
     return this.state()?.refreshToken ?? null;
+  }
+
+  async ensureValidAccessToken(): Promise<string | null> {
+    const state = this.state();
+    if (!state?.accessToken) {
+      return null;
+    }
+
+    if (!this.shouldRefreshToken(state)) {
+      return state.accessToken;
+    }
+
+    return await this.refreshAccessToken();
   }
 
   async login(email: string, password: string): Promise<void> {
@@ -75,13 +109,58 @@ export class AuthService {
     clearStoredAuthState();
   }
 
+  private shouldRefreshToken(state: IStoredAuthState): boolean {
+    const expiresAt = state.expiresAt ?? readJwtExpiration(state.accessToken);
+    if (!expiresAt) {
+      return true;
+    }
+
+    return Date.now() + ACCESS_TOKEN_REFRESH_LEEWAY_MS >= expiresAt;
+  }
+
+  private async refreshAccessToken(): Promise<string | null> {
+    if (this.refreshPromise) {
+      return await this.refreshPromise;
+    }
+
+    const refreshToken = this.getRefreshToken();
+    if (!refreshToken) {
+      this.clearAuthState();
+      return null;
+    }
+
+    this.refreshPromise = (async () => {
+      try {
+        const response = await firstValueFrom(
+          this.http.post<IAuthResponse>(`${appEnv.apiBaseUrl}/refresh`, {
+            refreshToken,
+          }),
+        );
+
+        this.setAuthState(response);
+        return response.accessToken;
+      } catch {
+        this.clearAuthState();
+        return null;
+      } finally {
+        this.refreshPromise = null;
+      }
+    })();
+
+    return await this.refreshPromise;
+  }
+
   private setAuthState(response: IAuthResponse): void {
+    const expiresAt =
+      Date.now() + Math.max(response.expiresIn, 0) * 1000;
+
     const state: IStoredAuthState = {
       user: response.user,
       accessToken: response.accessToken,
       refreshToken: response.refreshToken,
       expiresIn: response.expiresIn,
       tokenType: response.tokenType,
+      expiresAt,
     };
 
     this.state.set(state);

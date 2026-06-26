@@ -7,9 +7,12 @@ import type { IFileResponse } from './file-types';
 
 @Component({
   selector: 'app-files-page',
+  host: {
+    class: 'block h-full min-h-0 flex-1 overflow-hidden',
+  },
   imports: [CommonModule],
   template: `
-    <section class="flex min-h-full flex-1 flex-col gap-6">
+    <section class="flex h-full min-h-0 flex-1 flex-col gap-6 overflow-hidden">
       <div class="flex flex-col gap-4 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p class="text-sm font-medium uppercase tracking-[0.2em] text-sky-600">

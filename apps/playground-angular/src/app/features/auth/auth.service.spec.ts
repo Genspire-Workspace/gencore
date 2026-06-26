@@ -48,6 +48,7 @@ describe('AuthService', () => {
       refreshToken: 'refresh-token',
       expiresIn: 3600,
       tokenType: 'Bearer',
+      expiresAt: Date.now() + 3600_000,
     });
 
     const { HttpClient } = await import('@angular/common/http');
@@ -112,5 +113,63 @@ describe('AuthService', () => {
     expect(globalThis.localStorage.getItem('playground-angular.auth')).toContain(
       'new-access-token',
     );
+  });
+
+  it('refreshes the access token when it is nearing expiration', async () => {
+    const requests: Array<{ url: string; body: unknown }> = [];
+    writeStoredAuthState({
+      user: {
+        id: 'user-1',
+        email: 'user@example.com',
+        emailConfirmed: true,
+        state: 'active',
+        createdAt: '2026-06-26T00:00:00.000Z',
+        updatedAt: '2026-06-26T00:00:00.000Z',
+      },
+      accessToken: 'expiring-access-token',
+      refreshToken: 'refresh-token',
+      expiresIn: 3600,
+      tokenType: 'Bearer',
+      expiresAt: Date.now() + 5_000,
+    });
+
+    const { HttpClient } = await import('@angular/common/http');
+    const injector = createEnvironmentInjector([
+      {
+        provide: HttpClient,
+        useValue: {
+          post: (url: string, body: unknown) => {
+            requests.push({ url, body });
+            return of({
+              user: {
+                id: 'user-1',
+                email: 'user@example.com',
+                emailConfirmed: true,
+                state: 'active',
+                createdAt: '2026-06-26T00:00:00.000Z',
+                updatedAt: '2026-06-26T00:00:00.000Z',
+              },
+              accessToken: 'refreshed-access-token',
+              refreshToken: 'rotated-refresh-token',
+              expiresIn: 3600,
+              tokenType: 'Bearer',
+            });
+          },
+        },
+      },
+    ]);
+
+    const service = runInInjectionContext(injector, () => new AuthService());
+    const token = await service.ensureValidAccessToken();
+
+    expect(token).toBe('refreshed-access-token');
+    expect(requests).toEqual([
+      {
+        url: 'http://localhost:3000/refresh',
+        body: {
+          refreshToken: 'refresh-token',
+        },
+      },
+    ]);
   });
 });

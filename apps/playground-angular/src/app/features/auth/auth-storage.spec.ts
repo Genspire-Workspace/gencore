@@ -41,6 +41,7 @@ describe('auth storage helpers', () => {
       refreshToken: 'refresh-token',
       expiresIn: 3600,
       tokenType: 'Bearer',
+      expiresAt: Date.now() + 3600_000,
     };
 
     writeStoredAuthState(state, storage);
