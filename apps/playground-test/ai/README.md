@@ -17,6 +17,8 @@ Main entry points:
 - [verify-generation.ts](/C:/Users/PC/Documents/GitHub/Gencore/apps/playground-test/ai/verify-generation.ts)
 - [verify-ai-context.ts](/C:/Users/PC/Documents/GitHub/Gencore/apps/playground-test/ai/verify-ai-context.ts)
 - [verify-api.ts](/C:/Users/PC/Documents/GitHub/Gencore/apps/playground-test/ai/verify-api.ts)
+- [verify-ai-sessions.ts](/C:/Users/PC/Documents/GitHub/Gencore/apps/playground-test/ai/verify-ai-sessions.ts)
+- [verify-ai-sessions.test.ts](/C:/Users/PC/Documents/GitHub/Gencore/apps/playground-test/ai/verify-ai-sessions.test.ts)
 
 Shared support:
 
@@ -41,14 +43,45 @@ Shared support:
 - verifies the playground API over HTTP
 - checks `/health`, `/ai/providers`, `/ai/chat`, `/ai/chat/stream`, and `/ai/embeddings`
 
+`verify-ai-sessions.ts`
+
+- verifies the session-based AI conversation API over HTTP
+- registers a verifier account and exercises session CRUD, ownership isolation, message replay, generation, streaming, and title auto-derivation
+- checks `/ai/sessions`, `/ai/sessions/:id`, `/ai/sessions/:id/messages`, and `/ai/sessions/:id/messages/stream`
+
+`verify-ai-sessions.test.ts`
+
+- deterministic `bun:test` suite that boots the playground app in-process
+- covers session CRUD, per-user ownership, empty-history baseline, message cascade on delete, and authentication enforcement (no live model calls)
+
 ## Commands
+
+### Bun test suites
+
+Run the deterministic `bun:test` suites (no live model calls, boot the playground app in-process):
+
+```bash
+# All AI verification bun:test suites in this folder
+bun test apps/playground-test/ai
+
+# Session persistence suite only (CRUD, ownership, cascade, auth)
+bun test apps/playground-test/ai/verify-ai-sessions.test.ts
+
+# Shared deterministic tool-layer preflight tests
+bun test apps/playground-test/ai/shared/verify-api-tools.test.ts
+```
+
+### Live HTTP verification scripts
+
+These require the playground API to already be running (`bun run dev:playground-api`), unless noted otherwise.
 
 Root scripts:
 
-- `bun run dev:ai:verify`
-- `bun run dev:ai-context:verify`
-- `bun run dev:api:verify`
-- `bun run dev:ai:verify:local`
+- `bun run dev:ai:verify` — direct `AiService` generation checks
+- `bun run dev:ai-context:verify` — `AiContext` request-building checks
+- `bun run dev:api:verify` — playground API `/ai/*` checks
+- `bun run dev:ai-sessions:verify` — playground API `/ai/sessions/*` checks
+- `bun run dev:ai:verify:local` — generation + context checks combined
 
 Direct execution:
 
@@ -56,6 +89,7 @@ Direct execution:
 bun apps/playground-test/ai/verify-generation.ts
 bun apps/playground-test/ai/verify-ai-context.ts
 bun apps/playground-test/ai/verify-api.ts
+bun apps/playground-test/ai/verify-ai-sessions.ts
 ```
 
 List help:
@@ -64,6 +98,7 @@ List help:
 bun run dev:ai:verify -- --list
 bun run dev:ai-context:verify -- --list
 bun run dev:api:verify -- --list
+bun run dev:ai-sessions:verify -- --list
 ```
 
 Scenario filtering:
@@ -73,6 +108,8 @@ bun run dev:ai:verify -- --scenarios ollama
 bun run dev:ai:verify -- --scenario ollama
 bun run dev:ai:verify -- --s ollama
 bun run dev:ai:verify -- -s ollama
+bun run dev:ai-sessions:verify -- --scenarios ollama
+bun run dev:ai-sessions:verify -- -s ollama
 ```
 
 API base URL override:
@@ -80,6 +117,8 @@ API base URL override:
 ```bash
 bun run dev:api:verify -- --base-url http://localhost:3000
 bun run dev:api:verify -- -b http://localhost:3000
+bun run dev:ai-sessions:verify -- --base-url http://localhost:3000
+bun run dev:ai-sessions:verify -- -b http://localhost:3000
 ```
 
 Ollama model override:
@@ -88,6 +127,7 @@ Ollama model override:
 bun run dev:ai:verify -- --ollama-model gemma4:31b-cloud --scenarios ollama
 bun run dev:ai-context:verify -- --ollama-model gemma4:31b-cloud --scenarios ollama
 bun run dev:api:verify -- --ollama-model gemma4:31b-cloud --scenarios ollama
+bun run dev:ai-sessions:verify -- --ollama-model gemma4:31b-cloud --scenarios ollama
 ```
 
 ## Environment
@@ -112,6 +152,11 @@ API verification:
 
 - `AI_API_BASE_URL`
 - `OLLAMA_API_KEY`
+
+Session verification (logs in with the seeded admin):
+
+- `GENCORE_PLAYGROUND_SEED_ADMIN_EMAIL`
+- `GENCORE_PLAYGROUND_SEED_ADMIN_PASSWORD`
 
 Optional generation debug:
 
@@ -141,6 +186,7 @@ Logs are written under:
 - `data/logs/ai-verification/generation`
 - `data/logs/ai-verification/ai-context`
 - `data/logs/ai-verification/api`
+- `data/logs/ai-verification/sessions`
 
 Example:
 
@@ -148,6 +194,7 @@ Example:
 data/logs/ai-verification/generation/verify-generation-2026-06-25-20-11-27-799.log
 data/logs/ai-verification/ai-context/verify-ai-context-2026-06-25-20-16-16-66.log
 data/logs/ai-verification/api/verify-api-2026-06-25-20-20-10-123.log
+data/logs/ai-verification/sessions/verify-ai-sessions-2026-06-25-23-49-12-345.log
 ```
 
 ## Notes
@@ -156,6 +203,8 @@ data/logs/ai-verification/api/verify-api-2026-06-25-20-20-10-123.log
 - Deterministic local preflight checks in `verify-ai-context.ts` are strict and should fail loudly if the tool layer regresses.
 - Ollama may be skipped when the local `ollama` package or runtime is unavailable.
 - `verify-api.ts` assumes the playground API is already running when you execute non-`--list` commands.
+- `verify-ai-sessions.ts` assumes the playground API is already running; it registers its own verifier account.
+- `verify-ai-sessions.test.ts` boots the playground app in-process and makes no live model calls.
 
 
 For PowerShell, use:

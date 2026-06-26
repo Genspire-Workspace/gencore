@@ -7,6 +7,7 @@ import path from "node:path";
 import { Server } from "@genspire/server";
 import { AuthRoleService } from "@genspire/auth";
 import { createPlaygroundApp } from "./playground-app.js";
+import { aiPlaygroundRuntime } from "./ai/ai-service-factory.js";
 
 async function registerAndGetToken(
   server: Server,
@@ -180,6 +181,91 @@ describe("playground api", () => {
       );
       expect(response.headers.get("cache-control")).toBe("no-cache");
     } finally {
+      await app.stop();
+    }
+  });
+
+  test("ai session stream emits a terminal chunk when provider yields no chunks", async () => {
+    const originalStreamChatCompletion =
+      aiPlaygroundRuntime.service.streamChatCompletion.bind(aiPlaygroundRuntime.service);
+
+    aiPlaygroundRuntime.service.streamChatCompletion = (async function* () {
+      return;
+    }) as typeof aiPlaygroundRuntime.service.streamChatCompletion;
+
+    const app = await createPlaygroundApp({
+      port: 0,
+      env: {
+        ...process.env,
+        GENCORE_PLAYGROUND_LIBSQL_DB_PATH: dbPath,
+      },
+    });
+
+    await app.start();
+
+    try {
+      const server = app.get(Server);
+      const { accessToken } = await registerAndGetToken(server);
+
+      const sessionResponse = await server.handle(
+        new Request("http://localhost/ai/sessions", {
+          method: "POST",
+          headers: authHeaders(accessToken),
+          body: JSON.stringify({
+            title: "Stream Fallback Session",
+          }),
+        }),
+      );
+
+      expect(sessionResponse.status).toBe(201);
+      const session = await sessionResponse.json() as { id: string };
+
+      const streamResponse = await server.handle(
+        new Request(`http://localhost/ai/sessions/${session.id}/messages/stream`, {
+          method: "POST",
+          headers: authHeaders(accessToken),
+          body: JSON.stringify({
+            content: "Hello",
+            provider: "ollama",
+            model: "gemma4:12b",
+          }),
+        }),
+      );
+
+      expect(streamResponse.status).toBe(200);
+      expect(streamResponse.headers.get("content-type")).toContain("application/x-ndjson");
+
+      const streamText = await streamResponse.text();
+      const chunks = streamText
+        .split("\n")
+        .map((line) => line.trim())
+        .filter(Boolean)
+        .map((line) => JSON.parse(line)) as Array<Record<string, unknown>>;
+
+      expect(chunks.length).toBe(1);
+      expect(chunks[0]).toMatchObject({
+        type: "message",
+        sessionId: session.id,
+      });
+      expect(typeof chunks[0]?.userMessageId).toBe("string");
+      expect(typeof chunks[0]?.assistantMessageId).toBe("string");
+
+      const messagesResponse = await server.handle(
+        new Request(`http://localhost/ai/sessions/${session.id}/messages`, {
+          headers: { authorization: `Bearer ${accessToken}` },
+        }),
+      );
+      expect(messagesResponse.status).toBe(200);
+
+      const messages = await messagesResponse.json() as {
+        items: Array<{ role: string }>;
+      };
+      expect(messages.items.map((message) => message.role)).toEqual([
+        "user",
+        "assistant",
+      ]);
+    } finally {
+      aiPlaygroundRuntime.service.streamChatCompletion = originalStreamChatCompletion;
       await app.stop();
     }
   });

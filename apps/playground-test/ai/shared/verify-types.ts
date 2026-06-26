@@ -3,7 +3,8 @@ import type { AiService } from "../../../../packages/ai/src/services/ai-service.
 export type AiVerifySuite =
   | "generation"
   | "ai-context"
-  | "api";
+  | "api"
+  | "sessions";
 
 export type AiVerifyScenarioId =
   | "ollama"

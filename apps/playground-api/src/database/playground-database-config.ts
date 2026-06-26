@@ -7,6 +7,8 @@ import { Migrator } from "@mikro-orm/migrations";
 import { AuthRefreshTokenEntity, AuthRoleEntity, AuthUserRoleEntity, AuthEventEntity, AuthBannedIpEntity } from "@genspire/auth";
 import { FileEntity } from "@genspire/storage";
 import { TodoEntity } from "../todos/todo.entity.js";
+import { AiSessionEntity } from "../ai/ai-session.entity.js";
+import { AiSessionMessageEntity } from "../ai/ai-session-message.entity.js";
 import { PlaygroundAuthUserEntity } from "../auth/playground-auth-user.entity.js";
 import type { IPlaygroundEnv } from "../config/playground-env.js";
 
@@ -38,7 +40,7 @@ export async function createPlaygroundMikroOrmConfig(
   const dbConfig = env.database;
   const runtimeDriver = dbConfig.provider === "postgres" ? "postgresql" as const : "libsql" as const;
 
-  const entities = [FileEntity, TodoEntity, PlaygroundAuthUserEntity, AuthRefreshTokenEntity, AuthRoleEntity, AuthUserRoleEntity, AuthEventEntity, AuthBannedIpEntity];
+  const entities = [FileEntity, TodoEntity, AiSessionEntity, AiSessionMessageEntity, PlaygroundAuthUserEntity, AuthRefreshTokenEntity, AuthRoleEntity, AuthUserRoleEntity, AuthEventEntity, AuthBannedIpEntity];
 
   const baseOptions = {
     runtimeDriver,

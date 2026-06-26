@@ -32,6 +32,7 @@
     "dev:ai:verify": "bun run apps/playground-test/ai/verify-generation.ts",
     "dev:ai-context:verify": "bun run apps/playground-test/ai/verify-ai-context.ts",
     "dev:api:verify": "bun run apps/playground-test/ai/verify-api.ts",
+    "dev:ai-sessions:verify": "bun run apps/playground-test/ai/verify-ai-sessions.ts",
     "dev:ai:verify:local": "bun run dev:ai:verify && bun run dev:ai-context:verify"
   },
   "devDependencies": {

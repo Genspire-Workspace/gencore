@@ -55,15 +55,131 @@ export async function fetchJson(
 export async function postJson(
   url: string,
   payload: unknown,
+  init?: RequestInit,
   timeoutMs?: number,
 ): Promise<IVerifyHttpJsonResponse> {
+  const headers = new Headers(init?.headers);
+  headers.set("content-type", "application/json");
+
   return fetchJson(url, {
+    ...init,
     method: "POST",
-    headers: {
-      "content-type": "application/json",
-    },
+    headers,
     body: JSON.stringify(payload),
   }, timeoutMs);
+}
+
+export interface IVerifyAuthAccount {
+  accessToken: string;
+  refreshToken?: string;
+  userId?: string;
+  email: string;
+  password: string;
+}
+
+export function readSeededAdminEnv(): {
+  email: string;
+  password: string;
+} {
+  const email = process.env.GENCORE_PLAYGROUND_SEED_ADMIN_EMAIL?.trim();
+  const password = process.env.GENCORE_PLAYGROUND_SEED_ADMIN_PASSWORD?.trim();
+
+  if (!email) {
+    throw new Error(
+      "GENCORE_PLAYGROUND_SEED_ADMIN_EMAIL is required for AI session verification.",
+    );
+  }
+
+  if (!password) {
+    throw new Error(
+      "GENCORE_PLAYGROUND_SEED_ADMIN_PASSWORD is required for AI session verification.",
+    );
+  }
+
+  return { email, password };
+}
+
+export async function loginAccount(
+  baseUrl: string,
+  email: string,
+  password: string,
+  timeoutMs?: number,
+): Promise<IVerifyAuthAccount> {
+  const response = await postJson(
+    `${normalizeBaseUrl(baseUrl)}/login`,
+    { email, password },
+    undefined,
+    timeoutMs,
+  );
+
+  if (response.status !== 200) {
+    throw new Error(
+      `Login failed for '${email}': HTTP ${response.status} - ${JSON.stringify(response.body)}`,
+    );
+  }
+
+  const body = response.body as {
+    accessToken: string;
+    refreshToken?: string;
+    user?: { id: string };
+  };
+
+  return {
+    accessToken: body.accessToken,
+    refreshToken: body.refreshToken,
+    userId: body.user?.id,
+    email,
+    password,
+  };
+}
+
+export async function loginSeededAdmin(
+  baseUrl: string,
+  timeoutMs?: number,
+): Promise<IVerifyAuthAccount> {
+  const { email, password } = readSeededAdminEnv();
+  return loginAccount(baseUrl, email, password, timeoutMs);
+}
+
+export async function registerAccount(
+  baseUrl: string,
+  email = `verify-${crypto.randomUUID()}@example.com`,
+  password = "password123",
+  timeoutMs?: number,
+): Promise<IVerifyAuthAccount> {
+  const response = await postJson(
+    `${normalizeBaseUrl(baseUrl)}/register`,
+    { email, password },
+    undefined,
+    timeoutMs,
+  );
+
+  if (response.status !== 201) {
+    throw new Error(
+      `Register failed for '${email}': HTTP ${response.status} - ${JSON.stringify(response.body)}`,
+    );
+  }
+
+  const body = response.body as {
+    accessToken: string;
+    refreshToken?: string;
+    user: { id: string };
+  };
+
+  return {
+    accessToken: body.accessToken,
+    refreshToken: body.refreshToken,
+    userId: body.user.id,
+    email,
+    password,
+  };
+}
+
+export function authHeaders(token: string): Record<string, string> {
+  return {
+    "content-type": "application/json",
+    authorization: `Bearer ${token}`,
+  };
 }
 
 export async function readNdjsonOrJson(response: Response): Promise<unknown> {
@@ -94,49 +210,12 @@ export async function* streamNdjsonOrJson(
     return;
   }
 
-  if (!response.body) {
-    return;
-  }
-
-  const reader = response.body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = "";
-
-  try {
-    while (true) {
-      const { done, value } = await reader.read();
-
-      if (done) {
-        break;
-      }
-
-      buffer += decoder.decode(value, { stream: true });
-
-      while (true) {
-        const newlineIndex = buffer.indexOf("\n");
-
-        if (newlineIndex < 0) {
-          break;
-        }
-
-        const line = buffer.slice(0, newlineIndex).trim();
-        buffer = buffer.slice(newlineIndex + 1);
-
-        if (!line) {
-          continue;
-        }
-
-        yield JSON.parse(line);
-      }
+  const text = await response.text().catch(() => "");
+  for (const line of text.split("\n")) {
+    const trimmed = line.trim();
+    if (!trimmed) {
+      continue;
     }
-
-    buffer += decoder.decode();
-    const trailing = buffer.trim();
-
-    if (trailing) {
-      yield JSON.parse(trailing);
-    }
-  } finally {
-    reader.releaseLock();
+    yield JSON.parse(trimmed);
   }
 }

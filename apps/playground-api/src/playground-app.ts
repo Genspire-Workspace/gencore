@@ -24,6 +24,7 @@ import { createPlaygroundStorageProvider } from "./storage/playground-storage-pr
 import { AuthActivityController } from "./auth/auth-activity.controller.js";
 import { AuthBanController } from "./auth/auth-ban.controller.js";
 import { AiController } from "./ai/ai.controller.js";
+import { AiSessionController } from "./ai/ai-session.controller.js";
 import { HealthController } from "./health/health.controller.js";
 import { TodoController } from "./todos/todo.controller.js";
 
@@ -115,7 +116,7 @@ export async function createPlaygroundApp(
     }),
   );
 
-  app.get(Server).registerControllers(FileController, HealthController, AiController, AuthController, RoleController, AuthActivityController, AuthBanController, TodoController);
+  app.get(Server).registerControllers(FileController, HealthController, AiController, AiSessionController, AuthController, RoleController, AuthActivityController, AuthBanController, TodoController);
 
   return app;
 }
