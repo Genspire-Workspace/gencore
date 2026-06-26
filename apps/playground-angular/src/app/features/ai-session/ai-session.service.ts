@@ -1,8 +1,8 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
-import { appEnv } from './app-env';
-import { AuthService } from './auth.service';
+import { appEnv } from '../../core/app-env';
+import { AuthService } from '../auth/auth.service';
 import { readNdjsonLines } from './ai-session-stream';
 import type {
   IAiSessionCreateRequest,
@@ -11,7 +11,7 @@ import type {
   IAiSessionMessageRequest,
   IAiSessionResponse,
   IAiSessionStreamChunk,
-} from './api-types';
+} from './ai-session-types';
 
 const ACTIVE_SESSION_STORAGE_KEY = 'playground-angular.ai-session-id';
 

@@ -1,8 +1,9 @@
 import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { FileService } from '../shared/file.service';
-import type { IFileResponse, IProblemDetails } from '../shared/api-types';
+import { FileService } from './file.service';
+import type { IProblemDetails } from '../../core/problem-details';
+import type { IFileResponse } from './file-types';
 
 @Component({
   selector: 'app-files-page',

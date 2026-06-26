@@ -3,8 +3,8 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Router, RouterLink } from '@angular/router';
-import { AuthService } from '../shared/auth.service';
-import type { IProblemDetails } from '../shared/api-types';
+import { AuthService } from './auth.service';
+import type { IProblemDetails } from '../../core/problem-details';
 
 @Component({
   selector: 'app-register-page',

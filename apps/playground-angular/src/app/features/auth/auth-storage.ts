@@ -1,4 +1,4 @@
-import type { IStoredAuthState } from './api-types';
+import type { IStoredAuthState } from './auth-types';
 
 const AUTH_STORAGE_KEY = 'playground-angular.auth';
 

@@ -1,26 +1,26 @@
-import { Routes } from '@angular/router';
-import { authGuard } from './shared/auth.guard';
+import type { Routes } from '@angular/router';
+import { authGuard } from './features/auth/auth.guard';
 
 export const routes: Routes = [
   {
     path: '',
     pathMatch: 'full',
     loadComponent: () =>
-      import('./pages/home-redirect.component').then(
+      import('./features/auth/home-redirect.component').then(
         (module) => module.HomeRedirectComponent,
       ),
   },
   {
     path: 'login',
     loadComponent: () =>
-      import('./pages/login-page.component').then(
+      import('./features/auth/login-page.component').then(
         (module) => module.LoginPageComponent,
       ),
   },
   {
     path: 'register',
     loadComponent: () =>
-      import('./pages/register-page.component').then(
+      import('./features/auth/register-page.component').then(
         (module) => module.RegisterPageComponent,
       ),
   },
@@ -28,7 +28,7 @@ export const routes: Routes = [
     path: 'files',
     canActivate: [authGuard],
     loadComponent: () =>
-      import('./pages/files-page.component').then(
+      import('./features/files/files-page.component').then(
         (module) => module.FilesPageComponent,
       ),
   },
@@ -36,7 +36,7 @@ export const routes: Routes = [
     path: 'ai-session',
     canActivate: [authGuard],
     loadComponent: () =>
-      import('./pages/ai-session-page.component').then(
+      import('./features/ai-session/ai-session-page.component').then(
         (module) => module.AiSessionPageComponent,
       ),
   },

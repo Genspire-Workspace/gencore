@@ -2,19 +2,19 @@ import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
-import { appEnv } from '../shared/app-env';
-import { AiSessionService } from '../shared/ai-session.service';
+import { appEnv } from '../../core/app-env';
+import { AiSessionService } from './ai-session.service';
 import {
   applyAiSessionStreamChunk,
   createAiSessionStreamAssembly,
   readAiContentText,
   resolveAiSessionAssistantText,
-} from '../shared/ai-session-stream';
+} from './ai-session-stream';
 import type {
   IAiSessionMessageDto,
   IAiSessionResponse,
-  IProblemDetails,
-} from '../shared/api-types';
+} from './ai-session-types';
+import type { IProblemDetails } from '../../core/problem-details';
 
 interface IUiChatMessage {
   id: string;

@@ -3,7 +3,7 @@ import {
   readStoredAuthState,
   writeStoredAuthState,
 } from './auth-storage';
-import type { IStoredAuthState } from './api-types';
+import type { IStoredAuthState } from './auth-types';
 
 function createMemoryStorage(): Pick<
   Storage,

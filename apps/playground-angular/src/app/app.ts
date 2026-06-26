@@ -5,7 +5,7 @@ import {
   RouterLinkActive,
   RouterOutlet,
 } from '@angular/router';
-import { AuthService } from './shared/auth.service';
+import { AuthService } from './features/auth/auth.service';
 
 @Component({
   selector: 'app-root',

@@ -1,12 +1,12 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
-import { appEnv } from './app-env';
+import { appEnv } from '../../core/app-env';
 import type {
   IAuthResponse,
   IAuthUser,
   IStoredAuthState,
-} from './api-types';
+} from './auth-types';
 import {
   clearStoredAuthState,
   readStoredAuthState,

@@ -1,4 +1,4 @@
-import type { IAiSessionStreamChunk } from './api-types';
+import type { IAiSessionStreamChunk } from './ai-session-types';
 
 export interface IAiSessionStreamAssembly {
   assistantText: string;

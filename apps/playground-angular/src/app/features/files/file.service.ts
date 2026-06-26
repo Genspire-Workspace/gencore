@@ -1,8 +1,8 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
-import { appEnv } from './app-env';
-import type { IFileListResponse, IFileResponse } from './api-types';
+import { appEnv } from '../../core/app-env';
+import type { IFileListResponse, IFileResponse } from './file-types';
 
 @Injectable({ providedIn: 'root' })
 export class FileService {
