@@ -1,4 +1,4 @@
-// file: packages/auth/src/application/auth-extension.ts
+﻿// file: packages/auth/src/application/auth-extension.ts
 
 import type { GenExtension } from "@genspire/core";
 import { Argon2PasswordHasher } from "./hashing/argon2-password-hasher.js";
@@ -9,6 +9,7 @@ import { AuthService } from "./services/auth.service.js";
 import { AuthRoleService } from "./services/auth-role.service.js";
 import { AuthEventService } from "./services/auth-event.service.js";
 import { AuthBanService } from "./services/auth-ban.service.js";
+import { AuthUserIpService } from "./services/auth-user-ip.service.js";
 import { PasswordHasher } from "./hashing/password-hasher.js";
 import type { IAuthExtensionOptions } from "./contracts/auth-options.js";
 
@@ -33,6 +34,7 @@ export function authExtension(options: IAuthExtensionOptions): GenExtension {
       app.registerScoped(AuthRoleService);
       app.registerScoped(AuthEventService);
       app.registerScoped(AuthBanService);
+      app.registerScoped(AuthUserIpService);
     },
   };
 }

@@ -1,10 +1,12 @@
-// file: apps\playground-api\src\auth\auth.test.ts
+﻿// file: apps\playground-api\src\auth\auth.test.ts
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { Server } from "@genspire/server";
+import { EventBus } from "@genspire/core";
+import { AuthUserIpService } from "@genspire/auth";
 import { createPlaygroundApp } from "../playground-app.js";
 
 async function cleanupDirectory(target: string): Promise<void> {
@@ -353,6 +355,83 @@ describe("playground auth api", () => {
       expect(swaggerDocument.paths["/refresh"]).toBeDefined();
       expect(swaggerDocument.paths["/logout"]).toBeDefined();
       expect(swaggerDocument.paths["/me"]).toBeDefined();
+    } finally {
+      await app.stop();
+    }
+  });
+
+  test("register emits an auth.user.registered event", async () => {
+    const app = await createApp();
+    await app.start();
+
+    let captured: { name: string; payload: unknown } | undefined;
+    const bus = app.get(EventBus);
+    const subscription = bus.on("auth.user.registered", (event) => {
+      captured = { name: event.name, payload: event.payload };
+    });
+
+    try {
+      const server = app.get(Server);
+      const response = await server.handle(
+        new Request("http://localhost/register", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            email: "event@example.com",
+            password: "password123",
+            displayName: "Event",
+          }),
+        }),
+      );
+
+      expect(response.status).toBe(201);
+      const body = (await response.json()) as Record<string, unknown>;
+      const userId = (body.user as Record<string, unknown>).id as string;
+
+      expect(captured).toBeDefined();
+      expect(captured!.name).toBe("auth.user.registered");
+      const payload = captured!.payload as Record<string, unknown>;
+      expect(payload.userId).toBe(userId);
+      expect(payload.email).toBe("event@example.com");
+      expect(payload.displayName).toBe("Event");
+      expect(payload.emailConfirmed).toBe(false);
+      expect(typeof payload.registeredAt).toBe("string");
+    } finally {
+      subscription.unsubscribe();
+      await app.stop();
+    }
+  });
+
+  test("register records the request IP as a known user IP", async () => {
+    const app = await createApp();
+    await app.start();
+
+    try {
+      const server = app.get(Server);
+      const response = await server.handle(
+        new Request("http://localhost/register", {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            "x-forwarded-for": "203.0.113.42",
+          },
+          body: JSON.stringify({ email: "ip@example.com", password: "password123" }),
+        }),
+      );
+
+      expect(response.status).toBe(201);
+      const body = (await response.json()) as Record<string, unknown>;
+      const userId = (body.user as Record<string, unknown>).id as string;
+
+      const scope = app.createScope();
+      try {
+        const userIpService = scope.resolve(AuthUserIpService);
+        const knownIps = await userIpService.listForUser(userId);
+        expect(knownIps.length).toBeGreaterThanOrEqual(1);
+        expect(knownIps.some((entry) => entry.ipAddress === "203.0.113.42")).toBe(true);
+      } finally {
+        await scope.destroy();
+      }
     } finally {
       await app.stop();
     }

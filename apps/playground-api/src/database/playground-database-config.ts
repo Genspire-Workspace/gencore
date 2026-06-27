@@ -1,10 +1,10 @@
-// file: apps\playground-api\src\database\playground-database-config.ts
+﻿// file: apps\playground-api\src\database\playground-database-config.ts
 
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
 import type { MikroOrmExtensionOptions } from "@genspire/data-mikroorm";
 import { Migrator } from "@mikro-orm/migrations";
-import { AuthRefreshTokenEntity, AuthRoleEntity, AuthUserRoleEntity, AuthEventEntity, AuthBannedIpEntity } from "@genspire/auth";
+import { AuthRefreshTokenEntity, AuthRoleEntity, AuthUserRoleEntity, AuthEventEntity, AuthBannedIpEntity, AuthUserIpEntity } from "@genspire/auth";
 import { FileEntity } from "@genspire/storage";
 import { TodoEntity } from "../todos/todo.entity.js";
 import { AiSessionEntity } from "../ai/sessions/ai-session.entity.js";
@@ -42,7 +42,7 @@ export async function createPlaygroundMikroOrmConfig(
   const dbConfig = env.database;
   const runtimeDriver = dbConfig.provider === "postgres" ? "postgresql" as const : "libsql" as const;
 
-  const entities = [FileEntity, TodoEntity, AiSessionEntity, AiSessionMessageEntity, AiPromptEntity, AiSkillEntity, PlaygroundAuthUserEntity, AuthRefreshTokenEntity, AuthRoleEntity, AuthUserRoleEntity, AuthEventEntity, AuthBannedIpEntity];
+  const entities = [FileEntity, TodoEntity, AiSessionEntity, AiSessionMessageEntity, AiPromptEntity, AiSkillEntity, PlaygroundAuthUserEntity, AuthRefreshTokenEntity, AuthRoleEntity, AuthUserRoleEntity, AuthEventEntity, AuthBannedIpEntity, AuthUserIpEntity];
 
   const baseOptions = {
     runtimeDriver,

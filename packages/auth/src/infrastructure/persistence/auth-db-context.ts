@@ -1,4 +1,4 @@
-// file: packages/auth/src/infrastructure/persistence/auth-db-context.ts
+﻿// file: packages/auth/src/infrastructure/persistence/auth-db-context.ts
 
 import { Scoped } from "@genspire/core";
 import { EntityManagerProvider, MikroOrmDbContext } from "@genspire/data-mikroorm";
@@ -9,6 +9,7 @@ import { AuthRoleEntity } from "../../domain/entities/auth-role.entity.js";
 import { AuthUserRoleEntity } from "../../domain/entities/auth-user-role.entity.js";
 import { AuthEventEntity } from "../../domain/entities/auth-event.entity.js";
 import { AuthBannedIpEntity } from "../../domain/entities/auth-banned-ip.entity.js";
+import { AuthUserIpEntity } from "../../domain/entities/auth-user-ip.entity.js";
 import type { MikroOrmDbSet } from "@genspire/data-mikroorm";
 
 @Scoped()
@@ -23,6 +24,7 @@ export class AuthDbContext<
   readonly userRoles: MikroOrmDbSet<AuthUserRoleEntity, string>;
   readonly events: MikroOrmDbSet<AuthEventEntity, string>;
   readonly bannedIps: MikroOrmDbSet<AuthBannedIpEntity, string>;
+  readonly userIps: MikroOrmDbSet<AuthUserIpEntity, string>;
 
   constructor(
     entityManagerProvider: EntityManagerProvider,
@@ -37,5 +39,6 @@ export class AuthDbContext<
     this.userRoles = this.set<AuthUserRoleEntity, string>(AuthUserRoleEntity);
     this.events = this.set<AuthEventEntity, string>(AuthEventEntity);
     this.bannedIps = this.set<AuthBannedIpEntity, string>(AuthBannedIpEntity);
+    this.userIps = this.set<AuthUserIpEntity, string>(AuthUserIpEntity);
   }
 }

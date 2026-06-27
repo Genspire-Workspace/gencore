@@ -1,9 +1,10 @@
-// file: packages/auth/src/domain/entities/auth-user-role.entity.ts
+﻿// file: packages/auth/src/domain/entities/auth-user-role.entity.ts
 
 import { Entity, PrimaryKey, Property, Index } from "@mikro-orm/decorators";
+import type { IEntity } from "@genspire/data";
 
 @Entity({ tableName: "auth_user_roles" })
-export class AuthUserRoleEntity {
+export class AuthUserRoleEntity implements IEntity<string> {
   @PrimaryKey({ type: "string" })
   id!: string;
 

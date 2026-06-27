@@ -1,4 +1,4 @@
-// file: packages/auth/src/application/services/auth-ban.service.ts
+﻿// file: packages/auth/src/application/services/auth-ban.service.ts
 
 import { Scoped, GenError } from "@genspire/core";
 import { AuthDbContext } from "../../infrastructure/persistence/auth-db-context.js";
@@ -34,7 +34,8 @@ export class AuthBanService {
     ban.bannedByUserId = input.bannedByUserId ?? null;
     ban.expiresAt = input.expiresAt ?? null;
     ban.state = "active";
-    ban.bannedAt = new Date();
+    ban.createdAt = new Date();
+    ban.bannedAt = ban.createdAt;
     ban.metadata = input.metadata ?? null;
 
     await this.db.bannedIps.add(ban);

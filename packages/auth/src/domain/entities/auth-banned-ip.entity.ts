@@ -1,9 +1,10 @@
-// file: packages/auth/src/domain/entities/auth-banned-ip.entity.ts
+﻿// file: packages/auth/src/domain/entities/auth-banned-ip.entity.ts
 
 import { Entity, PrimaryKey, Property, Index } from "@mikro-orm/decorators";
+import type { IEntity } from "@genspire/data";
 
 @Entity({ tableName: "auth_banned_ips" })
-export class AuthBannedIpEntity {
+export class AuthBannedIpEntity implements IEntity<string, "active" | "revoked"> {
   @PrimaryKey({ type: "string" })
   id!: string;
 
@@ -16,6 +17,9 @@ export class AuthBannedIpEntity {
 
   @Property({ type: "string" })
   state: "active" | "revoked" = "active";
+
+  @Property({ type: "datetime" })
+  createdAt: Date = new Date();
 
   @Property({ type: "datetime" })
   @Index()

@@ -1,9 +1,10 @@
-// file: packages/auth/src/domain/entities/auth-event.entity.ts
+﻿// file: packages/auth/src/domain/entities/auth-event.entity.ts
 
 import { Entity, PrimaryKey, Property, Index } from "@mikro-orm/decorators";
+import type { IEntity } from "@genspire/data";
 
 @Entity({ tableName: "auth_events" })
-export class AuthEventEntity {
+export class AuthEventEntity implements IEntity<string> {
   @PrimaryKey({ type: "string" })
   id!: string;
 

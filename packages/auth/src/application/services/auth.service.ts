@@ -1,11 +1,13 @@
-// file: packages/auth/src/application/services/auth.service.ts
+﻿// file: packages/auth/src/application/services/auth.service.ts
 
-import { Scoped, GenError } from "@genspire/core";
+import { Scoped, GenError, EventBus } from "@genspire/core";
 import { AuthDbContext } from "../../infrastructure/persistence/auth-db-context.js";
 import { PasswordHasher } from "../hashing/password-hasher.js";
 import { TokenService } from "./token.service.js";
 import { AuthConfiguration } from "./auth-configuration.js";
 import { AuthEventService } from "./auth-event.service.js";
+import { AuthUserIpService } from "./auth-user-ip.service.js";
+import { AUTH_USER_REGISTERED_EVENT } from "../../domain/events/auth-events.js";
 import { AuthRefreshTokenEntity } from "../../domain/entities/auth-refresh-token.entity.js";
 import { AuthUserBase } from "../../domain/entities/auth-user.entity.js";
 import { jwtVerify } from "jose";
@@ -19,7 +21,7 @@ import type { IAuthSessionResult } from "../contracts/auth-session.result.js";
 
 @Scoped()
 export class AuthService {
-  static inject = [AuthDbContext, PasswordHasher, TokenService, AuthConfiguration, AuthEventService];
+  static inject = [AuthDbContext, PasswordHasher, TokenService, AuthConfiguration, AuthEventService, AuthUserIpService, EventBus];
 
   constructor(
     private readonly db: AuthDbContext,
@@ -27,6 +29,8 @@ export class AuthService {
     private readonly tokenService: TokenService,
     private readonly config: AuthConfiguration,
     private readonly events: AuthEventService,
+    private readonly userIpService: AuthUserIpService,
+    private readonly eventBus: EventBus,
   ) {}
 
   async register(input: IRegisterInput): Promise<IAuthSessionResult> {
@@ -65,6 +69,9 @@ export class AuthService {
     await this.db.saveChanges();
 
     await this.recordEvent({ eventType: "register_success", userId: user.id, email: user.email, metadata });
+
+    await this.recordKnownIp(user.id, metadata);
+    await this.emitUserRegistered(user, metadata);
 
     return await this.issueTokens(user, undefined, metadata);
   }
@@ -112,6 +119,8 @@ export class AuthService {
 
     await this.recordEvent({ eventType: "login_success", userId: user.id, email: user.email, metadata });
 
+    await this.recordKnownIp(user.id, metadata);
+
     return await this.issueTokens(user, undefined, metadata);
   }
 
@@ -158,6 +167,8 @@ export class AuthService {
     await this.db.refreshTokens.update(storedToken);
 
     await this.recordEvent({ eventType: "refresh_success", userId: user.id, email: user.email, metadata });
+
+    await this.recordKnownIp(user.id, metadata);
 
     return await this.issueTokens(user, storedToken, metadata);
   }
@@ -306,6 +317,40 @@ export class AuthService {
       });
     } catch {
       // Event logging should not break auth flow
+    }
+  }
+
+  private async recordKnownIp(
+    userId: string,
+    metadata?: IAuthRequestMetadata,
+  ): Promise<void> {
+    try {
+      await this.userIpService.recordKnownIp({ userId, metadata });
+    } catch {
+      // Known-IP tracking must not break the auth flow.
+    }
+  }
+
+  private async emitUserRegistered(
+    user: AuthUserBase,
+    metadata?: IAuthRequestMetadata,
+  ): Promise<void> {
+    try {
+      await this.eventBus.emit(
+        AUTH_USER_REGISTERED_EVENT,
+        {
+          userId: user.id,
+          email: user.email,
+          displayName: user.displayName,
+          emailConfirmed: user.emailConfirmed,
+          ipAddress: metadata?.ipAddress ?? null,
+          userAgent: metadata?.userAgent ?? null,
+          registeredAt: user.createdAt.toISOString(),
+        },
+        { source: "auth", userId: user.id },
+      );
+    } catch {
+      // Event dispatch must not break registration.
     }
   }
 

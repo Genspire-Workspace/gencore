@@ -1,4 +1,4 @@
-// file: packages/auth/src/index.ts
+﻿// file: packages/auth/src/index.ts
 
 // Domain
 export { AuthUserBase, AuthUserEntity } from "./domain/entities/auth-user.entity.js";
@@ -7,6 +7,13 @@ export { AuthRoleEntity } from "./domain/entities/auth-role.entity.js";
 export { AuthUserRoleEntity } from "./domain/entities/auth-user-role.entity.js";
 export { AuthEventEntity } from "./domain/entities/auth-event.entity.js";
 export { AuthBannedIpEntity } from "./domain/entities/auth-banned-ip.entity.js";
+export { AuthUserIpEntity } from "./domain/entities/auth-user-ip.entity.js";
+
+export {
+  AUTH_USER_REGISTERED_EVENT,
+  type IAuthUserRegisteredEventPayload,
+  type AuthDomainEventName,
+} from "./domain/events/auth-events.js";
 
 export type { AuthEventType } from "./domain/types/auth-event-types.js";
 export type { AuthPrincipal } from "./domain/types/auth-principal.js";
@@ -19,6 +26,8 @@ export { AuthService } from "./application/services/auth.service.js";
 export { AuthRoleService } from "./application/services/auth-role.service.js";
 export { AuthEventService } from "./application/services/auth-event.service.js";
 export { AuthBanService } from "./application/services/auth-ban.service.js";
+export { AuthUserIpService } from "./application/services/auth-user-ip.service.js";
+export type { IRecordKnownIpInput } from "./application/services/auth-user-ip.service.js";
 export { TokenService } from "./application/services/token.service.js";
 export { AuthConfiguration } from "./application/services/auth-configuration.js";
 

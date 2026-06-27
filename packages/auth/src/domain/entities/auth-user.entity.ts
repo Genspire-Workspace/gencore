@@ -1,9 +1,10 @@
-// file: packages/auth/src/domain/entities/auth-user.entity.ts
+﻿// file: packages/auth/src/domain/entities/auth-user.entity.ts
 
 import { Entity, PrimaryKey, Property, Unique, Index } from "@mikro-orm/decorators";
+import type { IEntity } from "@genspire/data";
 import type { AuthUserState } from "../types/auth-user-state.js";
 
-export abstract class AuthUserBase {
+export abstract class AuthUserBase implements IEntity<string, AuthUserState> {
   @PrimaryKey({ type: "string" })
   id!: string;
 
