@@ -1,12 +1,12 @@
 // file: apps\playground-ai\verify-ai-context.ts
 
-import { AiContext } from "../../packages/ai/src/context/index.js";
-import type { IChatGenerationRequest } from "../../packages/ai/src/chat/chat-generation-request.js";
-import type { IAiToolCall } from "../../packages/ai/src/tools/ai-tool-call.js";
-import { AiToolCallingManager } from "../../packages/ai/src/tools/ai-tool-calling-manager.js";
-import { defineAiTool } from "../../packages/ai/src/tools/define-ai-tool.js";
-import { AiToolRegistry } from "../../packages/ai/src/tools/ai-tool-registry.js";
-import { AiToolResolver } from "../../packages/ai/src/tools/ai-tool-resolver.js";
+import { AiContext } from "../../packages/ai/src/application/context/index.js";
+import type { IChatGenerationRequest } from "../../packages/ai/src/domain/chat/chat-generation-request.js";
+import type { IAiToolCall } from "../../packages/ai/src/domain/tools/ai-tool-call.js";
+import { AiToolCallingManager } from "../../packages/ai/src/application/tools/ai-tool-calling-manager.js";
+import { defineAiTool } from "../../packages/ai/src/domain/tools/define-ai-tool.js";
+import { AiToolRegistry } from "../../packages/ai/src/application/tools/ai-tool-registry.js";
+import { AiToolResolver } from "../../packages/ai/src/application/tools/ai-tool-resolver.js";
 import {
   applyChunkToSummary,
   createAiVerifyLogger,

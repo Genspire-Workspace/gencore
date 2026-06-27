@@ -1,8 +1,8 @@
 // file: apps\playground-ai\shared\verify-formatters.ts
 
-import type { IChatGenerationChunk } from "../../../packages/ai/src/chat/chat-generation-chunk.js";
-import type { IChatGenerationRequest } from "../../../packages/ai/src/chat/chat-generation-request.js";
-import type { IEmbeddingGenerationRequest } from "../../../packages/ai/src/embeddings/embedding-generation-request.js";
+import type { IChatGenerationChunk } from "../../../packages/ai/src/domain/chat/chat-generation-chunk.js";
+import type { IChatGenerationRequest } from "../../../packages/ai/src/domain/chat/chat-generation-request.js";
+import type { IEmbeddingGenerationRequest } from "../../../packages/ai/src/domain/embeddings/embedding-generation-request.js";
 import type { IAiVerifyLogger } from "./verify-types.js";
 
 export function logChatOrEmbeddingRequest(

@@ -1,9 +1,9 @@
-// file: packages\ai\src\extension\ai-extension.ts
+// file: packages/ai/src/extension/ai-extension.ts
 
 import type { GenExtension } from "@genspire/core";
-import type { IAiClient } from "../clients/ai-client.js";
-import { AiClientRegistry } from "../clients/ai-client-registry.js";
-import { AiService } from "../services/ai-service.js";
+import type { IAiClient } from "../providers/ai-provider-client.js";
+import { AiClientRegistry } from "../providers/ai-provider-client-registry.js";
+import { AiService } from "../application/services/ai-service.js";
 
 export interface IAiDefaults {
   chatProvider?: string;

@@ -1,6 +1,6 @@
 // file: apps\playground-ai\shared\verify-types.ts
 
-import type { AiService } from "../../../packages/ai/src/services/ai-service.js";
+import type { AiService } from "../../../packages/ai/src/application/services/ai-service.js";
 
 export type AiVerifySuite =
   | "generation"

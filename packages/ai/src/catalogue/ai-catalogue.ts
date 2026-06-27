@@ -1,8 +1,8 @@
-// file: packages\ai\src\catalogue\ai-catalogue.ts
+// file: packages/ai/src/catalogue/ai-catalogue.ts
 
-import type { IAiLab } from "../common/ai-lab.js";
-import type { IAiModel } from "../common/ai-model.js";
-import type { IAiProvider } from "../common/ai-provider.js";
+import type { IAiLab } from "../domain/models/ai-lab.js";
+import type { IAiModel } from "../domain/models/ai-model.js";
+import type { IAiProvider } from "../domain/models/ai-provider.js";
 
 export interface IAiCatalogueData {
   providers: Record<string, IAiProvider>;

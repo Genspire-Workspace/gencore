@@ -1,13 +1,13 @@
 // file: apps\playground-api\src\ai\shared\ai-chat-helpers.ts
 
-import type { AiMessageContent } from "../../../../../packages/ai/src/common/ai-content-part.js";
-import { AiContext } from "../../../../../packages/ai/src/context/index.js";
-import type { IChatGenerationRequest } from "../../../../../packages/ai/src/chat/chat-generation-request.js";
-import type { IChatGenerationSettings } from "../../../../../packages/ai/src/chat/chat-generation-settings.js";
-import type { IChatMessage } from "../../../../../packages/ai/src/chat/chat-message.js";
-import type { IAiToolCall } from "../../../../../packages/ai/src/tools/ai-tool-call.js";
-import type { IAiToolResult } from "../../../../../packages/ai/src/tools/ai-tool-result.js";
-import type { IAiTool } from "../../../../../packages/ai/src/tools/ai-tool.js";
+import type { AiMessageContent } from "../../../../../packages/ai/src/domain/messages/ai-content-part.js";
+import { AiContext } from "../../../../../packages/ai/src/application/context/index.js";
+import type { IChatGenerationRequest } from "../../../../../packages/ai/src/domain/chat/chat-generation-request.js";
+import type { IChatGenerationSettings } from "../../../../../packages/ai/src/domain/chat/chat-generation-settings.js";
+import type { IChatMessage } from "../../../../../packages/ai/src/domain/chat/chat-message.js";
+import type { IAiToolCall } from "../../../../../packages/ai/src/domain/tools/ai-tool-call.js";
+import type { IAiToolResult } from "../../../../../packages/ai/src/domain/tools/ai-tool-result.js";
+import type { IAiTool } from "../../../../../packages/ai/src/domain/tools/ai-tool.js";
 import { HttpError } from "@genspire/server";
 import type { AiChatRequestDto, AiChatSettingsDto, AiChatToolDto, AiToolExecutionModeDto } from "../generation/ai.dto.js";
 import type { IAiPlaygroundRuntime } from "../runtime/ai-service-factory.js";

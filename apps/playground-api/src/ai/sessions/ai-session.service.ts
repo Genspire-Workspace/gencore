@@ -26,9 +26,9 @@ import type {
   UpdateAiSessionRequestDto,
 } from "./ai-session.dto.js";
 import type { AiChatRequestDto } from "../generation/ai.dto.js";
-import type { IChatGenerationChunk } from "../../../../../packages/ai/src/chat/chat-generation-chunk.js";
-import type { IChatGenerationResponse } from "../../../../../packages/ai/src/chat/chat-generation-response.js";
-import type { IChatMessage } from "../../../../../packages/ai/src/chat/chat-message.js";
+import type { IChatGenerationChunk } from "../../../../../packages/ai/src/domain/chat/chat-generation-chunk.js";
+import type { IChatGenerationResponse } from "../../../../../packages/ai/src/domain/chat/chat-generation-response.js";
+import type { IChatMessage } from "../../../../../packages/ai/src/domain/chat/chat-message.js";
 
 const TITLE_MAX_LENGTH = 80;
 const STREAM_HEARTBEAT_INTERVAL_MS = Number(

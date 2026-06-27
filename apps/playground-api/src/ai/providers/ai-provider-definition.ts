@@ -1,4 +1,4 @@
-import type { IOpenAICompatibleClientOptions } from "../../../../../packages/ai/src/clients/openai-compatible/index.js";
+import type { IOpenAICompatibleClientOptions } from "../../../../../packages/ai/src/providers/openai-compatible/index.js";
 
 export interface IAiPlaygroundProviderInfo {
   id: string;

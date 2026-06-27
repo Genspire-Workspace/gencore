@@ -1,11 +1,11 @@
 import { Scoped } from "@genspire/core";
 import type { ICurrentUser } from "@genspire/auth";
 import { HttpError } from "@genspire/server";
-import { AiPromptRenderer } from "../../../../../packages/ai/src/prompts/ai-prompt-renderer.js";
-import type { IChatGenerationRequest } from "../../../../../packages/ai/src/chat/chat-generation-request.js";
-import type { IChatMessage } from "../../../../../packages/ai/src/chat/chat-message.js";
-import type { IAiTool } from "../../../../../packages/ai/src/tools/ai-tool.js";
-import type { IChatGenerationSettings } from "../../../../../packages/ai/src/chat/chat-generation-settings.js";
+import { AiPromptRenderer } from "../../../../../packages/ai/src/application/prompts/ai-prompt-renderer.js";
+import type { IChatGenerationRequest } from "../../../../../packages/ai/src/domain/chat/chat-generation-request.js";
+import type { IChatMessage } from "../../../../../packages/ai/src/domain/chat/chat-message.js";
+import type { IAiTool } from "../../../../../packages/ai/src/domain/tools/ai-tool.js";
+import type { IChatGenerationSettings } from "../../../../../packages/ai/src/domain/chat/chat-generation-settings.js";
 import { aiPlaygroundRuntime, type IAiPlaygroundRuntime } from "../runtime/ai-service-factory.js";
 import type { AiChatRequestDto, AiChatSettingsDto, AiChatToolDto, AiToolExecutionModeDto } from "./ai.dto.js";
 import { AiPromptService } from "../prompts/ai-prompt.service.js";

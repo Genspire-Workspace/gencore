@@ -1,4 +1,4 @@
-// file: packages\ai\src\errors\ai-error.ts
+// file: packages/ai/src/errors/ai-error.ts
 
 import { GenError } from "@genspire/core";
 

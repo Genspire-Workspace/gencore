@@ -1,9 +1,9 @@
 import { GenError, Scoped } from "@genspire/core";
 import type { ICurrentUser } from "@genspire/auth";
 import { HttpError } from "@genspire/server";
-import { defineAiPrompt } from "../../../../../packages/ai/src/prompts/define-ai-prompt.js";
-import type { AiPromptTemplate, IAiPrompt, IAiPromptVariable } from "../../../../../packages/ai/src/prompts/ai-prompt.js";
-import { AiPromptRenderer } from "../../../../../packages/ai/src/prompts/ai-prompt-renderer.js";
+import { defineAiPrompt } from "../../../../../packages/ai/src/domain/prompts/define-ai-prompt.js";
+import type { AiPromptTemplate, IAiPrompt, IAiPromptVariable } from "../../../../../packages/ai/src/domain/prompts/ai-prompt.js";
+import { AiPromptRenderer } from "../../../../../packages/ai/src/application/prompts/ai-prompt-renderer.js";
 import { PlaygroundDbContext } from "../../database/playground-db-context.js";
 import { AiPromptEntity, type AiPromptVisibility } from "./ai-prompt.entity.js";
 import type {

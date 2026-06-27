@@ -1,12 +1,12 @@
 // file: apps\playground-ai\verify-generation.ts
 
-import type { IChatGenerationChunk } from "../../packages/ai/src/chat/chat-generation-chunk.js";
-import type { IChatGenerationRequest } from "../../packages/ai/src/chat/chat-generation-request.js";
-import type { IEmbeddingGenerationRequest } from "../../packages/ai/src/embeddings/embedding-generation-request.js";
-import { AiPromptRenderer } from "../../packages/ai/src/prompts/ai-prompt-renderer.js";
-import { defineAiPrompt } from "../../packages/ai/src/prompts/define-ai-prompt.js";
-import { AiSkillRegistry } from "../../packages/ai/src/skills/ai-skill-registry.js";
-import { defineAiSkill } from "../../packages/ai/src/skills/define-ai-skill.js";
+import type { IChatGenerationChunk } from "../../packages/ai/src/domain/chat/chat-generation-chunk.js";
+import type { IChatGenerationRequest } from "../../packages/ai/src/domain/chat/chat-generation-request.js";
+import type { IEmbeddingGenerationRequest } from "../../packages/ai/src/domain/embeddings/embedding-generation-request.js";
+import { AiPromptRenderer } from "../../packages/ai/src/application/prompts/ai-prompt-renderer.js";
+import { defineAiPrompt } from "../../packages/ai/src/domain/prompts/define-ai-prompt.js";
+import { AiSkillRegistry } from "../../packages/ai/src/application/skills/ai-skill-registry.js";
+import { defineAiSkill } from "../../packages/ai/src/domain/skills/define-ai-skill.js";
 import {
   applyChunkToSummary,
   createAiVerifyLogger,

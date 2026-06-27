@@ -4,7 +4,13 @@
   "type": "module",
   "main": "./src/index.ts",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./domain": "./src/domain.ts",
+    "./application": "./src/application.ts",
+    "./providers": "./src/providers.ts",
+    "./catalogue": "./src/catalogue.ts",
+    "./providers/ollama": "./src/providers/ollama/index.ts",
+    "./providers/openai-compatible": "./src/providers/openai-compatible/index.ts"
   },
   "scripts": {
     "generate-models": "bun run scripts/generate-models.ts"

@@ -1,8 +1,8 @@
 // file: apps\playground-ai\shared\verify-runtime.ts
 
-import { AiClientRegistry } from "../../../packages/ai/src/clients/ai-client-registry.js";
-import { AiService } from "../../../packages/ai/src/services/ai-service.js";
-import { OpenAICompatibleClient } from "../../../packages/ai/src/clients/openai-compatible/index.js";
+import { AiClientRegistry } from "../../../packages/ai/src/providers/ai-provider-client-registry.js";
+import { AiService } from "../../../packages/ai/src/application/services/ai-service.js";
+import { OpenAICompatibleClient } from "../../../packages/ai/src/providers/openai-compatible/index.js";
 import { shouldRunScenario } from "./verify-args.js";
 import type {
   IAiVerifyLogger,
@@ -35,7 +35,7 @@ export async function createAiVerifyScenarios(
     "gemma4:12b";
 
   try {
-    const { OllamaClient } = await import("../../../packages/ai/src/clients/ollama/index.js");
+    const { OllamaClient } = await import("../../../packages/ai/src/providers/ollama/index.js");
 
     const ollamaClient = new OllamaClient({
       id: "ollama",

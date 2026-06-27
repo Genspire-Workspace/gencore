@@ -2,14 +2,14 @@
 
 import { mkdir, readdir, writeFile } from "node:fs/promises";
 import path from "node:path";
-import type { IChatGenerationChunk } from "../../packages/ai/src/chat/chat-generation-chunk.js";
-import type { IChatGenerationRequest } from "../../packages/ai/src/chat/chat-generation-request.js";
-import type { IAiMessage } from "../../packages/ai/src/common/ai-message.js";
-import { AiPromptRenderer } from "../../packages/ai/src/prompts/ai-prompt-renderer.js";
+import type { IChatGenerationChunk } from "../../packages/ai/src/domain/chat/chat-generation-chunk.js";
+import type { IChatGenerationRequest } from "../../packages/ai/src/domain/chat/chat-generation-request.js";
+import type { IAiMessage } from "../../packages/ai/src/domain/messages/ai-message.js";
+import { AiPromptRenderer } from "../../packages/ai/src/application/prompts/ai-prompt-renderer.js";
 import {
   loadAiSkillFromDirectory,
-} from "../../packages/ai/src/skills/ai-skill-loader.js";
-import { AiSkillRegistry } from "../../packages/ai/src/skills/ai-skill-registry.js";
+} from "../../packages/ai/src/application/skills/ai-skill-loader.js";
+import { AiSkillRegistry } from "../../packages/ai/src/application/skills/ai-skill-registry.js";
 import {
   applyChunkToSummary,
   createAiVerifyLogger,

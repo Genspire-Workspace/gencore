@@ -1,7 +1,7 @@
 // file: apps\skills\computer-use\scripts\read.ts
 
 import path from "node:path";
-import { defineAiTool } from "../../../../packages/ai/src/tools/define-ai-tool.js";
+import { defineAiTool } from "../../../../packages/ai/src/domain/tools/define-ai-tool.js";
 import {
   readFileStats,
   resolveTrustedDirectory,

@@ -1,9 +1,9 @@
 // file: packages\ai\scripts\models-dev\normalize-models-dev.ts
 
-import type { AiClientKind } from "../../src/clients/ai-client-kind.js";
-import type { IAiLab } from "../../src/common/ai-lab.js";
-import type { AiModelModality, IAiModel, IAiModelBenchmark, IAiModelCost, IAiModelInterleaved, IAiModelLimit, IAiModelLink, IAiModelModalities } from "../../src/common/ai-model.js";
-import type { IAiProvider, AiProviderKind } from "../../src/common/ai-provider.js";
+import type { AiClientKind } from "../../src/providers/ai-provider-client-kind.js";
+import type { IAiLab } from "../../src/domain/models/ai-lab.js";
+import type { AiModelModality, IAiModel, IAiModelBenchmark, IAiModelCost, IAiModelInterleaved, IAiModelLimit, IAiModelLink, IAiModelModalities } from "../../src/domain/models/ai-model.js";
+import type { IAiProvider, AiProviderKind } from "../../src/domain/models/ai-provider.js";
 import type { IModelsDevFetchResult } from "./fetch-models-dev.js";
 import { asBoolean, asNumber, asString, asStringArray, isRecord, toSortedRecord } from "./utils.js";
 

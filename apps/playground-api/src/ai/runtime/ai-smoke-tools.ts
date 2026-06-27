@@ -1,6 +1,6 @@
-import type { IAiTool } from "../../../../../packages/ai/src/tools/ai-tool.js";
-import { defineAiTool } from "../../../../../packages/ai/src/tools/define-ai-tool.js";
-import { AiToolRegistry } from "../../../../../packages/ai/src/tools/ai-tool-registry.js";
+import type { IAiTool } from "../../../../../packages/ai/src/domain/tools/ai-tool.js";
+import { defineAiTool } from "../../../../../packages/ai/src/domain/tools/define-ai-tool.js";
+import { AiToolRegistry } from "../../../../../packages/ai/src/application/tools/ai-tool-registry.js";
 
 function toRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === "object"

@@ -2,7 +2,7 @@
 
 import path from "node:path";
 import { AiError } from "../../../../packages/ai/src/errors/ai-error.js";
-import { defineAiTool } from "../../../../packages/ai/src/tools/define-ai-tool.js";
+import { defineAiTool } from "../../../../packages/ai/src/domain/tools/define-ai-tool.js";
 import {
   AUDIO_EXTENSIONS,
   resolveTrustedDirectory,

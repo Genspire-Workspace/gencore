@@ -1,7 +1,7 @@
-import { AiClientRegistry } from "../../../../../packages/ai/src/clients/ai-client-registry.js";
-import { OpenAICompatibleClient } from "../../../../../packages/ai/src/clients/openai-compatible/index.js";
-import { AiService } from "../../../../../packages/ai/src/services/ai-service.js";
-import { AiToolRegistry } from "../../../../../packages/ai/src/tools/ai-tool-registry.js";
+import { AiClientRegistry } from "../../../../../packages/ai/src/providers/ai-provider-client-registry.js";
+import { OpenAICompatibleClient } from "../../../../../packages/ai/src/providers/openai-compatible/index.js";
+import { AiService } from "../../../../../packages/ai/src/application/services/ai-service.js";
+import { AiToolRegistry } from "../../../../../packages/ai/src/application/tools/ai-tool-registry.js";
 import {
   createAiPlaygroundProviderDefinitions,
   type IAiPlaygroundProviderInfo,

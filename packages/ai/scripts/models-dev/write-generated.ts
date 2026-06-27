@@ -2,9 +2,9 @@
 
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
-import type { IAiLab } from "../../src/common/ai-lab.js";
-import type { IAiModel } from "../../src/common/ai-model.js";
-import type { IAiProvider } from "../../src/common/ai-provider.js";
+import type { IAiLab } from "../../src/domain/models/ai-lab.js";
+import type { IAiModel } from "../../src/domain/models/ai-model.js";
+import type { IAiProvider } from "../../src/domain/models/ai-provider.js";
 import type { IModelsDevNormalizedCatalogue } from "./normalize-models-dev.js";
 import { stableStringify, toSortedRecord } from "./utils.js";
 
@@ -23,9 +23,9 @@ export async function writeGeneratedCatalogue(
   const labs = toSortedRecord(catalogue.labs);
 
   await Promise.all([
-    writeTypedRecord<IAiProvider>("providers.generated.ts", "IAiProvider", "AI_PROVIDERS", "../../common/ai-provider.js", providers),
-    writeTypedRecord<IAiModel>("models.generated.ts", "IAiModel", "AI_MODELS", "../../common/ai-model.js", models),
-    writeTypedRecord<IAiLab>("labs.generated.ts", "IAiLab", "AI_LABS", "../../common/ai-lab.js", labs),
+    writeTypedRecord<IAiProvider>("providers.generated.ts", "IAiProvider", "AI_PROVIDERS", "../../domain/models/ai-provider.js", providers),
+    writeTypedRecord<IAiModel>("models.generated.ts", "IAiModel", "AI_MODELS", "../../domain/models/ai-model.js", models),
+    writeTypedRecord<IAiLab>("labs.generated.ts", "IAiLab", "AI_LABS", "../../domain/models/ai-lab.js", labs),
     writeFile(
       path.join(GENERATED_DIR, "catalogue.generated.ts"),
       `${HEADER}

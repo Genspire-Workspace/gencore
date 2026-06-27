@@ -1,14 +1,14 @@
 // file: apps\playground-ai\shared\verify-api-tools.ts
 
-import type { IAiTool } from "../../../packages/ai/src/tools/ai-tool.js";
-import type { IAiToolCall } from "../../../packages/ai/src/tools/ai-tool-call.js";
-import type { IAiToolResult } from "../../../packages/ai/src/tools/ai-tool-result.js";
-import { AiToolExecutor } from "../../../packages/ai/src/tools/ai-tool-executor.js";
+import type { IAiTool } from "../../../packages/ai/src/domain/tools/ai-tool.js";
+import type { IAiToolCall } from "../../../packages/ai/src/domain/tools/ai-tool-call.js";
+import type { IAiToolResult } from "../../../packages/ai/src/domain/tools/ai-tool-result.js";
+import { AiToolExecutor } from "../../../packages/ai/src/application/tools/ai-tool-executor.js";
 import {
   createToolCallFromUnknown,
   createToolResultFromUnknown,
   isRecord,
-} from "../../../packages/ai/src/tools/ai-tool-utils.js";
+} from "../../../packages/ai/src/application/tools/ai-tool-utils.js";
 
 export type AiApiToolExecutionMode = "client" | "server";
 

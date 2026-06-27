@@ -7,7 +7,7 @@ import {
   RequestContext,
 } from "@genspire/server";
 import { getCurrentUser } from "@genspire/auth";
-import type { IChatGenerationChunk } from "../../../../../packages/ai/src/chat/chat-generation-chunk.js";
+import type { IChatGenerationChunk } from "../../../../../packages/ai/src/domain/chat/chat-generation-chunk.js";
 import {
   AiChatRequestDto,
   AiChatResponseDto,
