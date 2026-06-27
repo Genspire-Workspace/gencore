@@ -1,10 +1,10 @@
 // file: packages\auth\src\auth.test.ts
 
 import { describe, expect, test } from "bun:test";
-import { Argon2PasswordHasher } from "./hashing/argon2-password-hasher.js";
-import { TokenService } from "./services/token.service.js";
-import { AuthConfiguration } from "./services/auth-configuration.js";
-import { AuthUserEntity } from "./entities/auth-user.entity.js";
+import { Argon2PasswordHasher } from "./application/hashing/argon2-password-hasher.js";
+import { TokenService } from "./application/services/token.service.js";
+import { AuthConfiguration } from "./application/services/auth-configuration.js";
+import { AuthUserEntity } from "./domain/entities/auth-user.entity.js";
 
 describe("Password hasher", () => {
   test("hashes and verifies a password", async () => {

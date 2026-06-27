@@ -1,61 +1,65 @@
-// file: packages\auth\src\index.ts
+// file: packages/auth/src/index.ts
 
-// Entities
-export { AuthUserBase, AuthUserEntity } from "./entities/auth-user.entity.js";
-export { AuthRefreshTokenEntity } from "./entities/auth-refresh-token.entity.js";
-export { AuthRoleEntity } from "./entities/auth-role.entity.js";
-export { AuthUserRoleEntity } from "./entities/auth-user-role.entity.js";
-export { AuthEventEntity } from "./entities/auth-event.entity.js";
-export { AuthBannedIpEntity } from "./entities/auth-banned-ip.entity.js";
+// Domain
+export { AuthUserBase, AuthUserEntity } from "./domain/entities/auth-user.entity.js";
+export { AuthRefreshTokenEntity } from "./domain/entities/auth-refresh-token.entity.js";
+export { AuthRoleEntity } from "./domain/entities/auth-role.entity.js";
+export { AuthUserRoleEntity } from "./domain/entities/auth-user-role.entity.js";
+export { AuthEventEntity } from "./domain/entities/auth-event.entity.js";
+export { AuthBannedIpEntity } from "./domain/entities/auth-banned-ip.entity.js";
 
-// Types
-export type { IAuthExtensionOptions as AuthExtensionOptions, RequiredAuthExtensionOptions } from "./types/auth-options.js";
-export type { AuthPrincipal } from "./types/auth-principal.js";
-export type { ICurrentUser } from "./types/current-user.js";
-export type { IAuthRequestMetadata } from "./types/auth-request-metadata.js";
-export type { AuthEventType } from "./types/auth-event-types.js";
-export type { AuthUserState } from "./types/auth-user-state.js";
-export { getAuthRequestMetadata } from "./types/auth-request-metadata.js";
+export type { AuthEventType } from "./domain/types/auth-event-types.js";
+export type { AuthPrincipal } from "./domain/types/auth-principal.js";
+export type { AuthUserState } from "./domain/types/auth-user-state.js";
+export { CURRENT_USER_KEY } from "./domain/types/current-user.js";
+export type { ICurrentUser } from "./domain/types/current-user.js";
 
-// DTOs
-export { RegisterRequestDto as RegisterRequest } from "./dtos/register-request.dto.js";
-export { LoginRequestDto as LoginRequest } from "./dtos/login-request.dto.js";
-export { RefreshRequestDto as RefreshRequest } from "./dtos/refresh-request.dto.js";
-export { LogoutRequestDto as LogoutRequest } from "./dtos/logout-request.dto.js";
-export { AuthUserResponseDto as AuthUserResponse } from "./dtos/auth-user.dto.js";
-export { AuthResponseDto as AuthResponse } from "./dtos/auth-response.dto.js";
-export { RoleResponseDto } from "./dtos/role.dto.js";
-export { CreateRoleRequestDto } from "./dtos/role.dto.js";
-export { UpdateRoleRequestDto } from "./dtos/role.dto.js";
-export { AssignRoleRequestDto } from "./dtos/role.dto.js";
-export { UserRolesResponseDto } from "./dtos/role.dto.js";
+// Application
+export { AuthService } from "./application/services/auth.service.js";
+export { AuthRoleService } from "./application/services/auth-role.service.js";
+export { AuthEventService } from "./application/services/auth-event.service.js";
+export { AuthBanService } from "./application/services/auth-ban.service.js";
+export { TokenService } from "./application/services/token.service.js";
+export { AuthConfiguration } from "./application/services/auth-configuration.js";
 
-// Services
-export { AuthService } from "./services/auth.service.js";
-export { AuthRoleService } from "./services/auth-role.service.js";
-export { AuthEventService } from "./services/auth-event.service.js";
-export { AuthBanService } from "./services/auth-ban.service.js";
-export { TokenService } from "./services/token.service.js";
-export { AuthConfiguration } from "./services/auth-configuration.js";
+export { PasswordHasher } from "./application/hashing/password-hasher.js";
+export { Argon2PasswordHasher } from "./application/hashing/argon2-password-hasher.js";
 
-// Current user
-export { getCurrentUser, requireCurrentUser } from "./services/current-user.js";
+export { authExtension } from "./application/auth-extension.js";
 
-// Middleware
-export { bearerAuthMiddleware } from "./middleware/bearer-auth.middleware.js";
-export { authGuardMiddleware } from "./middleware/auth-guard.middleware.js";
-export { ipBanMiddleware } from "./middleware/ip-ban.middleware.js";
+export type { IAuthExtensionOptions as AuthExtensionOptions, RequiredAuthExtensionOptions } from "./application/contracts/auth-options.js";
+export type { IAuthRequestMetadata } from "./application/contracts/auth-request-metadata.js";
+export type { IRegisterInput } from "./application/contracts/register.input.js";
+export type { ILoginInput } from "./application/contracts/login.input.js";
+export type { IRefreshInput } from "./application/contracts/refresh.input.js";
+export type { ILogoutInput } from "./application/contracts/logout.input.js";
+export type { IAuthUserResult } from "./application/contracts/auth-user.result.js";
+export type { IAuthSessionResult } from "./application/contracts/auth-session.result.js";
 
-// Hashing
-export { PasswordHasher } from "./hashing/password-hasher.js";
-export { Argon2PasswordHasher } from "./hashing/argon2-password-hasher.js";
+// Infrastructure
+export { AuthDbContext } from "./infrastructure/persistence/auth-db-context.js";
 
-// Context
-export { AuthDbContext } from "./context/auth-db-context.js";
+// Server (re-exported for backward compatibility; prefer `@genspire/auth/server`)
+export { AuthController } from "./server/controllers/auth.controller.js";
+export { RoleController } from "./server/controllers/role.controller.js";
+export { bearerAuthMiddleware } from "./server/middleware/bearer-auth.middleware.js";
+export { authGuardMiddleware } from "./server/middleware/auth-guard.middleware.js";
+export { ipBanMiddleware } from "./server/middleware/ip-ban.middleware.js";
+export { getCurrentUser, requireCurrentUser } from "./server/current-user.js";
+export { getAuthRequestMetadata } from "./server/auth-request-metadata.js";
+export { authServerExtension, authServerMiddlewares } from "./server/auth-server-extension.js";
+export type { IAuthServerExtensionOptions } from "./server/auth-server-extension.js";
 
-// Controller
-export { AuthController } from "./controllers/auth.controller.js";
-export { RoleController } from "./controllers/role.controller.js";
-
-// Extension
-export { authExtension } from "./extension/auth-extension.js";
+export { RegisterRequestDto as RegisterRequest } from "./server/dtos/register-request.dto.js";
+export { LoginRequestDto as LoginRequest } from "./server/dtos/login-request.dto.js";
+export { RefreshRequestDto as RefreshRequest } from "./server/dtos/refresh-request.dto.js";
+export { LogoutRequestDto as LogoutRequest } from "./server/dtos/logout-request.dto.js";
+export { AuthUserResponseDto as AuthUserResponse } from "./server/dtos/auth-user.dto.js";
+export { AuthResponseDto as AuthResponse } from "./server/dtos/auth-response.dto.js";
+export {
+  RoleResponseDto,
+  CreateRoleRequestDto,
+  UpdateRoleRequestDto,
+  AssignRoleRequestDto,
+  UserRolesResponseDto,
+} from "./server/dtos/role.dto.js";

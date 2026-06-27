@@ -9,7 +9,7 @@ import {
 } from "@genspire/data-mikroorm";
 import { serverExtension, Server, rateLimitMiddleware, type RateLimitOptions } from "@genspire/server";
 import { swaggerExtension } from "@genspire/swagger";
-import { authExtension, AuthConfiguration, AuthController, RoleController, bearerAuthMiddleware, authGuardMiddleware, ipBanMiddleware } from "@genspire/auth";
+import { authExtension, AuthConfiguration, authServerMiddlewares, authServerExtension } from "@genspire/auth";
 import { storageExtension, FileController, StorageDbContext } from "@genspire/storage";
 import path from "node:path";
 import { mkdirSync } from "node:fs";
@@ -118,9 +118,7 @@ export async function createPlaygroundApp(
       },
       middlewares: [
         rateLimitMiddleware({ windowMs: 60_000, max: 120, ...options.rateLimit }),
-        ipBanMiddleware(),
-        bearerAuthMiddleware(authConfig),
-        authGuardMiddleware(),
+        ...authServerMiddlewares(authConfig),
       ],
     }),
   );
@@ -133,7 +131,9 @@ export async function createPlaygroundApp(
     }),
   );
 
-  app.get(Server).registerControllers(FileController, HealthController, AiChatController, AiEmbeddingController, AiProviderController, AiSessionController, AiPromptController, AiSkillController, AuthController, RoleController, AuthActivityController, AuthBanController, TodoController);
+  await app.use(authServerExtension());
+
+  app.get(Server).registerControllers(FileController, HealthController, AiChatController, AiEmbeddingController, AiProviderController, AiSessionController, AiPromptController, AiSkillController, AuthActivityController, AuthBanController, TodoController);
 
   return app;
 }
