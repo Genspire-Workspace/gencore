@@ -331,7 +331,7 @@ export class OpenAICompatibleChatGenerator implements IChatGenerator {
         return {
           type: "image" as const,
           image: part.data,
-          mediaType: part.mimeType,
+          mediaType: part.mediaType,
         };
       case "tool_call":
         return {
@@ -349,6 +349,13 @@ export class OpenAICompatibleChatGenerator implements IChatGenerator {
             typeof part.content === "string"
               ? { type: "text" as const, value: part.content }
               : { type: "json" as const, value: part.content },
+        };
+      case "file":
+        return {
+          type: "file" as const,
+          data: part.data,
+          mediaType: part.mediaType,
+          ...(part.filename ? { filename: part.filename } : {}),
         };
       default:
         return { type: "text" as const, text: JSON.stringify(part) };

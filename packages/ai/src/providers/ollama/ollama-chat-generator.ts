@@ -19,6 +19,22 @@ type OllamaChatRequestWithTools = Parameters<Ollama["chat"]>[0] & {
   tools?: unknown[];
 };
 
+function toOllamaImage(
+  data: string | Uint8Array | ArrayBuffer | URL,
+): string | undefined {
+  if (typeof data === "string") {
+    const match = /^data:[^;]+;base64,(.*)$/s.exec(data);
+    return match ? match[1]! : data;
+  }
+
+  if (data instanceof URL) {
+    return undefined;
+  }
+
+  const bytes = data instanceof Uint8Array ? data : new Uint8Array(data);
+  return Buffer.from(bytes).toString("base64");
+}
+
 export class OllamaChatGenerator implements IChatGenerator {
   private readonly options: IOllamaClientOptions;
   private readonly client: Ollama;
@@ -450,14 +466,49 @@ export class OllamaChatGenerator implements IChatGenerator {
 
   private convertToOllamaMessages(messages: IChatMessage[]): Message[] {
     return messages.map((msg) => {
-      const base: Message = {
+      if (typeof msg.content === "string") {
+        return { role: msg.role, content: msg.content };
+      }
+
+      const textParts: string[] = [];
+      const images: string[] = [];
+
+      for (const part of msg.content) {
+        if (part.type === "text") {
+          textParts.push(part.text);
+        } else if (part.type === "image") {
+          const base64 = toOllamaImage(part.data);
+          if (base64) {
+            images.push(base64);
+          } else {
+            textParts.push(JSON.stringify(part));
+          }
+        } else if (part.type === "file") {
+          if (part.mediaType.startsWith("image/")) {
+            const base64 = toOllamaImage(part.data);
+            if (base64) {
+              images.push(base64);
+            } else {
+              textParts.push(JSON.stringify(part));
+            }
+          } else {
+            textParts.push(JSON.stringify(part));
+          }
+        } else {
+          textParts.push(JSON.stringify(part));
+        }
+      }
+
+      const message: Message = {
         role: msg.role,
-        content:
-          typeof msg.content === "string"
-            ? msg.content
-            : JSON.stringify(msg.content),
+        content: textParts.join(""),
       };
-      return base;
+
+      if (images.length > 0) {
+        message.images = images;
+      }
+
+      return message;
     });
   }
 

@@ -1,0 +1,16 @@
+{
+  "name": "@genspire/playground-app-ai",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "scripts": {
+    "verify": "bun run src/index.ts",
+    "verify:ollama": "bun run src/verify/verification-ollama.ts",
+    "verify:openai-like": "bun run src/verify/verification-openai-like.ts",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@genspire/core": "workspace:*"
+  }
+}

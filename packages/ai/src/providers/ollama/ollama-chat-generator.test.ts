@@ -267,3 +267,41 @@ describe("OllamaChatGenerator tool mapping", () => {
     expect(firstKey).toBe(secondKey);
   });
 });
+
+describe("OllamaChatGenerator message conversion", () => {
+  maybeTest("convertToOllamaMessages extracts image parts into images and text into content", () => {
+    const generator = createGenerator();
+    const convert = Reflect.get(
+      Reflect.getPrototypeOf(generator)!,
+      "convertToOllamaMessages",
+    ).bind(generator);
+
+    const messages = convert([
+      {
+        role: "user",
+        content: [
+          { type: "image", data: "BASE64", mediaType: "image/png" },
+          { type: "text", text: "What color is this?" },
+        ],
+      },
+    ]);
+
+    expect(messages).toHaveLength(1);
+    expect(messages[0].role).toBe("user");
+    expect(messages[0].content).toBe("What color is this?");
+    expect(messages[0].images).toEqual(["BASE64"]);
+  });
+
+  maybeTest("convertToOllamaMessages leaves string content untouched and omits images", () => {
+    const generator = createGenerator();
+    const convert = Reflect.get(
+      Reflect.getPrototypeOf(generator)!,
+      "convertToOllamaMessages",
+    ).bind(generator);
+
+    const messages = convert([{ role: "user", content: "hello" }]);
+
+    expect(messages[0].content).toBe("hello");
+    expect(messages[0].images).toBeUndefined();
+  });
+});

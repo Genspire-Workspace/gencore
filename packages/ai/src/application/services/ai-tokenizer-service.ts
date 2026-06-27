@@ -142,6 +142,8 @@ export class AiTokenizerService {
         return this.serializeMessageContent(part.content);
       case "image":
         return "[image]";
+      case "file":
+        return "[file]";
       default:
         return "";
     }

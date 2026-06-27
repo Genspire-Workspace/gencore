@@ -95,8 +95,6 @@ class AiTokenizerService {
         return this.serializeMessageContent(part.content);
       case "image":
         return "[image]";
-      case "file":
-        return "[file]";
       default:
         return "";
     }
@@ -136,6 +134,16 @@ class AiTokenizerService {
     return encoding.decode(tokens);
   }
 }
+// packages/ai/src/extension/ai-tokenizer-extension.ts
+function aiTokenizerExtension() {
+  return {
+    name: "ai-tokenizer",
+    register(app) {
+      app.provide(AiTokenizerService, new AiTokenizerService);
+    }
+  };
+}
 export {
+  aiTokenizerExtension,
   AiTokenizerService
 };
