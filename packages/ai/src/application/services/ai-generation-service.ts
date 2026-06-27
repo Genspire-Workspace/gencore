@@ -1,4 +1,4 @@
-// file: packages/ai/src/application/services/ai-service.ts
+// file: packages/ai/src/application/services/ai-generation-service.ts
 
 import type { IChatGenerationRequest } from "../../domain/chat/chat-generation-request.js";
 import type { IChatGenerationResponse } from "../../domain/chat/chat-generation-response.js";
@@ -6,16 +6,16 @@ import type { IChatGenerationChunk } from "../../domain/chat/chat-generation-chu
 import type { IEmbeddingGenerationRequest } from "../../domain/embeddings/embedding-generation-request.js";
 import type { IEmbeddingGenerationResponse } from "../../domain/embeddings/embedding-generation-response.js";
 import type { IAiDefaults } from "../../extension/ai-extension.js";
-import { AiClientRegistry } from "../../providers/ai-provider-client-registry.js";
+import { AiProviderClientRegistry } from "../../providers/ai-provider-client-registry.js";
 import { AiError } from "../../errors/ai-error.js";
 
-export class AiService {
+export class AiGenerationService {
   constructor(
-    private readonly registry: AiClientRegistry,
+    private readonly registry: AiProviderClientRegistry,
     private readonly defaults?: IAiDefaults,
   ) {}
 
-  async generateChatCompletion(
+  async generateChat(
     request: IChatGenerationRequest,
   ): Promise<IChatGenerationResponse> {
     const client = this.resolveChatClient(request.provider);
@@ -25,12 +25,12 @@ export class AiService {
       );
     }
 
-    return client.chat.generateChatCompletion(
+    return client.chat.generateChat(
       this.applyChatDefaults(request),
     );
   }
 
-  streamChatCompletion(
+  streamChat(
     request: IChatGenerationRequest,
   ): AsyncIterable<IChatGenerationChunk> {
     const client = this.resolveChatClient(request.provider);
@@ -40,7 +40,7 @@ export class AiService {
       );
     }
 
-    return client.chat.streamChatCompletion(
+    return client.chat.streamChat(
       this.applyChatDefaults(request),
     );
   }

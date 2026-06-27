@@ -1,17 +1,17 @@
 // file: packages/ai/src/providers/openai-compatible/openai-compatible-client.ts
 
-import type { IAiClient } from "../ai-provider-client.js";
-import type { AiClientKind } from "../ai-provider-client-kind.js";
+import type { IAiProviderClient } from "../ai-provider-client.js";
+import type { AiProviderClientKind } from "../ai-provider-client-kind.js";
 import type { IChatGenerator } from "../../domain/chat/chat-generator.js";
 import type { IEmbeddingGenerator } from "../../domain/embeddings/embedding-generator.js";
 import type { IOpenAICompatibleClientOptions } from "./openai-compatible-client-options.js";
 import { OpenAICompatibleChatGenerator } from "./openai-compatible-chat-generator.js";
 import { OpenAICompatibleEmbeddingGenerator } from "./openai-compatible-embedding-generator.js";
 
-export class OpenAICompatibleClient implements IAiClient {
+export class OpenAICompatibleClient implements IAiProviderClient {
   readonly id: string;
   readonly name: string;
-  readonly kind: AiClientKind = "openai-compatible";
+  readonly kind: AiProviderClientKind = "openai-compatible";
   readonly chat?: IChatGenerator;
   readonly embeddings?: IEmbeddingGenerator;
 

@@ -10,11 +10,6 @@ export interface IChatGenerationSettings extends IAiGenerationSettings {
   stop?: string[];
 
   toolChoice?: AiToolChoice;
-
-  /**
-   * Maximum number of model/tool/model steps.
-   *
-   * Defaults to 1 when omitted.
-   */
+  
   maxToolSteps?: number;
 }

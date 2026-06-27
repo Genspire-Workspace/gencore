@@ -1,7 +1,7 @@
 // file: apps\playground-ai\shared\verify-runtime.ts
 
-import { AiClientRegistry } from "../../../packages/ai/src/providers/ai-provider-client-registry.js";
-import { AiService } from "../../../packages/ai/src/application/services/ai-service.js";
+import { AiProviderClientRegistry } from "../../../packages/ai/src/providers/ai-provider-client-registry.js";
+import { AiGenerationService } from "../../../packages/ai/src/application/services/ai-generation-service.js";
 import { OpenAICompatibleClient } from "../../../packages/ai/src/providers/openai-compatible/index.js";
 import { shouldRunScenario } from "./verify-args.js";
 import type {
@@ -44,13 +44,13 @@ export async function createAiVerifyScenarios(
       headers: createOllamaHeaders(),
     });
 
-    const registry = new AiClientRegistry();
+    const registry = new AiProviderClientRegistry();
     registry.register(ollamaClient);
 
     scenarios.push({
       id: "ollama",
       name: "OLLAMA",
-      service: new AiService(registry, {
+      service: new AiGenerationService(registry, {
         chatProvider: "ollama",
         embeddingProvider: "ollama",
         embeddingModel: process.env.OLLAMA_EMBED_MODEL ?? "embeddinggemma:latest",
@@ -77,13 +77,13 @@ export async function createAiVerifyScenarios(
       apiKey: deepseekApiKey,
     });
 
-    const registry = new AiClientRegistry();
+    const registry = new AiProviderClientRegistry();
     registry.register(deepseekClient);
 
     scenarios.push({
       id: "deepseek",
       name: "DEEPSEEK",
-      service: new AiService(registry, {
+      service: new AiGenerationService(registry, {
         chatProvider: "deepseek",
         embeddingProvider: "deepseek",
         embeddingModel: process.env.DEEPSEEK_EMBED_MODEL ?? "",

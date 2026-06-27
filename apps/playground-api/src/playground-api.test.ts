@@ -620,10 +620,10 @@ Review {{item}}.`,
 
   test("ai chat and session generation attach persisted prompts and skills at request time", async () => {
     const originalGenerateChatCompletion =
-      aiPlaygroundRuntime.service.generateChatCompletion.bind(aiPlaygroundRuntime.service);
+      aiPlaygroundRuntime.service.generateChat.bind(aiPlaygroundRuntime.service);
     const capturedRequests: IChatGenerationRequest[] = [];
 
-    aiPlaygroundRuntime.service.generateChatCompletion = async (request) => {
+    aiPlaygroundRuntime.service.generateChat = async (request) => {
       capturedRequests.push(request);
       return createAiResponse(request, "runtime ok");
     };
@@ -802,7 +802,7 @@ Review {{item}}.`,
       );
       expect(inaccessibleResponse.status).toBe(404);
     } finally {
-      aiPlaygroundRuntime.service.generateChatCompletion = originalGenerateChatCompletion;
+      aiPlaygroundRuntime.service.generateChat = originalGenerateChatCompletion;
       await app.stop();
     }
   });
@@ -847,11 +847,11 @@ Review {{item}}.`,
 
   test("ai session stream emits a terminal chunk when provider yields no chunks", async () => {
     const originalStreamChatCompletion =
-      aiPlaygroundRuntime.service.streamChatCompletion.bind(aiPlaygroundRuntime.service);
+      aiPlaygroundRuntime.service.streamChat.bind(aiPlaygroundRuntime.service);
 
-    aiPlaygroundRuntime.service.streamChatCompletion = (async function* () {
+    aiPlaygroundRuntime.service.streamChat = (async function* () {
       return;
-    }) as typeof aiPlaygroundRuntime.service.streamChatCompletion;
+    }) as typeof aiPlaygroundRuntime.service.streamChat;
 
     const app = await createPlaygroundApp({
       port: 0,
@@ -922,7 +922,7 @@ Review {{item}}.`,
         "assistant",
       ]);
     } finally {
-      aiPlaygroundRuntime.service.streamChatCompletion = originalStreamChatCompletion;
+      aiPlaygroundRuntime.service.streamChat = originalStreamChatCompletion;
       await app.stop();
     }
   });

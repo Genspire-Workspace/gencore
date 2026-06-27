@@ -1,6 +1,6 @@
 // file: packages/ai/src/domain/models/ai-provider.ts
 
-import type { AiClientKind } from "../../providers/ai-provider-client-kind.js";
+import type { AiProviderClientKind } from "../../providers/ai-provider-client-kind.js";
 
 export type AiProviderKind =
   | "first-party"
@@ -19,7 +19,7 @@ export interface IAiProvider {
   doc?: string;
   website?: string;
   models?: number;
-  clientKind: AiClientKind;
+  clientKind: AiProviderClientKind;
   kind: AiProviderKind;
   metadata?: Record<string, unknown>;
 }

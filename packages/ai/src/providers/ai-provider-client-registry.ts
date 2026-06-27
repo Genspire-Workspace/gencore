@@ -1,19 +1,19 @@
 // file: packages/ai/src/providers/ai-provider-client-registry.ts
 
 import { AiError } from "../errors/ai-error.js";
-import type { IAiClient } from "./ai-provider-client.js";
+import type { IAiProviderClient } from "./ai-provider-client.js";
 
-export class AiClientRegistry {
-  private readonly clients = new Map<string, IAiClient>();
+export class AiProviderClientRegistry {
+  private readonly clients = new Map<string, IAiProviderClient>();
 
-  register(client: IAiClient): void {
+  register(client: IAiProviderClient): void {
     if (this.clients.has(client.id)) {
       throw new AiError(`AI client '${client.id}' is already registered.`);
     }
     this.clients.set(client.id, client);
   }
 
-  get(id: string): IAiClient {
+  get(id: string): IAiProviderClient {
     const client = this.clients.get(id);
     if (!client) {
       throw new AiError(`AI client '${id}' is not registered.`);
@@ -21,11 +21,11 @@ export class AiClientRegistry {
     return client;
   }
 
-  tryGet(id: string): IAiClient | null {
+  tryGet(id: string): IAiProviderClient | null {
     return this.clients.get(id) ?? null;
   }
 
-  list(): readonly IAiClient[] {
+  list(): readonly IAiProviderClient[] {
     return [...this.clients.values()];
   }
 }

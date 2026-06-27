@@ -1,9 +1,9 @@
 // file: packages/ai/src/extension/ai-extension.ts
 
 import type { GenExtension } from "@genspire/core";
-import type { IAiClient } from "../providers/ai-provider-client.js";
-import { AiClientRegistry } from "../providers/ai-provider-client-registry.js";
-import { AiService } from "../application/services/ai-service.js";
+import type { IAiProviderClient } from "../providers/ai-provider-client.js";
+import { AiProviderClientRegistry } from "../providers/ai-provider-client-registry.js";
+import { AiGenerationService } from "../application/services/ai-generation-service.js";
 
 export interface IAiDefaults {
   chatProvider?: string;
@@ -13,7 +13,7 @@ export interface IAiDefaults {
 }
 
 export interface IAiExtensionOptions {
-  clients: IAiClient[];
+  clients: IAiProviderClient[];
   defaults?: IAiDefaults;
 }
 
@@ -21,15 +21,15 @@ export function aiExtension(options: IAiExtensionOptions): GenExtension {
   return {
     name: "ai",
     register(app) {
-      const registry = new AiClientRegistry();
+      const registry = new AiProviderClientRegistry();
       for (const client of options.clients) {
         registry.register(client);
       }
 
-      const service = new AiService(registry, options.defaults);
+      const service = new AiGenerationService(registry, options.defaults);
 
-      app.provide(AiClientRegistry, registry);
-      app.provide(AiService, service);
+      app.provide(AiProviderClientRegistry, registry);
+      app.provide(AiGenerationService, service);
     },
   };
 }

@@ -1,6 +1,6 @@
 // file: packages\ai\scripts\generate-models.ts
 
-import type { AiClientKind } from "../src/providers/ai-provider-client-kind.js";
+import type { AiProviderClientKind } from "../src/providers/ai-provider-client-kind.js";
 import { fetchModelsDev } from "./models-dev/fetch-models-dev.js";
 import { normalizeModelsDev } from "./models-dev/normalize-models-dev.js";
 import { writeGeneratedCatalogue } from "./models-dev/write-generated.js";
@@ -25,7 +25,7 @@ async function main(): Promise<void> {
 function printStats(catalogue: ReturnType<typeof normalizeModelsDev>): void {
   const models = Object.values(catalogue.models);
   const providers = Object.values(catalogue.providers);
-  const clientKinds: AiClientKind[] = [
+  const clientKinds: AiProviderClientKind[] = [
     "openai-compatible",
     "openai",
     "anthropic",

@@ -1,10 +1,10 @@
 // file: packages/ai/src/providers/ai-provider-client-registry.test.ts
 
 import { describe, expect, test, beforeEach } from "bun:test";
-import { AiClientRegistry } from "./ai-provider-client-registry.js";
-import type { IAiClient } from "./ai-provider-client.js";
+import { AiProviderClientRegistry } from "./ai-provider-client-registry.js";
+import type { IAiProviderClient } from "./ai-provider-client.js";
 
-function createMockClient(id: string): IAiClient {
+function createMockClient(id: string): IAiProviderClient {
   return {
     id,
     name: `Mock ${id}`,
@@ -16,10 +16,10 @@ function createMockClient(id: string): IAiClient {
       return true;
     },
     chat: {
-      async generateChatCompletion() {
+      async generateChat() {
         throw new Error("not implemented");
       },
-      streamChatCompletion() {
+      streamChat() {
         throw new Error("not implemented");
       },
     },
@@ -27,10 +27,10 @@ function createMockClient(id: string): IAiClient {
 }
 
 describe("AiClientRegistry", () => {
-  let registry: AiClientRegistry;
+  let registry: AiProviderClientRegistry;
 
   beforeEach(() => {
-    registry = new AiClientRegistry();
+    registry = new AiProviderClientRegistry();
   });
 
   test("registers client", () => {

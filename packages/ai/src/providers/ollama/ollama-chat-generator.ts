@@ -34,7 +34,7 @@ export class OllamaChatGenerator implements IChatGenerator {
     });
   }
 
-  async generateChatCompletion(
+  async generateChat(
     request: IChatGenerationRequest,
   ): Promise<IChatGenerationResponse> {
     const modelId = this.resolveModelId(request);
@@ -107,7 +107,7 @@ export class OllamaChatGenerator implements IChatGenerator {
     };
   }
 
-  async *streamChatCompletion(
+  async *streamChat(
     request: IChatGenerationRequest,
   ): AsyncIterable<IChatGenerationChunk> {
     const modelId = this.resolveModelId(request);

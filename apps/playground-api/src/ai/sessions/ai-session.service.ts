@@ -323,7 +323,7 @@ export class AiSessionService {
       aiPlaygroundRuntime,
     );
     const response: IChatGenerationResponse =
-      await aiPlaygroundRuntime.service.generateChatCompletion(request);
+      await aiPlaygroundRuntime.service.generateChat(request);
 
     assertNoClientToolResults(response.toolResults, toolExecutionModes);
 
@@ -491,7 +491,7 @@ export class AiSessionService {
 
         try {
           const iterator = aiPlaygroundRuntime.service
-            .streamChatCompletion(request)[Symbol.asyncIterator]();
+            .streamChat(request)[Symbol.asyncIterator]();
           const pendingServerTools = new Map<
             string,
             {

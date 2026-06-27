@@ -249,7 +249,7 @@ async function runStreamingTest(
     const chunks: IChatGenerationChunk[] = [];
     const summary = createEmptyChatStreamSummary();
 
-    for await (const chunk of scenario.service.streamChatCompletion(req)) {
+    for await (const chunk of scenario.service.streamChat(req)) {
       chunks.push(chunk);
       logChatChunk(logger, chunk);
       applyChunkToSummary(summary, chunk, collectReasoning);
@@ -290,7 +290,7 @@ async function runStreamingAssertionTest(
     const chunks: IChatGenerationChunk[] = [];
     const summary = createEmptyChatStreamSummary();
 
-    for await (const chunk of scenario.service.streamChatCompletion(req)) {
+    for await (const chunk of scenario.service.streamChat(req)) {
       chunks.push(chunk);
       logChatChunk(logger, chunk);
       applyChunkToSummary(summary, chunk, false);

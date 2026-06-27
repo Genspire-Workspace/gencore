@@ -334,7 +334,7 @@ async function runConversationSmokeTest(
   try {
     const summary = createEmptyChatStreamSummary();
 
-    for await (const chunk of scenario.service.streamChatCompletion(request)) {
+    for await (const chunk of scenario.service.streamChat(request)) {
       logChatChunk(logger, chunk);
       applyChunkToSummary(summary, chunk, true);
     }

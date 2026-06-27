@@ -40,7 +40,7 @@ export class OpenAICompatibleChatGenerator implements IChatGenerator {
     this.options = options;
   }
 
-  async generateChatCompletion(
+  async generateChat(
     request: IChatGenerationRequest,
   ): Promise<IChatGenerationResponse> {
     const provider = this.createProvider(request.apiKey);
@@ -94,7 +94,7 @@ export class OpenAICompatibleChatGenerator implements IChatGenerator {
     };
   }
 
-  async *streamChatCompletion(
+  async *streamChat(
     request: IChatGenerationRequest,
   ): AsyncIterable<IChatGenerationChunk> {
     const provider = this.createProvider(request.apiKey);

@@ -1,6 +1,6 @@
-import { AiClientRegistry } from "../../../../../packages/ai/src/providers/ai-provider-client-registry.js";
+import { AiProviderClientRegistry } from "../../../../../packages/ai/src/providers/ai-provider-client-registry.js";
 import { OpenAICompatibleClient } from "../../../../../packages/ai/src/providers/openai-compatible/index.js";
-import { AiService } from "../../../../../packages/ai/src/application/services/ai-service.js";
+import { AiGenerationService } from "../../../../../packages/ai/src/application/services/ai-generation-service.js";
 import { AiToolRegistry } from "../../../../../packages/ai/src/application/tools/ai-tool-registry.js";
 import {
   createAiPlaygroundProviderDefinitions,
@@ -10,15 +10,15 @@ import { AiProviderModelResolver } from "../providers/ai-provider-model-resolver
 import { playgroundAiSmokeToolRegistry } from "./ai-smoke-tools.js";
 
 export interface IAiPlaygroundRuntime {
-  registry: AiClientRegistry;
-  service: AiService;
+  registry: AiProviderClientRegistry;
+  service: AiGenerationService;
   resolver: AiProviderModelResolver;
   providers: IAiPlaygroundProviderInfo[];
   serverToolRegistry: AiToolRegistry;
 }
 
 export function createAiPlaygroundRuntime(): IAiPlaygroundRuntime {
-  const registry = new AiClientRegistry();
+  const registry = new AiProviderClientRegistry();
   const providerDefinitions = createAiPlaygroundProviderDefinitions();
 
   const defaults = {
@@ -49,7 +49,7 @@ export function createAiPlaygroundRuntime(): IAiPlaygroundRuntime {
   }
 
   const resolver = new AiProviderModelResolver(defaults);
-  const service = new AiService(registry, {
+  const service = new AiGenerationService(registry, {
     chatProvider: defaults.chatProvider,
     chatModel: defaults.chatModel,
     embeddingProvider: defaults.embeddingProvider,

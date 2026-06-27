@@ -5,11 +5,11 @@ import type { IChatGenerationResponse } from "./chat-generation-response.js";
 import type { IChatGenerationChunk } from "./chat-generation-chunk.js";
 
 export interface IChatGenerator {
-  generateChatCompletion(
+  generateChat(
     request: IChatGenerationRequest,
   ): Promise<IChatGenerationResponse>;
 
-  streamChatCompletion(
+  streamChat(
     request: IChatGenerationRequest,
   ): AsyncIterable<IChatGenerationChunk>;
 }

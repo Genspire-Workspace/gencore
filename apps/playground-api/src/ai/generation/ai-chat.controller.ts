@@ -49,7 +49,7 @@ export class AiChatController {
       getCurrentUser(ctx),
       aiPlaygroundRuntime,
     );
-    const response = await aiPlaygroundRuntime.service.generateChatCompletion(
+    const response = await aiPlaygroundRuntime.service.generateChat(
       request,
     );
 
@@ -143,7 +143,7 @@ export class AiChatController {
         };
 
         try {
-          const iterator = aiPlaygroundRuntime.service.streamChatCompletion(
+          const iterator = aiPlaygroundRuntime.service.streamChat(
             request,
           )[Symbol.asyncIterator]();
           const pendingServerTools = new Map<

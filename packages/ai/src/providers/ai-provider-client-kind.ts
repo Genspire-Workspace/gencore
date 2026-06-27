@@ -1,6 +1,6 @@
 // file: packages/ai/src/providers/ai-provider-client-kind.ts
 
-export type AiClientKind =
+export type AiProviderClientKind =
   | "openai"
   | "anthropic"
   | "google"

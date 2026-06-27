@@ -1,6 +1,6 @@
 // file: packages\ai\scripts\models-dev\normalize-models-dev.ts
 
-import type { AiClientKind } from "../../src/providers/ai-provider-client-kind.js";
+import type { AiProviderClientKind } from "../../src/providers/ai-provider-client-kind.js";
 import type { IAiLab } from "../../src/domain/models/ai-lab.js";
 import type { AiModelModality, IAiModel, IAiModelBenchmark, IAiModelCost, IAiModelInterleaved, IAiModelLimit, IAiModelLink, IAiModelModalities } from "../../src/domain/models/ai-model.js";
 import type { IAiProvider, AiProviderKind } from "../../src/domain/models/ai-provider.js";
@@ -203,7 +203,7 @@ export function inferClientKind(provider: {
   id?: string;
   npm?: string;
   api?: string;
-}): AiClientKind {
+}): AiProviderClientKind {
   if (provider.id === "ollama") return "ollama";
   if (provider.api?.includes("localhost:11434")) return "ollama";
 

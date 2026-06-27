@@ -1,3 +1,3 @@
 // file: packages/ai/src/application/services/index.ts
 
-export { AiService } from "./ai-service.js";
+export { AiGenerationService } from "./ai-generation-service.js";

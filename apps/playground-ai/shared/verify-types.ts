@@ -1,6 +1,6 @@
 // file: apps\playground-ai\shared\verify-types.ts
 
-import type { AiService } from "../../../packages/ai/src/application/services/ai-service.js";
+import type { AiGenerationService } from "../../../packages/ai/src/application/services/ai-generation-service.js";
 
 export type AiVerifySuite =
   | "generation"
@@ -29,7 +29,7 @@ export interface IAiVerifyScenarioFilter {
 export interface IAiVerifyScenario {
   id: AiVerifyScenarioId;
   name: string;
-  service: AiService;
+  service: AiGenerationService;
   chatModels: string[];
   embedModel?: string;
   supportsEmbedding: boolean;

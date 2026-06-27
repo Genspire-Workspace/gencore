@@ -2,12 +2,12 @@
 
 import type { IChatGenerator } from "../domain/chat/chat-generator.js";
 import type { IEmbeddingGenerator } from "../domain/embeddings/embedding-generator.js";
-import type { AiClientKind } from "./ai-provider-client-kind.js";
+import type { AiProviderClientKind } from "./ai-provider-client-kind.js";
 
-export interface IAiClient {
+export interface IAiProviderClient {
   id: string;
   name: string;
-  kind: AiClientKind;
+  kind: AiProviderClientKind;
   chat?: IChatGenerator;
   embeddings?: IEmbeddingGenerator;
 
