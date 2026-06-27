@@ -1,11 +1,17 @@
 // file: apps/playground-app-ai/src/verify/shared/scenarios.ts
 
 import type { IChatGenerationRequest } from "../../../../../packages/ai/src/domain/chat/chat-generation-request.js";
+import type { IChatGenerationResponse } from "../../../../../packages/ai/src/domain/chat/chat-generation-response.js";
 import type { IChatGenerationSettings } from "../../../../../packages/ai/src/domain/chat/chat-generation-settings.js";
 import type { IChatMessage } from "../../../../../packages/ai/src/domain/chat/chat-message.js";
 import type { IEmbeddingGenerationRequest } from "../../../../../packages/ai/src/domain/embeddings/embedding-generation-request.js";
 import type { IAiImagePart } from "../../../../../packages/ai/src/domain/messages/ai-content-part.js";
+import { Agent } from "../../../../../packages/ai/src/application/agents/agent.js";
+import { AiContext } from "../../../../../packages/ai/src/application/context/ai-context.js";
 import { AiGenerationService } from "../../../../../packages/ai/src/application/services/ai-generation-service.js";
+import type { IAiAgentLoopResult, IAiAgentStep } from "../../../../../packages/ai/src/application/agents/index.js";
+import { defineAiTool } from "../../../../../packages/ai/src/domain/tools/define-ai-tool.js";
+import type { IAiToolResult } from "../../../../../packages/ai/src/domain/tools/ai-tool-result.js";
 import type { IAiProviderClient } from "../../../../../packages/ai/src/providers/ai-provider-client.js";
 import { createPlaygroundAiApp } from "../../playground-ai-app.js";
 import {
@@ -48,6 +54,99 @@ export interface IProviderVerificationResult {
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+function normalizeText(value: string): string {
+  return value.trim().toLowerCase();
+}
+
+function isPlaceholderToolResponseText(value: string): boolean {
+  const normalized = normalizeText(value);
+
+  return (
+    normalized.length === 0 ||
+    normalized === "<|tool_response>" ||
+    normalized === "[tool_response]"
+  );
+}
+
+function logAgentResponse(
+  logger: IAppAiLogger,
+  response: IChatGenerationResponse,
+): void {
+  logger.log("  Response:");
+  logger.log(`    id: ${response.id}`);
+  logger.log(`    provider: ${response.provider ?? "(default)"}`);
+  logger.log(`    model: ${response.model ?? "(default)"}`);
+  logger.log(`    finishReason: ${response.finishReason ?? "(none)"}`);
+  logger.log(
+    `    message: ${JSON.stringify({
+      role: response.message.role,
+      content:
+        typeof response.message.content === "string"
+          ? response.message.content
+          : response.message.content,
+    })}`,
+  );
+
+  if (response.toolCalls?.length) {
+    logger.log(`    toolCalls: ${JSON.stringify(response.toolCalls)}`);
+  }
+
+  if (response.toolResults?.length) {
+    logger.log(`    toolResults: ${JSON.stringify(response.toolResults)}`);
+  }
+
+  if (response.usage) {
+    logger.log(
+      `    usage: input=${response.usage.inputTokens}, output=${response.usage.outputTokens}, total=${response.usage.totalTokens}`,
+    );
+  }
+}
+
+function logAgentToolResults(
+  logger: IAppAiLogger,
+  toolResults: readonly IAiToolResult[],
+): void {
+  if (toolResults.length === 0) {
+    logger.log("  Executed tool results: (none)");
+    return;
+  }
+
+  logger.log(`  Executed tool results: ${toolResults.length}`);
+
+  for (const toolResult of toolResults) {
+    logger.log(
+      `    [tool_result] ${toolResult.name} call=${toolResult.toolCallId} result=${JSON.stringify(toolResult.result ?? null)} error=${JSON.stringify(toolResult.error ?? null)}`,
+    );
+  }
+}
+
+function logAgentStep(logger: IAppAiLogger, step: IAiAgentStep): void {
+  logger.log(`  Step ${step.index + 1}:`);
+  logRequest(logger, step.request);
+  logAgentResponse(logger, step.response);
+  logAgentToolResults(logger, step.toolResults);
+  logger.log(`  Step ${step.index + 1} done: ${step.done}`);
+}
+
+function logAgentTurnSummary(
+  logger: IAppAiLogger,
+  result: IAiAgentLoopResult,
+): void {
+  logger.log("  Agent turn summary:");
+  logger.log(`    stopped: ${result.stopped}`);
+  logger.log(`    steps: ${result.stepCount}`);
+  logger.log(`    toolResults: ${result.toolResults.length}`);
+  logger.log(
+    `    finalMessage: ${JSON.stringify(extractText(result.finalMessage?.content ?? ""))}`,
+  );
+
+  if (result.returnDirectResult !== undefined) {
+    logger.log(
+      `    returnDirectResult: ${JSON.stringify(result.returnDirectResult)}`,
+    );
+  }
 }
 
 async function runChatStreamScenario(options: {
@@ -132,10 +231,16 @@ async function runVisionScenario(options: {
   logRequest(options.logger, request);
 
   try {
-    const response = await options.service.generateChat(request);
-    const text = extractText(response.message.content);
+    const summary = createEmptyChatStreamSummary();
 
-    options.logger.log(`  Response: ${text}`);
+    for await (const chunk of options.service.streamChat(request)) {
+      applyChunkToSummary(summary, chunk, false);
+      options.logger.log(formatChunk(chunk));
+    }
+
+    logStreamSummary(options.logger, summary);
+
+    const text = summary.fullText;
 
     const passed = text.trim().length > 0;
     let detail = `text=${text.length} chars`;
@@ -149,6 +254,282 @@ async function runVisionScenario(options: {
     }
 
     return { label: options.label, model: options.model, passed, detail };
+  } catch (error) {
+    const message = errorMessage(error);
+    options.logger.log(`  ERROR: ${message}`);
+
+    return {
+      label: options.label,
+      model: options.model,
+      passed: false,
+      detail: "error",
+      error: message,
+    };
+  }
+}
+
+async function runAgentToolScenario(options: {
+  service: AiGenerationService;
+  model: string;
+  logger: IAppAiLogger;
+  label: string;
+}): Promise<IScenarioResult> {
+  const verificationSecret = "Gencore agent verification secret";
+  const agent = new Agent(options.service, [
+    defineAiTool({
+      name: "get_verification_secret",
+      description:
+        "Returns the exact verification secret for the agent verification scenario.",
+      parameters: {
+        type: "object",
+        properties: {},
+      },
+      execute: async () => ({ secret: verificationSecret }),
+    }),
+  ]);
+
+  const context = AiContext.create()
+    .setSystemPrompt(
+      "You are running an agent verification. You must call the available tool exactly once before answering. Return only the secret from the tool.",
+    )
+    .addUserMessage(
+      "Call the tool and then reply with exactly the secret value that it returns.",
+    );
+
+  options.logger.log("");
+  options.logger.log(`----- ${options.label} [${options.model}] -----`);
+
+  try {
+    const result = await agent.run(context, {
+      maxSteps: 4,
+      requestOverrides: {
+        model: options.model,
+        settings: { reasoningEffort: "none" },
+      },
+      onStepStart: (state) => {
+        options.logger.log(`  Preparing step ${state.stepCount + 1}`);
+      },
+      onStepChunk: (chunk) => {
+        options.logger.log(formatChunk(chunk));
+      },
+      onStepEnd: (step) => {
+        logAgentStep(options.logger, step);
+      },
+      onTurnEnd: (result) => {
+        logAgentTurnSummary(options.logger, result);
+      },
+    });
+
+    const finalText = extractText(result.finalMessage?.content ?? "");
+    const passed =
+      result.stopped === "completed" &&
+      result.toolResults.length > 0 &&
+      normalizeText(finalText) === normalizeText(verificationSecret);
+
+    options.logger.log(`  Stopped: ${result.stopped}`);
+    options.logger.log(`  Tool results: ${result.toolResults.length}`);
+    options.logger.log(`  Final message: ${JSON.stringify(finalText)}`);
+
+    return {
+      label: options.label,
+      model: options.model,
+      passed,
+      detail: `stopped=${result.stopped}; tools=${result.toolResults.length}; final=${finalText.length} chars`,
+      ...(passed
+        ? {}
+        : {
+            error:
+              finalText.length > 0
+                ? `expected exact secret '${verificationSecret}'`
+                : "agent did not produce a final secret message",
+          }),
+    };
+  } catch (error) {
+    const message = errorMessage(error);
+    options.logger.log(`  ERROR: ${message}`);
+
+    return {
+      label: options.label,
+      model: options.model,
+      passed: false,
+      detail: "error",
+      error: message,
+    };
+  }
+}
+
+async function runAgentVisionScenario(options: {
+  service: AiGenerationService;
+  model: string;
+  image: IAiImagePart;
+  logger: IAppAiLogger;
+  label: string;
+  prompt?: string;
+  expected?: string;
+}): Promise<IScenarioResult> {
+  const prompt =
+    options.prompt ??
+    "Look at this image and answer with the dominant color in one word.";
+
+  const agent = new Agent(options.service);
+  const context = AiContext.create().addUserMessage([
+    {
+      type: "image",
+      data: options.image.data,
+      mediaType: options.image.mediaType,
+    },
+    { type: "text", text: prompt },
+  ]);
+
+  options.logger.log("");
+  options.logger.log(`----- ${options.label} [${options.model}] -----`);
+
+  try {
+    const result = await agent.run(context, {
+      maxSteps: 1,
+      requestOverrides: {
+        model: options.model,
+        settings: { reasoningEffort: "none" },
+      },
+      onStepStart: (state) => {
+        options.logger.log(`  Preparing step ${state.stepCount + 1}`);
+      },
+      onStepChunk: (chunk) => {
+        options.logger.log(formatChunk(chunk));
+      },
+      onStepEnd: (step) => {
+        logAgentStep(options.logger, step);
+      },
+      onTurnEnd: (result) => {
+        logAgentTurnSummary(options.logger, result);
+      },
+    });
+
+    const finalText = extractText(result.finalMessage?.content ?? "");
+    const expected = options.expected ?? "red";
+    const found = normalizeText(finalText).includes(normalizeText(expected));
+    const passed = result.stopped === "completed" && finalText.length > 0 && found;
+
+    options.logger.log(`  Stopped: ${result.stopped}`);
+    options.logger.log(`  Final message: ${JSON.stringify(finalText)}`);
+    options.logger.log(`  Expected keyword '${expected}': ${found ? "found" : "NOT found"}`);
+
+    return {
+      label: options.label,
+      model: options.model,
+      passed,
+      detail: `stopped=${result.stopped}; final=${finalText.length} chars; expected=${found ? "found" : "missing"}`,
+      ...(passed ? {} : { error: `expected keyword '${expected}' in final agent response` }),
+    };
+  } catch (error) {
+    const message = errorMessage(error);
+    options.logger.log(`  ERROR: ${message}`);
+
+    return {
+      label: options.label,
+      model: options.model,
+      passed: false,
+      detail: "error",
+      error: message,
+    };
+  }
+}
+
+async function runAgentMaxTurnsScenario(options: {
+  service: AiGenerationService;
+  model: string;
+  logger: IAppAiLogger;
+  label: string;
+  maxSteps?: number;
+}): Promise<IScenarioResult> {
+  const maxSteps = options.maxSteps ?? 2;
+  const agent = new Agent(options.service, [
+    defineAiTool({
+      name: "continue_agent_verification",
+      description:
+        "Returns instructions telling the model to continue by calling this tool again.",
+      parameters: {
+        type: "object",
+        properties: {},
+      },
+      execute: async () => ({
+        instruction:
+          "Continue the loop verification. Do not answer the user yet. Call continue_agent_verification again.",
+      }),
+    }),
+  ]);
+
+  const context = AiContext.create()
+    .setSystemPrompt(
+      "You are running a max-turn verification. On every turn, call continue_agent_verification. Do not provide a final answer before you are stopped.",
+    )
+    .addUserMessage(
+      "Start the loop verification now. Keep calling the tool and do not finish.",
+    );
+
+  options.logger.log("");
+  options.logger.log(`----- ${options.label} [${options.model}] -----`);
+
+  try {
+    const result = await agent.run(context, {
+      maxSteps,
+      requestOverrides: {
+        model: options.model,
+        settings: { reasoningEffort: "none" },
+      },
+      onStepStart: (state) => {
+        options.logger.log(`  Preparing step ${state.stepCount + 1}`);
+      },
+      onStepChunk: (chunk) => {
+        options.logger.log(formatChunk(chunk));
+      },
+      onStepEnd: (step) => {
+        const responseText = extractText(step.response.message.content);
+        if (step.done && isPlaceholderToolResponseText(responseText)) {
+          options.logger.log(
+            "  Placeholder tool-response output detected; keeping the loop open for max-turn verification.",
+          );
+          step.done = false;
+        }
+
+        logAgentStep(options.logger, step);
+      },
+      onMaxStepsFinalMessageStart: (request) => {
+        options.logger.log("  Streaming enforced final message after maxSteps:");
+        logRequest(options.logger, request);
+      },
+      onMaxStepsFinalMessageChunk: (chunk) => {
+        options.logger.log(formatChunk(chunk));
+      },
+      onMaxStepsFinalMessageEnd: (message) => {
+        options.logger.log(
+          `  Streamed final message: ${JSON.stringify(extractText(message?.content ?? ""))}`,
+        );
+      },
+      onTurnEnd: (result) => {
+        logAgentTurnSummary(options.logger, result);
+      },
+    });
+
+    const finalText = extractText(result.finalMessage?.content ?? "");
+    const passed =
+      result.stopped === "maxSteps" &&
+      finalText.length > 0 &&
+      !isPlaceholderToolResponseText(finalText);
+
+    options.logger.log(`  Stopped: ${result.stopped}`);
+    options.logger.log(`  Tool results: ${result.toolResults.length}`);
+    options.logger.log(`  Final message: ${JSON.stringify(finalText)}`);
+
+    return {
+      label: options.label,
+      model: options.model,
+      passed,
+      detail: `stopped=${result.stopped}; steps=${result.stepCount}; tools=${result.toolResults.length}; final=${finalText.length} chars`,
+      ...(passed
+        ? {}
+        : { error: "agent did not produce a streamed final message after reaching maxSteps" }),
+    };
   } catch (error) {
     const message = errorMessage(error);
     options.logger.log(`  ERROR: ${message}`);
@@ -304,9 +685,45 @@ export async function verifyProvider(
           label: "VISION (image+text parts)",
         }),
       );
+
+      results.push(
+        await runAgentVisionScenario({
+          service: config.service,
+          model: chatModel,
+          image,
+          prompt: config.visionPrompt,
+          expected: config.visionExpected ?? "red",
+          logger,
+          label: "AGENT VISION",
+        }),
+      );
     } else if (!config.skipVision) {
       logger.log(
         `  VISION: skipped (model does not accept image input per ${capabilities.source})`,
+      );
+    }
+
+    if (capabilities.supportsToolCall) {
+      results.push(
+        await runAgentToolScenario({
+          service: config.service,
+          model: chatModel,
+          logger,
+          label: "AGENT TOOL LOOP",
+        }),
+      );
+
+      results.push(
+        await runAgentMaxTurnsScenario({
+          service: config.service,
+          model: chatModel,
+          logger,
+          label: "AGENT MAX TURNS",
+        }),
+      );
+    } else {
+      logger.log(
+        `  AGENT TOOL LOOP: skipped (model does not support tool calls per ${capabilities.source})`,
       );
     }
   }

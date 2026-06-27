@@ -95,8 +95,8 @@ describe("app-ai verify shared library", () => {
 
       await logger.close();
 
-      expect(result.total).toBe(4);
-      expect(result.passed).toBe(4);
+      expect(result.total).toBe(7);
+      expect(result.passed).toBe(7);
       expect(result.failed).toBe(0);
 
       const logExists = await Bun.file(result.logPath).exists();

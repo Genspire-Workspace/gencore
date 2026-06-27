@@ -20,6 +20,7 @@ if (args.list) {
   console.log("Ollama verification");
   console.log("  bun run verify:ollama -- --models gemma4:12b --embed-model embeddinggemma:latest");
   console.log("  vision (image+text parts) runs per chat model when it accepts image input");
+  console.log("  agent verification adds tool-use, agent vision, and max-turn stop scenarios when the model supports them");
   console.log("  vision uses data/test-directory/images/arabervollblut-horse-10333771.jpg by default; override with --image <path>");
   console.log("  override unknown-model modalities via OLLAMA_DEFAULT_INPUT_MODALITIES (e.g. text,image)");
   console.log("Env: OLLAMA_API_KEY, OLLAMA_HOST, OLLAMA_CHAT_MODELS, OLLAMA_CHAT_MODEL, OLLAMA_EMBED_MODEL, OLLAMA_DEFAULT_INPUT_MODALITIES, OLLAMA_DEFAULT_REASONING");
