@@ -6,14 +6,14 @@ import type { IModelTransformResult } from "../../domain/generation/ai-model-tra
 /**
  * DeepSeek v4 models use a two-field thinking system:
  *
- *   {"thinking": {"type": "enabled" | "disabled"}}   Ã¢â‚¬â€ toggle
- *   {"reasoning_effort": "high" | "max"}              Ã¢â‚¬â€ effort (only when enabled)
+ *   {"thinking": {"type": "enabled" | "disabled"}}   toggle
+ *   {"reasoning_effort": "high" | "max"}             effort (only when enabled)
  *
  * Effort mapping per API docs:
- *   none/minimal Ã¢â€ â€™ thinking disabled
- *   low/medium   Ã¢â€ â€™ thinking enabled, reasoning_effort = "high" (compat mapping)
- *   high         Ã¢â€ â€™ thinking enabled, reasoning_effort = "high"
- *   xhigh/max    Ã¢â€ â€™ thinking enabled, reasoning_effort = "max"
+ *   none/minimal   thinking disabled
+ *   low/medium     thinking enabled, reasoning_effort = "high" (compat mapping)
+ *   high           thinking enabled, reasoning_effort = "high"
+ *   xhigh/max      thinking enabled, reasoning_effort = "max"
  */
 export function deepseekTransform(
   request: IChatGenerationRequest,
