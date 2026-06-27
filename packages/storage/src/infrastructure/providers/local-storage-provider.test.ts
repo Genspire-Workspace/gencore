@@ -1,10 +1,10 @@
-// file: packages\storage\src\local\local-storage-provider.test.ts
+// file: packages/storage/src/infrastructure/providers/local-storage-provider.test.ts
 
 import { describe, expect, test, beforeAll, afterAll } from "bun:test";
 import { mkdtempSync, rmSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { LocalStorageProvider, localStorageProvider } from "./local-storage-provider.js";
-import type { IStorageProvider } from "../contracts/storage-provider.js";
+import type { IStorageProvider } from "../../application/contracts/storage-provider.js";
 
 let tempDir: string;
 let provider: IStorageProvider;

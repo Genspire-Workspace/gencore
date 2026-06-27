@@ -1,4 +1,4 @@
-// file: packages\storage\src\s3\s3-storage-provider.ts
+// file: packages/storage/src/infrastructure/providers/s3-storage-provider.ts
 
 import {
   S3Client,
@@ -19,9 +19,9 @@ import type {
   IPutObjectInput,
   IStorageObjectRef,
   IStoredObject,
-} from "../contracts/storage-object.js";
-import type { IStorageProvider } from "../contracts/storage-provider.js";
-import type { IS3StorageProviderOptions } from "../contracts/storage-options.js";
+} from "../../application/contracts/storage-object.js";
+import type { IStorageProvider } from "../../application/contracts/storage-provider.js";
+import type { IS3StorageProviderOptions } from "../../application/contracts/storage-options.js";
 
 export class S3StorageProvider implements IStorageProvider {
   private readonly client: S3Client;

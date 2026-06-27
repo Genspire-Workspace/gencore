@@ -1,4 +1,4 @@
-// file: packages\storage\src\files\file.entity.ts
+// file: packages/storage/src/domain/entities/file.entity.ts
 
 import { Entity, PrimaryKey, Property } from "@mikro-orm/decorators";
 import type { IEntity } from "@genspire/data";

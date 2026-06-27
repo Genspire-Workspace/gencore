@@ -1,4 +1,4 @@
-// file: packages\storage\src\services\storage-service.test.ts
+// file: packages/storage/src/application/services/storage-service.test.ts
 
 import { describe, expect, test, mock } from "bun:test";
 import { StorageService } from "./storage-service.js";

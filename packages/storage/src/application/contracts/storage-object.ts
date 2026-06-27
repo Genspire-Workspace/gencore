@@ -1,4 +1,4 @@
-// file: packages\storage\src\contracts\storage-object.ts
+// file: packages/storage/src/application/contracts/storage-object.ts
 
 export interface IStorageObjectRef {
   bucket: string;

@@ -1,4 +1,4 @@
-// file: packages\storage\src\local\local-storage-provider.ts
+// file: packages/storage/src/infrastructure/providers/local-storage-provider.ts
 
 import { existsSync, mkdirSync, readdirSync, statSync, unlinkSync } from "node:fs";
 import { dirname, isAbsolute, normalize, relative, resolve, sep } from "node:path";
@@ -10,9 +10,9 @@ import type {
   IPutObjectInput,
   IStorageObjectRef,
   IStoredObject,
-} from "../contracts/storage-object.js";
-import type { IStorageProvider } from "../contracts/storage-provider.js";
-import type { ILocalStorageProviderOptions } from "../contracts/storage-options.js";
+} from "../../application/contracts/storage-object.js";
+import type { IStorageProvider } from "../../application/contracts/storage-provider.js";
+import type { ILocalStorageProviderOptions } from "../../application/contracts/storage-options.js";
 
 interface ILocalStoredObjectMetadata {
   bucket: string;

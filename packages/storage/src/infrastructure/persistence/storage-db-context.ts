@@ -1,8 +1,8 @@
-// file: packages\storage\src\files\storage-db-context.ts
+// file: packages/storage/src/infrastructure/persistence/storage-db-context.ts
 
 import { Scoped } from "@genspire/core";
 import { EntityManagerProvider, MikroOrmDbContext } from "@genspire/data-mikroorm";
-import { FileEntity } from "./file.entity.js";
+import { FileEntity } from "../../domain/entities/file.entity.js";
 
 @Scoped()
 export class StorageDbContext extends MikroOrmDbContext {

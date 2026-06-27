@@ -4,7 +4,11 @@
   "type": "module",
   "main": "./src/index.ts",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./domain": "./src/domain.ts",
+    "./application": "./src/application.ts",
+    "./infrastructure": "./src/infrastructure.ts",
+    "./server": "./src/server.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.758.0",

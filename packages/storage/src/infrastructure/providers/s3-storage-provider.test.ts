@@ -1,8 +1,8 @@
-// file: packages\storage\src\s3\s3-storage-provider.test.ts
+// file: packages/storage/src/infrastructure/providers/s3-storage-provider.test.ts
 
 import { describe, expect, test } from "bun:test";
 import { S3StorageProvider, s3StorageProvider } from "./s3-storage-provider.js";
-import type { IS3StorageProviderOptions } from "../contracts/storage-options.js";
+import type { IS3StorageProviderOptions } from "../../application/contracts/storage-options.js";
 
 function createOptions(overrides: Partial<IS3StorageProviderOptions> = {}): IS3StorageProviderOptions {
   return {

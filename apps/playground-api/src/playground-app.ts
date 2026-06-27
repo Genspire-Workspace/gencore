@@ -10,7 +10,7 @@ import {
 import { serverExtension, Server, rateLimitMiddleware, type RateLimitOptions } from "@genspire/server";
 import { swaggerExtension } from "@genspire/swagger";
 import { authExtension, AuthConfiguration, authServerMiddlewares, authServerExtension } from "@genspire/auth";
-import { storageExtension, FileController, StorageDbContext } from "@genspire/storage";
+import { storageExtension, StorageDbContext, storageServerExtension } from "@genspire/storage";
 import path from "node:path";
 import { mkdirSync } from "node:fs";
 import { PlaygroundAuthUserEntity } from "./auth/playground-auth-user.entity.js";
@@ -133,7 +133,9 @@ export async function createPlaygroundApp(
 
   await app.use(authServerExtension());
 
-  app.get(Server).registerControllers(FileController, HealthController, AiChatController, AiEmbeddingController, AiProviderController, AiSessionController, AiPromptController, AiSkillController, AuthActivityController, AuthBanController, TodoController);
+  await app.use(storageServerExtension());
+
+  app.get(Server).registerControllers(HealthController, AiChatController, AiEmbeddingController, AiProviderController, AiSessionController, AiPromptController, AiSkillController, AuthActivityController, AuthBanController, TodoController);
 
   return app;
 }

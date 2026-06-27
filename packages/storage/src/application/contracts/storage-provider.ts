@@ -1,4 +1,4 @@
-// file: packages\storage\src\contracts\storage-provider.ts
+// file: packages/storage/src/application/contracts/storage-provider.ts
 
 import type {
   ICreateSignedUrlInput,

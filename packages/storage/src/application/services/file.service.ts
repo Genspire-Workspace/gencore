@@ -1,12 +1,22 @@
-// file: packages\storage\src\files\file.service.ts
+// file: packages/storage/src/application/services/file.service.ts
 
 import { GenError, Scoped } from "@genspire/core";
-import { StorageService } from "../services/storage-service.js";
-import { StorageDbContext } from "./storage-db-context.js";
-import { FileEntity } from "./file.entity.js";
-import type { FileListResponseDto, FileResponseDto, PrepareUploadResponseDTO } from "./file.dto.js";
+import { StorageService } from "./storage-service.js";
+import { StorageDbContext } from "../../infrastructure/persistence/storage-db-context.js";
+import { FileEntity } from "../../domain/entities/file.entity.js";
+import type {
+  IFileResult,
+  IFileListResult,
+  IPreparedUploadResult,
+  IDownloadedFile,
+} from "../contracts/file-service-results.js";
+import type {
+  IUploadFileInput,
+  IPrepareUploadInput,
+  IListFilesInput,
+} from "../contracts/file-service-inputs.js";
 
-function toFileResponse(entity: {
+function toFileResult(entity: {
   id: string;
   bucket: string;
   key: string;
@@ -18,7 +28,7 @@ function toFileResponse(entity: {
   uploaderIp?: string | null;
   createdAt: Date;
   updatedAt: Date;
-}): FileResponseDto {
+}): IFileResult {
   return {
     id: entity.id,
     bucket: entity.bucket,
@@ -34,24 +44,6 @@ function toFileResponse(entity: {
   };
 }
 
-export interface UploadFileInput {
-  file: Blob;
-  originalName: string;
-  bucket: string;
-  userId: string;
-  metadata?: Record<string, string>;
-  uploadedBy?: string;
-  uploaderIp?: string | null;
-}
-
-export interface PrepareUploadInput {
-  originalName: string;
-  bucket: string;
-  userId: string;
-  uploadedBy?: string;
-  uploaderIp?: string | null;
-}
-
 @Scoped()
 export class FileService {
   static inject = [StorageDbContext, StorageService];
@@ -61,7 +53,7 @@ export class FileService {
     private readonly storage: StorageService,
   ) {}
 
-  async upload(input: UploadFileInput): Promise<FileResponseDto> {
+  async upload(input: IUploadFileInput): Promise<IFileResult> {
     if (!input.file || input.file.size === 0) {
       throw new GenError("File is required and must not be empty.", "FILE_VALIDATION_ERROR");
     }
@@ -107,10 +99,10 @@ export class FileService {
     await this.db.files.add(entity);
     await this.db.saveChanges();
 
-    return toFileResponse(entity);
+    return toFileResult(entity);
   }
 
-  async prepareUpload(input: PrepareUploadInput): Promise<PrepareUploadResponseDTO> {
+  async prepareUpload(input: IPrepareUploadInput): Promise<IPreparedUploadResult> {
     const bucket = input.bucket.trim();
 
     if (!bucket) {
@@ -153,17 +145,13 @@ export class FileService {
     await this.db.saveChanges();
 
     return {
-      entity: toFileResponse(entity),
+      entity: toFileResult(entity),
       uploadUrl,
     };
   }
 
-  async list(
-    bucket?: string,
-    prefix?: string,
-    limit?: number,
-    cursor?: string,
-  ): Promise<FileListResponseDto> {
+  async list(input: IListFilesInput = {}): Promise<IFileListResult> {
+    const { bucket, prefix, limit, cursor } = input;
     const files = await this.db.files.list({
       orderBy: "createdAt",
       direction: "desc",
@@ -195,17 +183,13 @@ export class FileService {
     }
 
     return {
-      items: items.map(toFileResponse),
+      items: items.map(toFileResult),
       cursor: items.length > 0 ? items[items.length - 1]!.id : undefined,
       hasMore,
     };
   }
 
-  async getById(id: string): Promise<{
-    entity: FileResponseDto;
-    stream: ReadableStream<Uint8Array>;
-    contentType: string;
-  } | null> {
+  async getById(id: string): Promise<IDownloadedFile | null> {
     const entity = await this.db.files.findById(id);
     if (!entity) {
       return null;
@@ -221,7 +205,7 @@ export class FileService {
     }
 
     return {
-      entity: toFileResponse(entity),
+      entity: toFileResult(entity),
       stream: stored.body,
       contentType: stored.contentType ?? entity.contentType ?? "application/octet-stream",
     };

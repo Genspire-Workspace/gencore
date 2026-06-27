@@ -1,4 +1,4 @@
-// file: packages\storage\src\contracts\storage-options.ts
+// file: packages/storage/src/application/contracts/storage-options.ts
 
 import type { IStorageProvider } from "./storage-provider.js";
 

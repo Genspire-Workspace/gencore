@@ -1,4 +1,4 @@
-// file: packages\storage\src\files\file.controller.ts
+// file: packages/storage/src/server/controllers/file.controller.ts
 
 import { Authorize, Controller, Delete, Get, Post, defineProblemDetailsType, json, problem } from "@genspire/server";
 import type { RequestContext } from "@genspire/server";
@@ -8,8 +8,8 @@ import {
   FileListResponseDto,
   FileResponseDto,
   UploadFileDto,
-} from "./file.dto.js";
-import { FileService } from "./file.service.js";
+} from "../dtos/file.dto.js";
+import { FileService } from "../../application/services/file.service.js";
 
 @Authorize()
 @Controller("/file", {
@@ -126,7 +126,7 @@ export class FileController {
       });
     }
 
-    return await this.service.list(bucket, prefix, limit, cursor);
+    return await this.service.list({ bucket, prefix, limit, cursor });
   }
 
   @Get("/:id", {
