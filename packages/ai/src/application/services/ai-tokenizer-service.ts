@@ -11,7 +11,7 @@ import type {
   AiContentPart,
   AiMessageContent,
 } from "../../domain/messages/ai-content-part.js";
-import type { IAiContext } from "../context/ai-context.js";
+import type { IAiContext } from "../../domain/context/ai-context.js";
 import type { IAiTokenChunk } from "../../domain/tokenization/ai-token-chunk.js";
 import type { IAiTokenChunkResult } from "../../domain/tokenization/ai-token-chunk-result.js";
 import type { IAiTokenCountResult } from "../../domain/tokenization/ai-token-count-result.js";

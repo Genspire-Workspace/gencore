@@ -5,6 +5,7 @@ import type { IChatGenerationChunk } from "../chat/chat-generation-chunk.js";
 import type { IChatGenerationResponse } from "../chat/chat-generation-response.js";
 import type { IChatGenerationSettings } from "../chat/chat-generation-settings.js";
 import type { IChatMessage } from "../chat/chat-message.js";
+import type { IAiContext } from "../context/ai-context.js";
 import type { IAiToolCall } from "../tools/ai-tool-call.js";
 import type { IAiTool } from "../tools/ai-tool.js";
 import type { IAiToolResult } from "../tools/ai-tool-result.js";
@@ -40,15 +41,8 @@ export type IAiAgentMaxStepsFinalMessagePrompt =
   | ((state: IAiAgentLoopState) => string | Promise<string>);
 export type IAiAgentToolExecutionMode = "immediate" | "deferred";
 
-export interface IAiAgentContextSnapshot {
-  systemPrompt?: IChatMessage;
-  chatMessages: IChatMessage[];
-  tools: IAiTool[];
-  metadata?: Record<string, unknown>;
-}
-
 export interface IAiAgentResumeState {
-  context: IAiAgentContextSnapshot;
+  context: IAiContext;
   stepCount: number;
   steps: IAiAgentStep[];
   toolResults: IAiToolResult[];

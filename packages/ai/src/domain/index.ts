@@ -1,6 +1,7 @@
 // file: packages/ai/src/domain/index.ts
 
 export * from "./messages/index.js";
+export * from "./context/index.js";
 export * from "./models/index.js";
 export * from "./generation/index.js";
 export * from "./chat/index.js";

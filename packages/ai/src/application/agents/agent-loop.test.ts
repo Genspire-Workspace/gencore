@@ -3,7 +3,7 @@
 import { describe, expect, test } from "bun:test";
 import { AiGenerationService } from "../services/ai-generation-service.js";
 import { AiProviderClientRegistry } from "../../providers/ai-provider-client-registry.js";
-import { AiContext } from "../context/ai-context.js";
+import { AiContext } from "../../domain/context/ai-context.js";
 import { defineAiTool } from "../../domain/tools/define-ai-tool.js";
 import { Agent, AgentLoop, stepCountIs } from "./index.js";
 import type { IAiProviderClient } from "../../providers/ai-provider-client.js";
@@ -211,24 +211,30 @@ function createAlwaysToolCallProvider(): IAiProviderClient {
   };
 }
 
-function createAgent(providerId: string, provider: IAiProviderClient): Agent {
+function createAgent(
+  providerId: string,
+  provider: IAiProviderClient,
+  context: AiContext = AiContext.create().addTool(getCapital),
+): Agent {
   const registry = new AiProviderClientRegistry();
   registry.register(provider);
 
   return new Agent(
     new AiGenerationService(registry, { chatProvider: providerId, chatModel: "agent-model" }),
-    [getCapital],
+    context,
   );
 }
 
 describe("Agent loop", () => {
   test("runs a tool-calling loop end-to-end with hooks", async () => {
-    const agent = createAgent("agent-test", createAgentTestProvider());
-    const context = AiContext.create().addUserMessage("What is the capital of Portugal?");
-
+    const agent = createAgent(
+      "agent-test",
+      createAgentTestProvider(),
+      AiContext.create().addTool(getCapital).addUserMessage("What is the capital of Portugal?"),
+    );
     const events: string[] = [];
 
-    const result = await agent.run(context, {
+    const result = await agent.run({
       maxSteps: 5,
       onStepStart: (state) => events.push(`start:${state.stepCount}`),
       onStepEnd: (step) => events.push(`end:${step.index}:${step.done}`),
@@ -244,11 +250,14 @@ describe("Agent loop", () => {
   });
 
   test("emits streamed step chunks through hooks", async () => {
-    const agent = createAgent("agent-test", createAgentTestProvider());
-    const context = AiContext.create().addUserMessage("What is the capital of Portugal?");
+    const agent = createAgent(
+      "agent-test",
+      createAgentTestProvider(),
+      AiContext.create().addTool(getCapital).addUserMessage("What is the capital of Portugal?"),
+    );
     const events: string[] = [];
 
-    const result = await agent.run(context, {
+    const result = await agent.run({
       maxSteps: 5,
       onStepChunk: (chunk, state) => {
         events.push(`${state.stepCount}:${chunk.type ?? "unknown"}:${chunk.delta ?? ""}`);
@@ -359,21 +368,24 @@ describe("Agent loop", () => {
       },
     };
 
-    const agent = createAgent("request-tools", provider);
-    const result = await agent.run(
-      AiContext.create().addUserMessage("What is the capital of Portugal?"),
-      { maxSteps: 5 },
+    const agent = createAgent(
+      "request-tools",
+      provider,
+      AiContext.create().addTool(getCapital).addUserMessage("What is the capital of Portugal?"),
     );
+    const result = await agent.run({ maxSteps: 5 });
 
     expect(sawToolInRequest).toBe(true);
     expect(result.stopped).toBe("completed");
   });
 
   test("stops at maxSteps when the model keeps calling tools", async () => {
-    const agent = createAgent("always", createAlwaysToolCallProvider());
-    const context = AiContext.create().addUserMessage("loop");
-
-    const result = await agent.run(context, { maxSteps: 3 });
+    const agent = createAgent(
+      "always",
+      createAlwaysToolCallProvider(),
+      AiContext.create().addTool(getCapital).addUserMessage("loop"),
+    );
+    const result = await agent.run({ maxSteps: 3 });
 
     expect(result.stepCount).toBe(3);
     expect(result.stopped).toBe("maxSteps");
@@ -381,12 +393,12 @@ describe("Agent loop", () => {
   });
 
   test("can defer tool execution and resume later with tool results", async () => {
-    const agent = createAgent("agent-test", createAgentTestProvider());
-    const initialContext = AiContext.create().addUserMessage(
-      "What is the capital of Portugal?",
+    const agent = createAgent(
+      "agent-test",
+      createAgentTestProvider(),
+      AiContext.create().addTool(getCapital).addUserMessage("What is the capital of Portugal?"),
     );
-
-    const waiting = await agent.run(initialContext, {
+    const waiting = await agent.run({
       toolExecutionMode: "deferred",
       maxSteps: 5,
     });
@@ -420,11 +432,13 @@ describe("Agent loop", () => {
   });
 
   test("streams the final maxSteps message through hooks", async () => {
-    const agent = createAgent("always", createAlwaysToolCallProvider());
-    const context = AiContext.create().addUserMessage("loop");
+    const agent = createAgent(
+      "always",
+      createAlwaysToolCallProvider(),
+      AiContext.create().addTool(getCapital).addUserMessage("loop"),
+    );
     const events: string[] = [];
-
-    const result = await agent.run(context, {
+    const result = await agent.run({
       maxSteps: 2,
       onMaxStepsFinalMessageStart: (request) => {
         events.push(`start:${request.tools?.length ?? 0}`);
@@ -448,10 +462,12 @@ describe("Agent loop", () => {
   });
 
   test("can opt out of final-message generation on maxSteps", async () => {
-    const agent = createAgent("always", createAlwaysToolCallProvider());
-    const context = AiContext.create().addUserMessage("loop");
-
-    const result = await agent.run(context, {
+    const agent = createAgent(
+      "always",
+      createAlwaysToolCallProvider(),
+      AiContext.create().addTool(getCapital).addUserMessage("loop"),
+    );
+    const result = await agent.run({
       maxSteps: 3,
       maxStepsFinalMessagePrompt: false,
     });
@@ -462,10 +478,12 @@ describe("Agent loop", () => {
   });
 
   test("respects a custom stopWhen condition", async () => {
-    const agent = createAgent("always", createAlwaysToolCallProvider());
-    const context = AiContext.create().addUserMessage("loop");
-
-    const result = await agent.run(context, { stopWhen: stepCountIs(2) });
+    const agent = createAgent(
+      "always",
+      createAlwaysToolCallProvider(),
+      AiContext.create().addTool(getCapital).addUserMessage("loop"),
+    );
+    const result = await agent.run({ stopWhen: stepCountIs(2) });
 
     expect(result.stepCount).toBe(2);
     expect(result.stopped).toBe("stopWhen");
@@ -490,10 +508,10 @@ describe("Agent loop", () => {
 
     const loop = new CountingLoop(
       new AiGenerationService(registry, { chatProvider: "always", chatModel: "agent-model" }),
-      [getCapital],
+      AiContext.create().addUserMessage("loop").addTool(getCapital),
     );
 
-    const result = await loop.run(AiContext.create().addUserMessage("loop"));
+    const result = await loop.run();
 
     expect(result.stepCount).toBe(1);
     expect(result.stopped).toBe("maxSteps");

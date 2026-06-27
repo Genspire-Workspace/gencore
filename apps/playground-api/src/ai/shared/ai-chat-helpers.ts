@@ -1,7 +1,7 @@
 // file: apps\playground-api\src\ai\shared\ai-chat-helpers.ts
 
 import type { AiMessageContent } from "../../../../../packages/ai/src/domain/messages/ai-content-part.js";
-import { AiContext } from "../../../../../packages/ai/src/application/context/index.js";
+import { AiContext } from "../../../../../packages/ai/src/domain/context/index.js";
 import type { IChatGenerationRequest } from "../../../../../packages/ai/src/domain/chat/chat-generation-request.js";
 import type { IChatGenerationSettings } from "../../../../../packages/ai/src/domain/chat/chat-generation-settings.js";
 import type { IChatMessage } from "../../../../../packages/ai/src/domain/chat/chat-message.js";

@@ -1,11 +1,11 @@
-// file: packages/ai/src/application/context/ai-context.ts
+// file: packages/ai/src/domain/context/ai-context.ts
 
-import type { IChatMessage } from "../../domain/chat/chat-message.js";
-import type { IChatGenerationRequest } from "../../domain/chat/chat-generation-request.js";
-import type { IChatGenerationSettings } from "../../domain/chat/chat-generation-settings.js";
-import type { IAiTool } from "../../domain/tools/ai-tool.js";
-import type { AiMessageContent } from "../../domain/messages/ai-content-part.js";
-import { normalizeAiMessageContent } from "../../domain/messages/ai-message-content.js";
+import type { IChatMessage } from "../chat/chat-message.js";
+import type { IChatGenerationRequest } from "../chat/chat-generation-request.js";
+import type { IChatGenerationSettings } from "../chat/chat-generation-settings.js";
+import type { IAiTool } from "../tools/ai-tool.js";
+import type { AiMessageContent } from "../messages/ai-content-part.js";
+import { normalizeAiMessageContent } from "../messages/ai-message-content.js";
 
 export interface IAiContext {
   systemPrompt?: IChatMessage;

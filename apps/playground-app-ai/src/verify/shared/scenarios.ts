@@ -7,7 +7,7 @@ import type { IChatMessage } from "../../../../../packages/ai/src/domain/chat/ch
 import type { IEmbeddingGenerationRequest } from "../../../../../packages/ai/src/domain/embeddings/embedding-generation-request.js";
 import type { IAiImagePart } from "../../../../../packages/ai/src/domain/messages/ai-content-part.js";
 import { Agent } from "../../../../../packages/ai/src/application/agents/agent.js";
-import { AiContext } from "../../../../../packages/ai/src/application/context/ai-context.js";
+import { AiContext } from "../../../../../packages/ai/src/domain/context/ai-context.js";
 import { AiGenerationService } from "../../../../../packages/ai/src/application/services/ai-generation-service.js";
 import type { IAiAgentLoopResult, IAiAgentStep } from "../../../../../packages/ai/src/application/agents/index.js";
 import { defineAiTool } from "../../../../../packages/ai/src/domain/tools/define-ai-tool.js";
@@ -275,7 +275,14 @@ async function runAgentToolScenario(options: {
   label: string;
 }): Promise<IScenarioResult> {
   const verificationSecret = "Gencore agent verification secret";
-  const agent = new Agent(options.service, [
+  const context = AiContext.create()
+    .setSystemPrompt(
+      "You are running an agent verification. You must call the available tool exactly once before answering. Return only the secret from the tool.",
+    )
+    .addUserMessage(
+      "Call the tool and then reply with exactly the secret value that it returns.",
+    );
+  context.addTool(
     defineAiTool({
       name: "get_verification_secret",
       description:
@@ -286,21 +293,15 @@ async function runAgentToolScenario(options: {
       },
       execute: async () => ({ secret: verificationSecret }),
     }),
-  ]);
+  );
 
-  const context = AiContext.create()
-    .setSystemPrompt(
-      "You are running an agent verification. You must call the available tool exactly once before answering. Return only the secret from the tool.",
-    )
-    .addUserMessage(
-      "Call the tool and then reply with exactly the secret value that it returns.",
-    );
+  const agent = new Agent(options.service, context);
 
   options.logger.log("");
   options.logger.log(`----- ${options.label} [${options.model}] -----`);
 
   try {
-    const result = await agent.run(context, {
+    const result = await agent.run({
       maxSteps: 4,
       requestOverrides: {
         model: options.model,
@@ -371,7 +372,6 @@ async function runAgentVisionScenario(options: {
     options.prompt ??
     "Look at this image and answer with the dominant color in one word.";
 
-  const agent = new Agent(options.service);
   const context = AiContext.create().addUserMessage([
     {
       type: "image",
@@ -380,12 +380,13 @@ async function runAgentVisionScenario(options: {
     },
     { type: "text", text: prompt },
   ]);
+  const agent = new Agent(options.service, context);
 
   options.logger.log("");
   options.logger.log(`----- ${options.label} [${options.model}] -----`);
 
   try {
-    const result = await agent.run(context, {
+    const result = await agent.run({
       maxSteps: 1,
       requestOverrides: {
         model: options.model,
@@ -443,7 +444,14 @@ async function runAgentMaxTurnsScenario(options: {
   maxSteps?: number;
 }): Promise<IScenarioResult> {
   const maxSteps = options.maxSteps ?? 2;
-  const agent = new Agent(options.service, [
+  const context = AiContext.create()
+    .setSystemPrompt(
+      "You are running a max-turn verification. On every turn, call continue_agent_verification. Do not provide a final answer before you are stopped.",
+    )
+    .addUserMessage(
+      "Start the loop verification now. Keep calling the tool and do not finish.",
+    );
+  context.addTool(
     defineAiTool({
       name: "continue_agent_verification",
       description:
@@ -457,21 +465,15 @@ async function runAgentMaxTurnsScenario(options: {
           "Continue the loop verification. Do not answer the user yet. Call continue_agent_verification again.",
       }),
     }),
-  ]);
+  );
 
-  const context = AiContext.create()
-    .setSystemPrompt(
-      "You are running a max-turn verification. On every turn, call continue_agent_verification. Do not provide a final answer before you are stopped.",
-    )
-    .addUserMessage(
-      "Start the loop verification now. Keep calling the tool and do not finish.",
-    );
+  const agent = new Agent(options.service, context);
 
   options.logger.log("");
   options.logger.log(`----- ${options.label} [${options.model}] -----`);
 
   try {
-    const result = await agent.run(context, {
+    const result = await agent.run({
       maxSteps,
       requestOverrides: {
         model: options.model,

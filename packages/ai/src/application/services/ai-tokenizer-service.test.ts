@@ -1,7 +1,7 @@
 // file: packages/ai/src/application/services/ai-tokenizer-service.test.ts
 
 import { describe, expect, test } from "bun:test";
-import { AiContext } from "../context/ai-context.js";
+import { AiContext } from "../../domain/context/ai-context.js";
 import { AiTokenizerService } from "./ai-tokenizer-service.js";
 
 describe("AiTokenizerService", () => {

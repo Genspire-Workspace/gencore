@@ -1,6 +1,6 @@
 // file: packages/ai/src/application/agents/agent-loop.ts
 
-import { AiContext } from "../context/ai-context.js";
+import { AiContext } from "../../domain/context/ai-context.js";
 import type { AiGenerationService } from "../services/ai-generation-service.js";
 import type { IChatGenerationChunk } from "../../domain/chat/chat-generation-chunk.js";
 import type { IChatGenerationRequest } from "../../domain/chat/chat-generation-request.js";
@@ -35,7 +35,7 @@ const DEFAULT_MAX_STEPS_FINAL_MESSAGE_PROMPT =
 export abstract class AgentLoop {
   constructor(
     protected readonly generationService: AiGenerationService,
-    protected readonly tools: readonly IAiTool[] = [],
+    protected readonly context: AiContext,
   ) {}
 
   /** Called before each step. */
@@ -113,9 +113,9 @@ export abstract class AgentLoop {
   }
 
   protected buildRequest(
-    context: AiContext,
     overrides?: IAiAgentRequestOverrides,
     options?: {
+      context?: AiContext;
       includeAgentTools?: boolean;
       maxToolSteps?: number;
     },
@@ -124,6 +124,8 @@ export abstract class AgentLoop {
       ...this.baseRequestOverrides(),
       ...overrides,
     };
+
+    const context = options?.context ?? this.context;
 
     const request = context.toChatGenerationRequest({
       ...merged,
@@ -140,7 +142,7 @@ export abstract class AgentLoop {
       };
     }
 
-    if (this.tools.length === 0) {
+    if (context.tools.length === 0) {
       return request;
     }
 
@@ -148,7 +150,7 @@ export abstract class AgentLoop {
       (request.tools ?? []).map((tool) => [tool.name, tool] as const),
     );
 
-    for (const tool of this.tools) {
+    for (const tool of context.tools) {
       toolsByName.set(tool.name, tool);
     }
 
@@ -205,7 +207,6 @@ export abstract class AgentLoop {
     const lastStep = state.steps[state.steps.length - 1];
     const finalContext = context.clone().addUserMessage(prompt);
     const request = this.buildRequest(
-      finalContext,
       lastStep
         ? {
             provider: lastStep.request.provider,
@@ -219,7 +220,7 @@ export abstract class AgentLoop {
             },
           }
         : undefined,
-      { includeAgentTools: false, maxToolSteps: 0 },
+      { context: finalContext, includeAgentTools: false, maxToolSteps: 0 },
     );
 
     await this.onMaxStepsFinalMessageStart(request, state);
@@ -283,7 +284,7 @@ export abstract class AgentLoop {
 
     return manager.run({
       toolCalls: response.toolCalls ?? [],
-      tools: this.tools,
+      tools: this.context.tools,
       provider: request.provider,
       model: request.model,
       userId: request.userId,
@@ -432,7 +433,9 @@ export abstract class AgentLoop {
       await this.onStepStart(state);
 
       const overrides = (await this.onPrepareTurn(state)) ?? undefined;
-      const request = this.prepareStepRequest(this.buildRequest(context, overrides));
+      const request = this.prepareStepRequest(
+        this.buildRequest(overrides, { context }),
+      );
       const response = await this.streamResponse(request, state);
 
       const toolCalls = response.toolCalls ?? [];
@@ -453,7 +456,7 @@ export abstract class AgentLoop {
         response.toolResults = toolResults;
         returnDirectResult = managerResult.returnDirectResult;
       } else if (toolResults.length > 0) {
-        const directTool = this.tools.find((tool) => tool.returnDirect);
+        const directTool = this.context.tools.find((tool) => tool.returnDirect);
         if (directTool) {
           const directResult = toolResults.find(
             (result) => result.name === directTool.name,
@@ -537,8 +540,8 @@ export abstract class AgentLoop {
     return result;
   }
 
-  async run(context: AiContext): Promise<IAiAgentLoopResult> {
-    return this.runInternal(context, { stepCount: 0, steps: [] }, []);
+  async run(): Promise<IAiAgentLoopResult> {
+    return this.runInternal(this.context.clone(), { stepCount: 0, steps: [] }, []);
   }
 
   async resume(
@@ -574,9 +577,16 @@ export class AiAgentLoop extends AgentLoop {
 
   constructor(
     generationService: AiGenerationService,
+    context: AiContext,
     options: IAiAgentLoopOptions = {},
   ) {
-    super(generationService, options.tools ?? []);
+    const mergedContext = context.clone();
+
+    if (options.tools?.length) {
+      mergedContext.addTools(options.tools);
+    }
+
+    super(generationService, mergedContext);
     this.options = options;
   }
 
