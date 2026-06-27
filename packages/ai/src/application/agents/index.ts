@@ -4,6 +4,9 @@ export { Agent } from "./agent.js";
 export { AgentLoop, AiAgentLoop } from "./agent-loop.js";
 export { stepCountIs } from "./agent-stop.js";
 export type {
+  IAiAgentContextSnapshot,
+  IAiAgentResumeState,
+  IAiAgentToolExecutionMode,
   IAiAgentMaxStepsFinalMessagePrompt,
   IAiAgentRequestOverrides,
   IAiAgentStep,

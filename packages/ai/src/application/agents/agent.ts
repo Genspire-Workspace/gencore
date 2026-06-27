@@ -6,7 +6,9 @@ import type { IAiTool } from "../../domain/tools/ai-tool.js";
 import type {
   IAiAgentLoopOptions,
   IAiAgentLoopResult,
+  IAiAgentResumeState,
 } from "../../domain/agents/agent-types.js";
+import type { IAiToolResult } from "../../domain/tools/ai-tool-result.js";
 import { AiAgentLoop } from "./agent-loop.js";
 
 /**
@@ -32,5 +34,13 @@ export class Agent {
     options: IAiAgentLoopOptions = {},
   ): Promise<IAiAgentLoopResult> {
     return this.loop(options).run(context);
+  }
+
+  async resume(
+    resumeState: IAiAgentResumeState,
+    toolResults: readonly IAiToolResult[],
+    options: IAiAgentLoopOptions = {},
+  ): Promise<IAiAgentLoopResult> {
+    return this.loop(options).resume(resumeState, toolResults);
   }
 }

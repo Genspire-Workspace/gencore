@@ -1,23 +1,26 @@
 // file: packages/ai/src/application/agents/agent-loop.ts
 
-import type { AiContext } from "../context/ai-context.js";
+import { AiContext } from "../context/ai-context.js";
 import type { AiGenerationService } from "../services/ai-generation-service.js";
 import type { IChatGenerationChunk } from "../../domain/chat/chat-generation-chunk.js";
 import type { IChatGenerationRequest } from "../../domain/chat/chat-generation-request.js";
 import type { IChatGenerationResponse } from "../../domain/chat/chat-generation-response.js";
 import type { IChatMessage } from "../../domain/chat/chat-message.js";
 import type { AiContentPart } from "../../domain/messages/ai-content-part.js";
+import type { IAiToolCall } from "../../domain/tools/ai-tool-call.js";
 import type { IAiTool } from "../../domain/tools/ai-tool.js";
 import type { IAiToolResult } from "../../domain/tools/ai-tool-result.js";
 import { AiToolCallingManager, type IAiToolCallingManagerResult } from "../tools/ai-tool-calling-manager.js";
 import type {
   IAiAgentLoopOptions,
+  IAiAgentResumeState,
   IAiAgentLoopResult,
   IAiAgentMaxStepsFinalMessagePrompt,
   IAiAgentLoopState,
   IAiAgentLoopStopReason,
   IAiAgentRequestOverrides,
   IAiAgentStep,
+  IAiAgentToolExecutionMode,
 } from "../../domain/agents/agent-types.js";
 
 const DEFAULT_MAX_STEPS_FINAL_MESSAGE_PROMPT =
@@ -99,6 +102,11 @@ export abstract class AgentLoop {
     return DEFAULT_MAX_STEPS_FINAL_MESSAGE_PROMPT;
   }
 
+  /** Controls whether tool calls are executed immediately or returned for resume. */
+  protected toolExecutionMode(): IAiAgentToolExecutionMode {
+    return "immediate";
+  }
+
   /** Base overrides applied to every turn request. */
   protected baseRequestOverrides(): IAiAgentRequestOverrides {
     return {};
@@ -147,6 +155,31 @@ export abstract class AgentLoop {
     return {
       ...request,
       tools: [...toolsByName.values()],
+    };
+  }
+
+  protected stripToolExecutors(tools: readonly IAiTool[] | undefined): IAiTool[] | undefined {
+    if (!tools?.length) {
+      return undefined;
+    }
+
+    return tools.map(({ execute: _execute, resultConverter: _resultConverter, ...tool }) => ({
+      ...tool,
+    }));
+  }
+
+  protected prepareStepRequest(
+    request: IChatGenerationRequest,
+  ): IChatGenerationRequest {
+    if (this.toolExecutionMode() !== "deferred") {
+      return request;
+    }
+
+    const tools = this.stripToolExecutors(request.tools);
+
+    return {
+      ...request,
+      ...(tools?.length ? { tools } : { tools: undefined }),
     };
   }
 
@@ -222,6 +255,24 @@ export abstract class AgentLoop {
     await this.onMaxStepsFinalMessageEnd(message, state);
 
     return message;
+  }
+
+  protected createResumeState(
+    context: AiContext,
+    state: IAiAgentLoopState,
+    toolResults: readonly IAiToolResult[],
+    pendingToolCalls: readonly IAiToolCall[],
+  ): IAiAgentResumeState {
+    return {
+      context: {
+        ...context.toJSON(),
+        tools: this.stripToolExecutors(context.tools) ?? [],
+      },
+      stepCount: state.stepCount,
+      steps: state.steps,
+      toolResults: [...toolResults],
+      pendingToolCalls: [...pendingToolCalls],
+    };
   }
 
   protected runToolCalls(
@@ -365,25 +416,38 @@ export abstract class AgentLoop {
     };
   }
 
-  async run(context: AiContext): Promise<IAiAgentLoopResult> {
-    const state: IAiAgentLoopState = { stepCount: 0, steps: [] };
-    const allToolResults: IAiToolResult[] = [];
+  private async runInternal(
+    context: AiContext,
+    state: IAiAgentLoopState,
+    allToolResults: IAiToolResult[],
+  ): Promise<IAiAgentLoopResult> {
     const maxSteps = this.maxSteps();
     let returnDirectResult: unknown;
     let stopped: IAiAgentLoopStopReason = "completed";
     let finalMessage: IChatMessage | undefined;
+    let pendingToolCalls: IAiToolCall[] | undefined;
+    let resumeState: IAiAgentResumeState | undefined;
 
     while (true) {
       await this.onStepStart(state);
 
       const overrides = (await this.onPrepareTurn(state)) ?? undefined;
-      const request = this.buildRequest(context, overrides);
+      const request = this.prepareStepRequest(this.buildRequest(context, overrides));
       const response = await this.streamResponse(request, state);
 
       const toolCalls = response.toolCalls ?? [];
       let toolResults: IAiToolResult[] = [...(response.toolResults ?? [])];
+      const deferredToolExecution =
+        this.toolExecutionMode() === "deferred" && toolCalls.length > 0;
 
-      if (toolCalls.length > 0 && toolResults.length === 0) {
+      if (deferredToolExecution) {
+        toolResults = [];
+        response.toolResults = undefined;
+      }
+
+      if (toolCalls.length > 0 && toolResults.length === 0 && deferredToolExecution) {
+        this.appendTurnToContext(context, response, []);
+      } else if (toolCalls.length > 0 && toolResults.length === 0) {
         const managerResult = await this.runToolCalls(response, request);
         toolResults = managerResult.toolResults;
         response.toolResults = toolResults;
@@ -418,6 +482,13 @@ export abstract class AgentLoop {
       allToolResults.push(...toolResults);
 
       await this.onStepEnd(step, state);
+
+      if (deferredToolExecution) {
+        stopped = "waitingForToolResults";
+        pendingToolCalls = toolCalls;
+        resumeState = this.createResumeState(context, state, allToolResults, toolCalls);
+        break;
+      }
 
       if (returnDirectResult !== undefined) {
         stopped = "returnDirect";
@@ -455,6 +526,8 @@ export abstract class AgentLoop {
       stepCount: state.stepCount,
       finalMessage,
       toolResults: allToolResults,
+      pendingToolCalls,
+      resumeState,
       returnDirectResult,
       stopped,
     };
@@ -462,6 +535,33 @@ export abstract class AgentLoop {
     await this.onTurnEnd(result);
 
     return result;
+  }
+
+  async run(context: AiContext): Promise<IAiAgentLoopResult> {
+    return this.runInternal(context, { stepCount: 0, steps: [] }, []);
+  }
+
+  async resume(
+    resumeState: IAiAgentResumeState,
+    toolResults: readonly IAiToolResult[],
+  ): Promise<IAiAgentLoopResult> {
+    const context = new AiContext(resumeState.context);
+
+    for (const result of toolResults) {
+      context.addToolResultMessage(
+        result.toolCallId,
+        JSON.stringify(result.result ?? result.error),
+      );
+    }
+
+    return this.runInternal(
+      context,
+      {
+        stepCount: resumeState.stepCount,
+        steps: [...resumeState.steps],
+      },
+      [...resumeState.toolResults, ...toolResults],
+    );
   }
 }
 
@@ -554,5 +654,9 @@ export class AiAgentLoop extends AgentLoop {
     }
 
     return overrides;
+  }
+
+  protected override toolExecutionMode(): IAiAgentToolExecutionMode {
+    return this.options.toolExecutionMode ?? super.toolExecutionMode();
   }
 }

@@ -10,6 +10,7 @@ import type { IAiProviderClient } from "../../providers/ai-provider-client.js";
 import type { IChatGenerationChunk } from "../../domain/chat/chat-generation-chunk.js";
 import type { IChatGenerationRequest } from "../../domain/chat/chat-generation-request.js";
 import type { IChatGenerationResponse } from "../../domain/chat/chat-generation-response.js";
+import type { IAiToolResult } from "../../domain/tools/ai-tool-result.js";
 
 const getCapital = defineAiTool({
   name: "get_capital",
@@ -377,6 +378,45 @@ describe("Agent loop", () => {
     expect(result.stepCount).toBe(3);
     expect(result.stopped).toBe("maxSteps");
     expect(result.finalMessage?.content).toBe("Final answer after max steps.");
+  });
+
+  test("can defer tool execution and resume later with tool results", async () => {
+    const agent = createAgent("agent-test", createAgentTestProvider());
+    const initialContext = AiContext.create().addUserMessage(
+      "What is the capital of Portugal?",
+    );
+
+    const waiting = await agent.run(initialContext, {
+      toolExecutionMode: "deferred",
+      maxSteps: 5,
+    });
+
+    expect(waiting.stopped).toBe("waitingForToolResults");
+    expect(waiting.pendingToolCalls).toHaveLength(1);
+    expect(waiting.resumeState).toBeDefined();
+    expect(waiting.finalMessage).toBeUndefined();
+    expect(waiting.toolResults).toHaveLength(0);
+
+    const resumed = await agent.resume(
+      waiting.resumeState!,
+      [
+        {
+          toolCallId: "call-1",
+          name: "get_capital",
+          result: { capital: "Lisbon" },
+        } satisfies IAiToolResult,
+      ],
+      {
+        toolExecutionMode: "deferred",
+        maxSteps: 5,
+      },
+    );
+
+    expect(resumed.stopped).toBe("completed");
+    expect(resumed.stepCount).toBe(2);
+    expect(resumed.finalMessage?.content).toBe("Lisbon");
+    expect(resumed.toolResults).toHaveLength(1);
+    expect(resumed.toolResults[0]?.result).toEqual({ capital: "Lisbon" });
   });
 
   test("streams the final maxSteps message through hooks", async () => {

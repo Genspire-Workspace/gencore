@@ -5,6 +5,7 @@ import type { IChatGenerationChunk } from "../chat/chat-generation-chunk.js";
 import type { IChatGenerationResponse } from "../chat/chat-generation-response.js";
 import type { IChatGenerationSettings } from "../chat/chat-generation-settings.js";
 import type { IChatMessage } from "../chat/chat-message.js";
+import type { IAiToolCall } from "../tools/ai-tool-call.js";
 import type { IAiTool } from "../tools/ai-tool.js";
 import type { IAiToolResult } from "../tools/ai-tool-result.js";
 
@@ -37,11 +38,28 @@ export type IAiAgentStopCondition = (state: IAiAgentLoopState) => boolean;
 export type IAiAgentMaxStepsFinalMessagePrompt =
   | string
   | ((state: IAiAgentLoopState) => string | Promise<string>);
+export type IAiAgentToolExecutionMode = "immediate" | "deferred";
+
+export interface IAiAgentContextSnapshot {
+  systemPrompt?: IChatMessage;
+  chatMessages: IChatMessage[];
+  tools: IAiTool[];
+  metadata?: Record<string, unknown>;
+}
+
+export interface IAiAgentResumeState {
+  context: IAiAgentContextSnapshot;
+  stepCount: number;
+  steps: IAiAgentStep[];
+  toolResults: IAiToolResult[];
+  pendingToolCalls: IAiToolCall[];
+}
 
 export interface IAiAgentLoopOptions {
   tools?: readonly IAiTool[];
   maxSteps?: number;
   maxStepsFinalMessagePrompt?: IAiAgentMaxStepsFinalMessagePrompt | false;
+  toolExecutionMode?: IAiAgentToolExecutionMode;
   stopWhen?: IAiAgentStopCondition;
   signal?: AbortSignal;
   requestOverrides?: IAiAgentRequestOverrides;
@@ -76,13 +94,16 @@ export type IAiAgentLoopStopReason =
   | "completed"
   | "stopWhen"
   | "maxSteps"
-  | "returnDirect";
+  | "returnDirect"
+  | "waitingForToolResults";
 
 export interface IAiAgentLoopResult {
   steps: IAiAgentStep[];
   stepCount: number;
   finalMessage?: IChatMessage;
   toolResults: IAiToolResult[];
+  pendingToolCalls?: IAiToolCall[];
+  resumeState?: IAiAgentResumeState;
   returnDirectResult?: unknown;
   stopped: IAiAgentLoopStopReason;
 }
