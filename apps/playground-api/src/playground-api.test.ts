@@ -8,6 +8,7 @@ import { Server } from "@genspire/server";
 import { AuthRoleService } from "@genspire/auth";
 import { createPlaygroundApp } from "./playground-app.js";
 import { aiPlaygroundRuntime } from "./ai/runtime/ai-service-factory.js";
+import { AiGenerationService } from "../../../packages/ai/src/application/services/ai-generation-service.js";
 import type { IChatGenerationRequest } from "../../../packages/ai/src/domain/chat/chat-generation-request.js";
 import type { IChatGenerationResponse } from "../../../packages/ai/src/domain/chat/chat-generation-response.js";
 
@@ -35,6 +36,17 @@ function authHeaders(token: string): Record<string, string> {
     "content-type": "application/json",
     authorization: `Bearer ${token}`,
   };
+}
+
+async function assignAdminRole(
+  app: Awaited<ReturnType<typeof createPlaygroundApp>>,
+  userId: string,
+): Promise<void> {
+  const scope = app.createScope();
+  const roleService = scope.resolve(AuthRoleService);
+  await roleService.createRole({ name: "admin" });
+  await roleService.assignRoleToUser(userId, "admin");
+  await scope.destroy();
 }
 
 function createTestEnv(
@@ -95,6 +107,20 @@ function getMessageText(content: unknown): string {
       return "";
     })
     .join("");
+}
+
+function parseSseEvents(text: string): Array<Record<string, unknown>> {
+  return text
+    .split("\n\n")
+    .map((block) => block.trim())
+    .filter(Boolean)
+    .map((block) => {
+      const dataLine = block
+        .split("\n")
+        .find((line) => line.startsWith("data: "));
+      return dataLine ? JSON.parse(dataLine.slice(6)) as Record<string, unknown> : null;
+    })
+    .filter((value): value is Record<string, unknown> => value !== null);
 }
 
 async function createZipBlob(
@@ -323,9 +349,11 @@ describe("playground api", () => {
       };
 
       expect(swaggerDocument.paths["/ai/providers"]).toBeDefined();
-      expect(swaggerDocument.paths["/ai/chat"]).toBeDefined();
-      expect(swaggerDocument.paths["/ai/chat/stream"]).toBeDefined();
-      expect(swaggerDocument.paths["/ai/embeddings"]).toBeDefined();
+      expect(swaggerDocument.paths["/api/v1/ai/admin/chat/generate"]).toBeDefined();
+      expect(swaggerDocument.paths["/api/v1/ai/admin/embeddings/generate"]).toBeDefined();
+      expect(swaggerDocument.paths["/api/v1/ai/sessions"]).toBeDefined();
+      expect(swaggerDocument.paths["/api/v1/ai/sessions/{sessionId}"]).toBeDefined();
+      expect(swaggerDocument.paths["/api/v1/ai/sessions/{sessionId}/graph"]).toBeDefined();
       expect(swaggerDocument.paths["/ai/prompts"]).toBeDefined();
       expect(swaggerDocument.paths["/ai/prompts/{id}"]).toBeDefined();
       expect(swaggerDocument.paths["/ai/prompts/{id}/render"]).toBeDefined();
@@ -618,16 +646,8 @@ Review {{item}}.`,
     }
   });
 
-  test("ai chat and session generation attach persisted prompts and skills at request time", async () => {
-    const originalGenerateChatCompletion =
-      aiPlaygroundRuntime.service.generateChat.bind(aiPlaygroundRuntime.service);
+  test("package AI admin and workspace routes generate through the shared AI service", async () => {
     const capturedRequests: IChatGenerationRequest[] = [];
-
-    aiPlaygroundRuntime.service.generateChat = async (request) => {
-      capturedRequests.push(request);
-      return createAiResponse(request, "runtime ok");
-    };
-
     const app = await createPlaygroundApp({
       port: 0,
       repoRoot: tempDir,
@@ -636,81 +656,49 @@ Review {{item}}.`,
 
     await app.start();
 
+    const generationService = app.get(AiGenerationService);
+    const originalGenerateChat = generationService.generateChat.bind(generationService);
+    const originalStreamChat = generationService.streamChat.bind(generationService);
+
+    generationService.generateChat = async (request) => {
+      capturedRequests.push(request);
+      return createAiResponse(request, "runtime ok");
+    };
+    generationService.streamChat = (async function* (request: IChatGenerationRequest) {
+      capturedRequests.push(request);
+      yield {
+        id: crypto.randomUUID(),
+        provider: request.provider ?? "ollama",
+        model: request.model ?? "gemma4:12b",
+        type: "delta",
+        delta: "runtime ",
+      };
+      yield {
+        id: crypto.randomUUID(),
+        provider: request.provider ?? "ollama",
+        model: request.model ?? "gemma4:12b",
+        type: "message",
+        message: {
+          role: "assistant",
+          content: "runtime ok",
+        },
+        finishReason: "stop",
+      };
+    }) as typeof generationService.streamChat;
+
     try {
       const server = app.get(Server);
       const owner = await registerAndGetToken(server);
-
-      const promptResponse = await server.handle(
-        new Request("http://localhost/ai/prompts", {
-          method: "POST",
-          headers: authHeaders(owner.accessToken),
-          body: JSON.stringify({
-            visibility: "private",
-            name: "Geo Prompt",
-            template: [
-              {
-                role: "system",
-                content: "Use the supplied context for {{country}}.",
-              },
-              {
-                role: "user",
-                content: "Prepare a quick answer for {{country}}.",
-              },
-            ],
-            variables: [{ name: "country", required: true }],
-          }),
-        }),
-      );
-      expect(promptResponse.status).toBe(201);
-      const prompt = await promptResponse.json() as { id: string };
-
-      const serverSkillResponse = await server.handle(
-        new Request("http://localhost/ai/skills", {
-          method: "POST",
-          headers: authHeaders(owner.accessToken),
-          body: JSON.stringify({
-            visibility: "private",
-            name: "geo-skill",
-            description: "Adds trusted tools and instructions.",
-            instructions: "Skill instructions must be visible to the model.",
-            executionMode: "server",
-            allowedTools: ["get_capital"],
-            serverToolNames: ["get_capital", "add_numbers"],
-          }),
-        }),
-      );
-      expect(serverSkillResponse.status).toBe(201);
-      const serverSkill = await serverSkillResponse.json() as { id: string };
-
-      const clientSkillResponse = await server.handle(
-        new Request("http://localhost/ai/skills", {
-          method: "POST",
-          headers: authHeaders(owner.accessToken),
-          body: JSON.stringify({
-            visibility: "private",
-            name: "client-docs",
-            description: "Client-only instructions should not expose server tools.",
-            instructions: "Client skill instructions are still model-visible.",
-            executionMode: "client",
-          }),
-        }),
-      );
-      expect(clientSkillResponse.status).toBe(201);
-      const clientSkill = await clientSkillResponse.json() as { id: string };
+      await assignAdminRole(app, owner.userId);
 
       const chatResponse = await server.handle(
-        new Request("http://localhost/ai/chat", {
+        new Request("http://localhost/api/v1/ai/admin/chat/generate", {
           method: "POST",
           headers: authHeaders(owner.accessToken),
           body: JSON.stringify({
             provider: "ollama",
             model: "gemma4:12b",
             systemPrompt: "Base system prompt.",
-            promptIds: [prompt.id],
-            skillIds: [serverSkill.id, clientSkill.id],
-            promptVariables: {
-              country: "Portugal",
-            },
             messages: [
               {
                 role: "user",
@@ -730,84 +718,53 @@ Review {{item}}.`,
       });
 
       const directRequest = capturedRequests[0];
-      expect(directRequest).toBeDefined();
-      expect(directRequest?.tools?.map((tool) => tool.name)).toEqual([
-        "get_capital",
-      ]);
       expect(directRequest?.messages.map((message) => `${message.role}:${getMessageText(message.content)}`)).toEqual([
         "system:Base system prompt.",
-        "system:Skill instructions must be visible to the model.",
-        "system:Client skill instructions are still model-visible.",
-        "system:Use the supplied context for Portugal.",
-        "user:Prepare a quick answer for Portugal.",
         "user:What should I know?",
       ]);
 
       const sessionResponse = await server.handle(
-        new Request("http://localhost/ai/sessions", {
+        new Request("http://localhost/api/v1/ai/sessions", {
           method: "POST",
           headers: authHeaders(owner.accessToken),
           body: JSON.stringify({
-            title: "Prompt Attachment Session",
+            title: "Workspace Session",
           }),
         }),
       );
       expect(sessionResponse.status).toBe(201);
-      const session = await sessionResponse.json() as { id: string };
+      const session = await sessionResponse.json() as {
+        id: string;
+        defaultTimeline: { id: string };
+      };
 
-      const sessionMessageResponse = await server.handle(
-        new Request(`http://localhost/ai/sessions/${session.id}/messages`, {
+      const sessionGenerateResponse = await server.handle(
+        new Request(`http://localhost/api/v1/ai/sessions/${session.id}/timelines/${session.defaultTimeline.id}/generate`, {
           method: "POST",
           headers: authHeaders(owner.accessToken),
           body: JSON.stringify({
             content: "Continue the request.",
-            promptIds: [prompt.id],
-            skillIds: [serverSkill.id],
-            promptVariables: {
-              country: "Japan",
-            },
-          }),
-        }),
-      );
-      expect(sessionMessageResponse.status).toBe(200);
-
-      const sessionRequest = capturedRequests[1];
-      expect(sessionRequest).toBeDefined();
-      expect(sessionRequest?.tools?.map((tool) => tool.name)).toEqual([
-        "get_capital",
-      ]);
-      expect(sessionRequest?.messages.map((message) => `${message.role}:${getMessageText(message.content)}`)).toEqual([
-        "system:Skill instructions must be visible to the model.",
-        "system:Use the supplied context for Japan.",
-        "user:Prepare a quick answer for Japan.",
-        "user:Continue the request.",
-      ]);
-
-      const inaccessibleResponse = await server.handle(
-        new Request("http://localhost/ai/chat", {
-          method: "POST",
-          headers: authHeaders(owner.accessToken),
-          body: JSON.stringify({
             provider: "ollama",
             model: "gemma4:12b",
-            promptIds: ["missing-prompt"],
-            messages: [
-              {
-                role: "user",
-                content: "Test missing prompt.",
-              },
-            ],
           }),
         }),
       );
-      expect(inaccessibleResponse.status).toBe(404);
+      expect(sessionGenerateResponse.status).toBe(200);
+      expect(sessionGenerateResponse.headers.get("content-type")).toContain("text/event-stream");
+      await sessionGenerateResponse.text();
+
+      const sessionRequest = capturedRequests[1];
+      expect(sessionRequest?.messages.map((message) => `${message.role}:${getMessageText(message.content)}`)).toEqual([
+        "user:Continue the request.",
+      ]);
     } finally {
-      aiPlaygroundRuntime.service.generateChat = originalGenerateChatCompletion;
+      generationService.generateChat = originalGenerateChat;
+      generationService.streamChat = originalStreamChat;
       await app.stop();
     }
   });
 
-  test("ai stream route returns NDJSON response headers", async () => {
+  test("admin AI stream route returns SSE response headers", async () => {
     const app = await createPlaygroundApp({
       port: 0,
       env: createTestEnv(dbPath),
@@ -817,15 +774,18 @@ Review {{item}}.`,
 
     try {
       const server = app.get(Server);
+      const owner = await registerAndGetToken(server);
+      await assignAdminRole(app, owner.userId);
       const response = await server.handle(
-        new Request("http://localhost/ai/chat/stream", {
+        new Request("http://localhost/api/v1/ai/admin/chat/generate", {
           method: "POST",
-          headers: {
-            "content-type": "application/json",
-          },
+          headers: authHeaders(owner.accessToken),
           body: JSON.stringify({
             provider: "missing-provider",
             model: "missing-model",
+            settings: {
+              stream: true,
+            },
             messages: [
               {
                 role: "user",
@@ -837,7 +797,7 @@ Review {{item}}.`,
       );
 
       expect(response.headers.get("content-type")).toContain(
-        "application/x-ndjson",
+        "text/event-stream",
       );
       expect(response.headers.get("cache-control")).toBe("no-cache");
     } finally {
@@ -845,14 +805,7 @@ Review {{item}}.`,
     }
   });
 
-  test("ai session stream emits a terminal chunk when provider yields no chunks", async () => {
-    const originalStreamChatCompletion =
-      aiPlaygroundRuntime.service.streamChat.bind(aiPlaygroundRuntime.service);
-
-    aiPlaygroundRuntime.service.streamChat = (async function* () {
-      return;
-    }) as typeof aiPlaygroundRuntime.service.streamChat;
-
+  test("workspace session generation emits SSE and persists messages when provider yields no chunks", async () => {
     const app = await createPlaygroundApp({
       port: 0,
       env: createTestEnv(dbPath),
@@ -863,9 +816,15 @@ Review {{item}}.`,
     try {
       const server = app.get(Server);
       const { accessToken } = await registerAndGetToken(server);
+      const generationService = app.get(AiGenerationService);
+      const originalStreamChatCompletion =
+        generationService.streamChat.bind(generationService);
+      generationService.streamChat = (async function* () {
+        return;
+      }) as typeof generationService.streamChat;
 
       const sessionResponse = await server.handle(
-        new Request("http://localhost/ai/sessions", {
+        new Request("http://localhost/api/v1/ai/sessions", {
           method: "POST",
           headers: authHeaders(accessToken),
           body: JSON.stringify({
@@ -875,10 +834,13 @@ Review {{item}}.`,
       );
 
       expect(sessionResponse.status).toBe(201);
-      const session = await sessionResponse.json() as { id: string };
+      const session = await sessionResponse.json() as {
+        id: string;
+        defaultTimeline: { id: string };
+      };
 
       const streamResponse = await server.handle(
-        new Request(`http://localhost/ai/sessions/${session.id}/messages/stream`, {
+        new Request(`http://localhost/api/v1/ai/sessions/${session.id}/timelines/${session.defaultTimeline.id}/generate`, {
           method: "POST",
           headers: authHeaders(accessToken),
           body: JSON.stringify({
@@ -890,85 +852,34 @@ Review {{item}}.`,
       );
 
       expect(streamResponse.status).toBe(200);
-      expect(streamResponse.headers.get("content-type")).toContain("application/x-ndjson");
+      expect(streamResponse.headers.get("content-type")).toContain("text/event-stream");
 
-      const streamText = await streamResponse.text();
-      const chunks = streamText
-        .split("\n")
-        .map((line) => line.trim())
-        .filter(Boolean)
-        .map((line) => JSON.parse(line)) as Array<Record<string, unknown>>;
+      const events = parseSseEvents(await streamResponse.text());
 
-      expect(chunks.length).toBe(1);
-      expect(chunks[0]).toMatchObject({
+      expect(events.some((event) => event.type === "started")).toBe(true);
+      const messageEvent = events.find((event) => event.type === "message");
+      expect(messageEvent).toMatchObject({
         type: "message",
         sessionId: session.id,
       });
-      expect(typeof chunks[0]?.userMessageId).toBe("string");
-      expect(typeof chunks[0]?.assistantMessageId).toBe("string");
+      expect(typeof messageEvent?.messageId).toBe("string");
 
       const messagesResponse = await server.handle(
-        new Request(`http://localhost/ai/sessions/${session.id}/messages`, {
+        new Request(`http://localhost/api/v1/ai/sessions/${session.id}/timelines/${session.defaultTimeline.id}/turns`, {
           headers: { authorization: `Bearer ${accessToken}` },
         }),
       );
       expect(messagesResponse.status).toBe(200);
 
-      const messages = await messagesResponse.json() as {
-        items: Array<{ role: string }>;
+      const turns = await messagesResponse.json() as {
+        items: Array<{ messages: Array<{ role: string }> }>;
       };
-      expect(messages.items.map((message) => message.role)).toEqual([
+      expect(turns.items.flatMap((turn) => turn.messages.map((message) => message.role))).toEqual([
         "user",
         "assistant",
       ]);
-    } finally {
-      aiPlaygroundRuntime.service.streamChat = originalStreamChatCompletion;
-      await app.stop();
-    }
-  });
 
-  test("ai chat rejects unknown server tool names before model execution", async () => {
-    const app = await createPlaygroundApp({
-      port: 0,
-      env: createTestEnv(dbPath),
-    });
-
-    await app.start();
-
-    try {
-      const server = app.get(Server);
-      const response = await server.handle(
-        new Request("http://localhost/ai/chat", {
-          method: "POST",
-          headers: {
-            "content-type": "application/json",
-          },
-          body: JSON.stringify({
-            provider: "ollama",
-            model: "gemma4:12b",
-            messages: [
-              {
-                role: "user",
-                content: "Hello",
-              },
-            ],
-            tools: [
-              {
-                name: "missing_server_tool",
-                description: "Missing server tool",
-                executionMode: "server",
-              },
-            ],
-          }),
-        }),
-      );
-
-      expect(response.status).toBe(400);
-      expect(await response.json()).toMatchObject({
-        title: "Unknown server AI tool 'missing_server_tool'.",
-        status: 400,
-        code: "AI_SERVER_TOOL_NOT_FOUND",
-      });
+      generationService.streamChat = originalStreamChatCompletion;
     } finally {
       await app.stop();
     }

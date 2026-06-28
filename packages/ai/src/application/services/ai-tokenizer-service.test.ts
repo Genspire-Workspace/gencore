@@ -57,7 +57,7 @@ describe("AiTokenizerService", () => {
 
     expect(result.chunkCount).toBe(1);
     expect(result.tokenCount).toBe(total);
-    expect(result.chunks[0].tokenCount).toBe(total);
+    expect(result.chunks[0]!.tokenCount).toBe(total);
   });
 
   test("splits text into bounded chunks", () => {
@@ -82,7 +82,7 @@ describe("AiTokenizerService", () => {
 
     expect(result.chunkCount).toBeGreaterThanOrEqual(2);
     const overlapping = result.chunks.filter(
-      (chunk, i) => i > 0 && chunk.startToken < result.chunks[i - 1].endToken,
+      (chunk, i) => i > 0 && chunk.startToken < result.chunks[i - 1]!.endToken,
     );
     expect(overlapping.length).toBeGreaterThan(0);
   });

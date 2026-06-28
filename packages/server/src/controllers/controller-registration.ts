@@ -42,6 +42,7 @@ export function registerControllerRoutes(
   router: Router,
   container: Container,
   controller: ControllerClass,
+  prefix = "",
 ): void {
   const metadata = getControllerMetadata(controller);
 
@@ -52,7 +53,7 @@ export function registerControllerRoutes(
   for (const route of metadata.httpRoutes) {
     router.add(
       route.method,
-      joinPaths(metadata.basePath, route.path),
+      joinPaths(prefix, joinPaths(metadata.basePath, route.path)),
       async (ctx: HttpContext) => {
         const instance = ctx.container.resolve(controller);
         const handler = (instance as Record<string, unknown>)[route.handlerName];
@@ -79,9 +80,10 @@ export function registerControllerRoutes(
 export function registerControllers(
   router: Router,
   container: Container,
+  prefix = "",
   ...controllers: ControllerClass[]
 ): void {
   for (const controller of controllers) {
-    registerControllerRoutes(router, container, controller);
+    registerControllerRoutes(router, container, controller, prefix);
   }
 }

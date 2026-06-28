@@ -8,6 +8,8 @@
     "./tokenizer": "./src/tokenizer.ts",
     "./domain": "./src/domain.ts",
     "./application": "./src/application.ts",
+    "./infrastructure": "./src/infrastructure.ts",
+    "./server": "./src/server.ts",
     "./providers": "./src/providers.ts",
     "./catalogue": "./src/catalogue.ts",
     "./providers/ollama": "./src/providers/ollama/index.ts",
@@ -18,8 +20,12 @@
   },
   "dependencies": {
     "@ai-sdk/openai-compatible": "^3.0.0",
+    "@genspire/auth": "workspace:*",
     "@genspire/core": "workspace:*",
+    "@genspire/data-mikroorm": "workspace:*",
+    "@genspire/server": "workspace:*",
     "ai": "^7.0.0",
+    "@mikro-orm/decorators": "^6.5.9",
     "ollama": "^0.6.3",
     "js-tiktoken": "^1.0.0"
   }

@@ -236,9 +236,15 @@ describe("Agent loop", () => {
 
     const result = await agent.run({
       maxSteps: 5,
-      onStepStart: (state) => events.push(`start:${state.stepCount}`),
-      onStepEnd: (step) => events.push(`end:${step.index}:${step.done}`),
-      onTurnEnd: (result) => events.push(`turn:${result.stepCount}:${result.stopped}`),
+      onStepStart: (state) => {
+        events.push(`start:${state.stepCount}`);
+      },
+      onStepEnd: (step) => {
+        events.push(`end:${step.index}:${step.done}`);
+      },
+      onTurnEnd: (result) => {
+        events.push(`turn:${result.stepCount}:${result.stopped}`);
+      },
     });
 
     expect(result.stepCount).toBe(2);
@@ -496,12 +502,12 @@ describe("Agent loop", () => {
     class CountingLoop extends AgentLoop {
       prepareCalls = 0;
 
-      protected onPrepareTurn() {
+      protected override onPrepareTurn() {
         this.prepareCalls += 1;
         return { metadata: { turn: this.prepareCalls } };
       }
 
-      protected maxSteps() {
+      protected override maxSteps() {
         return 1;
       }
     }

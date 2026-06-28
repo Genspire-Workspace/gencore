@@ -461,7 +461,6 @@ The SDK may share stable request/response types only when those types are intent
 When an agent needs a current example of the intended API architecture, use:
 
 * `apps/playground-api` for controller + Swagger + libSQL + MikroORM
-* `apps/person-api` for a smaller SQL-backed API example
 * `packages/auth` for reusable package APIs once it has been migrated to the `domain/application/infrastructure/server/extension` shape
 
 Prefer following these examples rather than inventing a parallel structure.

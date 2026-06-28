@@ -19,14 +19,15 @@ import { readPlaygroundEnv, type IPlaygroundEnv } from "./config/playground-env.
 import {
   createPlaygroundMikroOrmConfig,
 } from "./database/playground-database-config.js";
+import { aiExtension } from "../../../packages/ai/src/extension/ai-extension.js";
+import { aiServerExtension } from "../../../packages/ai/src/server/ai-server-extension.js";
+import { OpenAICompatibleClient } from "../../../packages/ai/src/providers/openai-compatible/index.js";
 import { PlaygroundDbContext } from "./database/playground-db-context.js";
 import { createPlaygroundStorageProvider } from "./storage/playground-storage-provider.js";
 import { AuthActivityController } from "./auth/auth-activity.controller.js";
 import { AuthBanController } from "./auth/auth-ban.controller.js";
-import { AiChatController } from "./ai/generation/ai-chat.controller.js";
-import { AiEmbeddingController } from "./ai/generation/ai-embedding.controller.js";
 import { AiProviderController } from "./ai/providers/ai-provider.controller.js";
-import { AiSessionController } from "./ai/sessions/ai-session.controller.js";
+import { createAiPlaygroundProviderDefinitions } from "./ai/providers/ai-provider-definition.js";
 import { AiPromptController } from "./ai/prompts/ai-prompt.controller.js";
 import { AiSkillController } from "./ai/skills/ai-skill.controller.js";
 import { HealthController } from "./health/health.controller.js";
@@ -75,6 +76,27 @@ export async function createPlaygroundApp(
       jwtSecret: playgroundEnv.auth.jwtSecret,
       issuer: playgroundEnv.auth.issuer,
       audience: playgroundEnv.auth.audience,
+    }),
+  );
+
+  const providerDefinitions = createAiPlaygroundProviderDefinitions();
+  const aiClients = providerDefinitions
+    .filter((provider) => provider.client)
+    .map((provider) => new OpenAICompatibleClient({
+      id: provider.id,
+      name: provider.name,
+      ...provider.client!,
+    }));
+
+  await app.use(
+    aiExtension({
+      clients: aiClients,
+      defaults: {
+        chatProvider: process.env.AI_CHAT_PROVIDER ?? "ollama",
+        chatModel: process.env.AI_CHAT_MODEL ?? process.env.OLLAMA_CHAT_MODEL ?? "gemma4:12b",
+        embeddingProvider: process.env.AI_EMBEDDING_PROVIDER ?? "ollama",
+        embeddingModel: process.env.AI_EMBEDDING_MODEL ?? process.env.OLLAMA_EMBED_MODEL ?? "embeddinggemma:latest",
+      },
     }),
   );
 
@@ -134,8 +156,9 @@ export async function createPlaygroundApp(
   await app.use(authServerExtension());
 
   await app.use(storageServerExtension());
+  await app.use(aiServerExtension({ routePrefix: "/api/v1" }));
 
-  app.get(Server).registerControllers(HealthController, AiChatController, AiEmbeddingController, AiProviderController, AiSessionController, AiPromptController, AiSkillController, AuthActivityController, AuthBanController, TodoController);
+  app.get(Server).registerControllers(HealthController, AiProviderController, AiPromptController, AiSkillController, AuthActivityController, AuthBanController, TodoController);
 
   return app;
 }

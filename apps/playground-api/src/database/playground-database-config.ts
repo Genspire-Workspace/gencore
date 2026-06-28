@@ -7,12 +7,20 @@ import { Migrator } from "@mikro-orm/migrations";
 import { AuthRefreshTokenEntity, AuthRoleEntity, AuthUserRoleEntity, AuthEventEntity, AuthBannedIpEntity, AuthUserIpEntity } from "@genspire/auth";
 import { FileEntity } from "@genspire/storage";
 import { TodoEntity } from "../todos/todo.entity.js";
-import { AiSessionEntity } from "../ai/sessions/ai-session.entity.js";
-import { AiSessionMessageEntity } from "../ai/sessions/ai-session-message.entity.js";
 import { AiPromptEntity } from "../ai/prompts/ai-prompt.entity.js";
 import { AiSkillEntity } from "../ai/skills/ai-skill.entity.js";
 import { PlaygroundAuthUserEntity } from "../auth/playground-auth-user.entity.js";
 import type { IPlaygroundEnv } from "../config/playground-env.js";
+import {
+  AiGenerationRunEntity,
+  AiSessionBranchEntity,
+  AiSessionEntity,
+  AiSessionMessageEntity,
+  AiSessionMessageFeedbackEntity,
+  AiSessionTimelineEntity,
+  AiSessionTimelineTurnEntity,
+  AiSessionTurnEntity,
+} from "../../../../packages/ai/src/domain/workspace/index.js";
 
 export type PlaygroundSchemaMode = "update" | "migrations" | "none";
 
@@ -42,7 +50,27 @@ export async function createPlaygroundMikroOrmConfig(
   const dbConfig = env.database;
   const runtimeDriver = dbConfig.provider === "postgres" ? "postgresql" as const : "libsql" as const;
 
-  const entities = [FileEntity, TodoEntity, AiSessionEntity, AiSessionMessageEntity, AiPromptEntity, AiSkillEntity, PlaygroundAuthUserEntity, AuthRefreshTokenEntity, AuthRoleEntity, AuthUserRoleEntity, AuthEventEntity, AuthBannedIpEntity, AuthUserIpEntity];
+  const entities = [
+    FileEntity,
+    TodoEntity,
+    AiSessionEntity,
+    AiSessionTimelineEntity,
+    AiSessionTimelineTurnEntity,
+    AiSessionTurnEntity,
+    AiSessionMessageEntity,
+    AiSessionMessageFeedbackEntity,
+    AiSessionBranchEntity,
+    AiGenerationRunEntity,
+    AiPromptEntity,
+    AiSkillEntity,
+    PlaygroundAuthUserEntity,
+    AuthRefreshTokenEntity,
+    AuthRoleEntity,
+    AuthUserRoleEntity,
+    AuthEventEntity,
+    AuthBannedIpEntity,
+    AuthUserIpEntity,
+  ];
 
   const baseOptions = {
     runtimeDriver,

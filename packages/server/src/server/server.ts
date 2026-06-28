@@ -9,7 +9,7 @@ import type { HttpRouteDocs, RouteHandler } from "../http/http-types.js";
 import type { HttpMiddleware } from "../middleware/middleware.js";
 import { HttpError } from "../responses/http-error.js";
 import { problem } from "../responses/response-helpers.js";
-import { Router } from "../routing/router.js";
+import { Router, RouterGroup } from "../routing/router.js";
 import type { RegisteredRoute, RouteRegistrationOptions } from "../routing/router.js";
 import { type IClientIpOptions, resolveClientIp } from "../ip/client-ip.js";
 
@@ -38,6 +38,7 @@ export class Server {
   private readonly port: number;
   private readonly middlewares: readonly HttpMiddleware[];
   private bunServer?: ReturnType<typeof Bun.serve>;
+  private readonly routePrefixStack: string[] = [];
 
   constructor(private readonly config: ServerOptions) {
     this.router = new Router(config.container);
@@ -76,7 +77,11 @@ export class Server {
     handler: RouteHandler,
     options?: HttpRouteDocs | RouteRegistrationOptions,
   ): void {
-    this.router[method](path, handler, this.normalizeRouteOptions(options));
+    this.router[method](
+      this.applyCurrentPrefix(path),
+      handler,
+      this.normalizeRouteOptions(options),
+    );
   }
 
   get(
@@ -136,7 +141,12 @@ export class Server {
   }
 
   group(prefix: string, register: Parameters<Router["group"]>[1]): void {
-    this.router.group(prefix, register);
+    this.routePrefixStack.push(prefix);
+    try {
+      register(new RouterGroup(this.router, this.currentPrefix()));
+    } finally {
+      this.routePrefixStack.pop();
+    }
   }
 
   listRoutes(): readonly RegisteredRoute[] {
@@ -148,11 +158,34 @@ export class Server {
   }
 
   registerController(controller: ControllerClass): void {
-    registerControllerRoutes(this.router, this.config.container, controller);
+    registerControllerRoutes(
+      this.router,
+      this.config.container,
+      controller,
+      this.currentPrefix(),
+    );
   }
 
   registerControllers(...controllers: ControllerClass[]): void {
-    registerControllerGroup(this.router, this.config.container, ...controllers);
+    registerControllerGroup(
+      this.router,
+      this.config.container,
+      this.currentPrefix(),
+      ...controllers,
+    );
+  }
+
+  private currentPrefix(): string {
+    return this.routePrefixStack.join("");
+  }
+
+  private applyCurrentPrefix(path: string): string {
+    const prefix = this.currentPrefix();
+    if (!prefix) {
+      return path;
+    }
+
+    return `${prefix}/${path}`.replace(/\/+/g, "/");
   }
 
   private resolveClientIpConfig(): IClientIpOptions {
