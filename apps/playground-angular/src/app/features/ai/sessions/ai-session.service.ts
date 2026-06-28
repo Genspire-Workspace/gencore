@@ -1,25 +1,19 @@
 // file: apps\playground-angular\src\app\features\ai\sessions\ai-session.service.ts
 
 import { Injectable, inject } from '@angular/core';
-import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { firstValueFrom } from 'rxjs';
-import { appEnv } from '../../../core/app-env';
-import { AuthService } from '../../auth/auth.service';
-import { readSseEventData } from '../shared/ai-sse';
+import { HttpErrorResponse } from '@angular/common/http';
 import type {
   IAiSessionCreateRequest,
   IAiSessionGraphResponse,
-  IAiSessionListResponse,
   IAiSessionMessageRequest,
   IAiSessionResponse,
   IAiSessionStreamChunk,
   IAiSessionTimelineTurnSnapshotDto,
-  IAiSessionTimelineTurnListResponse,
   IAiSessionUpdateRequest,
 } from './ai-session-types';
+import { AiSessionApiClient } from './ai-session-api.client';
 
 const ACTIVE_SESSION_STORAGE_KEY = 'playground-angular.ai-session-id';
-const AI_SESSION_API_PATH = '/api/v1/ai/sessions';
 
 function readStoredSessionId(): string | null {
   try {
@@ -44,8 +38,7 @@ function writeStoredSessionId(sessionId: string | null): void {
 
 @Injectable({ providedIn: 'root' })
 export class AiSessionService {
-  private readonly http = inject(HttpClient);
-  private readonly authService = inject(AuthService);
+  private readonly aiSessionApiClient = inject(AiSessionApiClient);
 
   getActiveSessionId(): string | null {
     return readStoredSessionId();
@@ -56,25 +49,13 @@ export class AiSessionService {
   }
 
   async listSessions(): Promise<IAiSessionResponse[]> {
-    const response = await firstValueFrom(
-      this.http.get<IAiSessionListResponse>(
-        `${appEnv.apiBaseUrl}${AI_SESSION_API_PATH}`,
-      ),
-    );
-
-    return response.items;
+    return (await this.aiSessionApiClient.listSessions()).items;
   }
 
   async createSession(
     input: IAiSessionCreateRequest = {},
   ): Promise<IAiSessionResponse> {
-    const session = await firstValueFrom(
-      this.http.post<IAiSessionResponse>(
-        `${appEnv.apiBaseUrl}${AI_SESSION_API_PATH}`,
-        input,
-      ),
-    );
-
+    const session = await this.aiSessionApiClient.createSession(input);
     this.setActiveSessionId(session.id);
     return session;
   }
@@ -95,11 +76,7 @@ export class AiSessionService {
 
   async getSession(sessionId: string): Promise<IAiSessionResponse | null> {
     try {
-      return await firstValueFrom(
-        this.http.get<IAiSessionResponse>(
-          `${appEnv.apiBaseUrl}${AI_SESSION_API_PATH}/${sessionId}`,
-        ),
-      );
+      return await this.aiSessionApiClient.getSession(sessionId);
     } catch (error) {
       if (error instanceof HttpErrorResponse && error.status === 404) {
         return null;
@@ -131,40 +108,22 @@ export class AiSessionService {
     sessionId: string,
     input: IAiSessionUpdateRequest,
   ): Promise<IAiSessionResponse> {
-    return await firstValueFrom(
-      this.http.patch<IAiSessionResponse>(
-        `${appEnv.apiBaseUrl}${AI_SESSION_API_PATH}/${sessionId}`,
-        input,
-      ),
-    );
+    return await this.aiSessionApiClient.updateSession(sessionId, input);
   }
 
   async getSessionGraph(
     sessionId: string,
     timelineId?: string,
   ): Promise<IAiSessionGraphResponse> {
-    const suffix = timelineId
-      ? `/timelines/${timelineId}/graph`
-      : '/graph';
-
-    return await firstValueFrom(
-      this.http.get<IAiSessionGraphResponse>(
-        `${appEnv.apiBaseUrl}${AI_SESSION_API_PATH}/${sessionId}${suffix}`,
-      ),
-    );
+    return await this.aiSessionApiClient.getSessionGraph(sessionId, timelineId);
   }
 
   async listTimelineTurns(
     sessionId: string,
     timelineId: string,
   ): Promise<IAiSessionTimelineTurnSnapshotDto[]> {
-    const response = await firstValueFrom(
-      this.http.get<IAiSessionTimelineTurnListResponse>(
-        `${appEnv.apiBaseUrl}${AI_SESSION_API_PATH}/${sessionId}/timelines/${timelineId}/turns`,
-      ),
-    );
-
-    return response.items;
+    return (await this.aiSessionApiClient.listTimelineTurns(sessionId, timelineId))
+      .items;
   }
 
   async streamMessage(
@@ -173,62 +132,11 @@ export class AiSessionService {
     input: IAiSessionMessageRequest,
     onChunk: (chunk: IAiSessionStreamChunk) => void,
   ): Promise<void> {
-    const accessToken = await this.authService.ensureValidAccessToken();
-    if (!accessToken) {
-      throw new Error('Authentication is required.');
-    }
-
-    const response = await fetch(
-      `${appEnv.apiBaseUrl}${AI_SESSION_API_PATH}/${sessionId}/timelines/${timelineId}/generate`,
-      {
-        method: 'POST',
-        headers: {
-          accept: 'text/event-stream',
-          'content-type': 'application/json',
-          authorization: `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify(input),
-      },
+    await this.aiSessionApiClient.streamGenerate(
+      sessionId,
+      timelineId,
+      input,
+      onChunk,
     );
-
-    if (!response.ok) {
-      const errorBody = await response.text().catch(() => '');
-      throw new Error(
-        `Stream request failed with HTTP ${response.status}: ${errorBody}`,
-      );
-    }
-
-    if (!response.body) {
-      return;
-    }
-
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = '';
-
-    try {
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) {
-          break;
-        }
-
-        buffer += decoder.decode(value, { stream: true });
-        const extracted = readSseEventData(buffer);
-        buffer = extracted.remainder;
-
-        for (const eventData of extracted.events) {
-          onChunk(JSON.parse(eventData) as IAiSessionStreamChunk);
-        }
-      }
-
-      buffer += decoder.decode();
-      const trailing = readSseEventData(buffer);
-      for (const eventData of trailing.events) {
-        onChunk(JSON.parse(eventData) as IAiSessionStreamChunk);
-      }
-    } finally {
-      reader.releaseLock();
-    }
   }
 }

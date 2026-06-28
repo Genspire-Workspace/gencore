@@ -27,6 +27,49 @@ export interface IAiChatSettingsDto {
   metadata?: Record<string, unknown>;
 }
 
+export interface IAiAdminChatGenerateRequestDto {
+  provider?: string;
+  model?: string;
+  systemPrompt?: string;
+  messages: IAiChatMessageDto[];
+  tools?: IAiChatToolDto[];
+  settings?: IAiChatSettingsDto;
+  metadata?: Record<string, unknown>;
+}
+
+export interface IAiAdminChatGenerateResponseDto {
+  id?: string;
+  provider: string;
+  model: string;
+  message: IAiChatMessageDto;
+  finishReason?: string;
+  usage?: Record<string, unknown>;
+  metadata?: Record<string, unknown>;
+  toolCalls?: unknown[];
+  toolResults?: unknown[];
+}
+
+export interface IAiEmbeddingVectorDto {
+  index: number;
+  embedding: number[];
+}
+
+export interface IAiEmbeddingGenerateRequestDto {
+  provider?: string;
+  model?: string;
+  input: string | string[];
+  dimensions?: number;
+  metadata?: Record<string, unknown>;
+}
+
+export interface IAiEmbeddingGenerateResponseDto {
+  provider: string;
+  model: string;
+  embeddings: IAiEmbeddingVectorDto[];
+  usage?: Record<string, unknown>;
+  metadata?: Record<string, unknown>;
+}
+
 export interface IAiProviderResponseDto {
   id: string;
   name: string;

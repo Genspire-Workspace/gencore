@@ -1,9 +1,20 @@
 // file: packages/ai/src/server/dtos/ai-admin.dto.ts
 
 import { ApiDto, ApiField, defineApiType } from "@genspire/server";
+import type {
+  IAiAdminChatGenerateRequestDto,
+  IAiAdminChatGenerateResponseDto,
+  IAiChatMessageDto,
+  IAiChatSettingsDto,
+  IAiChatToolDto,
+  IAiEmbeddingGenerateRequestDto,
+  IAiEmbeddingGenerateResponseDto,
+  IAiEmbeddingVectorDto,
+  IAiSseEventDto,
+} from "../contracts.js";
 
 @ApiDto({ description: "AI chat message" })
-export class AiChatMessageDto {
+export class AiChatMessageDto implements IAiChatMessageDto {
   @ApiField({ type: "string" })
   role!: "system" | "user" | "assistant" | "tool";
 
@@ -18,7 +29,7 @@ export class AiChatMessageDto {
 }
 
 @ApiDto({ description: "Declarative AI tool definition" })
-export class AiChatToolDto {
+export class AiChatToolDto implements IAiChatToolDto {
   @ApiField({ type: "string" })
   name!: string;
 
@@ -36,7 +47,7 @@ export class AiChatToolDto {
 }
 
 @ApiDto({ description: "AI generation settings" })
-export class AiChatSettingsDto {
+export class AiChatSettingsDto implements IAiChatSettingsDto {
   @ApiField({ type: "boolean", required: false })
   stream?: boolean;
 
@@ -69,7 +80,7 @@ export class AiChatSettingsDto {
 }
 
 @ApiDto({ description: "Admin AI chat generation request" })
-export class AiAdminChatGenerateRequestDto {
+export class AiAdminChatGenerateRequestDto implements IAiAdminChatGenerateRequestDto {
   @ApiField({ type: "string", required: false })
   provider?: string;
 
@@ -93,7 +104,7 @@ export class AiAdminChatGenerateRequestDto {
 }
 
 @ApiDto({ description: "Admin AI chat generation response" })
-export class AiAdminChatGenerateResponseDto {
+export class AiAdminChatGenerateResponseDto implements IAiAdminChatGenerateResponseDto {
   @ApiField({ type: "string", required: false })
   id?: string;
 
@@ -132,7 +143,7 @@ export class AiAdminChatGenerateResponseDto {
   description: "AI SSE event payload",
   contentType: "text/event-stream",
 })
-export class AiSseEventDto {
+export class AiSseEventDto implements IAiSseEventDto {
   @ApiField({ type: "string" })
   type!: string;
 
@@ -198,7 +209,7 @@ export class AiSseEventDto {
 }
 
 @ApiDto({ description: "AI embeddings request" })
-export class AiEmbeddingGenerateRequestDto {
+export class AiEmbeddingGenerateRequestDto implements IAiEmbeddingGenerateRequestDto {
   @ApiField({ type: "string", required: false })
   provider?: string;
 
@@ -216,7 +227,7 @@ export class AiEmbeddingGenerateRequestDto {
 }
 
 @ApiDto({ description: "Embedding vector" })
-export class AiEmbeddingVectorDto {
+export class AiEmbeddingVectorDto implements IAiEmbeddingVectorDto {
   @ApiField({ type: "number" })
   index!: number;
 
@@ -225,7 +236,7 @@ export class AiEmbeddingVectorDto {
 }
 
 @ApiDto({ description: "AI embeddings response" })
-export class AiEmbeddingGenerateResponseDto {
+export class AiEmbeddingGenerateResponseDto implements IAiEmbeddingGenerateResponseDto {
   @ApiField({ type: "string" })
   provider!: string;
 
