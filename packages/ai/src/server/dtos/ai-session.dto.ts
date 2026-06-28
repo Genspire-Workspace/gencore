@@ -1,4 +1,4 @@
-// file: packages/ai/src/server/dtos/ai-workspace.dto.ts
+// file: packages/ai/src/server/dtos/ai-session.dto.ts
 
 import { ApiDto, ApiField, defineApiType } from "@genspire/server";
 import { AiChatSettingsDto, AiChatToolDto } from "./ai-admin.dto.js";

@@ -1,4 +1,4 @@
-﻿// file: apps\playground-api\src\database\playground-database-config.ts
+// file: apps\playground-api\src\database\playground-database-config.ts
 
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
@@ -20,7 +20,7 @@ import {
   AiSessionTimelineEntity,
   AiSessionTimelineTurnEntity,
   AiSessionTurnEntity,
-} from "../../../../packages/ai/src/domain/workspace/index.js";
+} from "../../../../packages/ai/src/domain/session/index.js";
 
 export type PlaygroundSchemaMode = "update" | "migrations" | "none";
 
@@ -84,10 +84,20 @@ export async function createPlaygroundMikroOrmConfig(
     const dbPath = path.resolve(repoRoot, dbConfig.libsqlDbPath);
     await mkdir(path.dirname(dbPath), { recursive: true });
 
+    const migrationsPath = resolvePlaygroundMigrationsPath(repoRoot);
+    await mkdir(migrationsPath, { recursive: true });
+
     return {
       ...baseOptions,
       entities,
       dbName: dbPath,
+      migrations: {
+        path: migrationsPath,
+        pathTs: migrationsPath,
+        glob: "!(*.d).{js,ts}",
+        transactional: true,
+        disableForeignKeys: false,
+      },
     } as unknown as MikroOrmExtensionOptions;
   }
 

@@ -1,21 +1,21 @@
-// file: packages/ai/src/application/services/ai-workspace-feedback-service.ts
+// file: packages/ai/src/application/services/ai-session-feedback-service.ts
 
 import { Scoped } from "@genspire/core";
-import type { ICreateOrUpdateAiMessageFeedbackInput } from "../contracts/ai-workspace-contracts.js";
-import { AiSessionMessageFeedbackEntity } from "../../domain/workspace/index.js";
-import { AiWorkspaceDbContext } from "../../infrastructure/persistence/ai-workspace-db-context.js";
+import type { ICreateOrUpdateAiMessageFeedbackInput } from "../contracts/ai-session-contracts.js";
+import { AiSessionMessageFeedbackEntity } from "../../domain/session/index.js";
+import { AiSessionDbContext } from "../../infrastructure/persistence/ai-session-db-context.js";
 import {
   requireAccessibleSession,
   requireMessageInSession,
   toFeedbackResponse,
   validateFeedbackRating,
-} from "./ai-workspace-shared.js";
+} from "./ai-session-shared.js";
 
 @Scoped()
-export class AiWorkspaceFeedbackService {
-  static inject = [AiWorkspaceDbContext];
+export class AiSessionFeedbackService {
+  static inject = [AiSessionDbContext];
 
-  constructor(private readonly db: AiWorkspaceDbContext) {}
+  constructor(private readonly db: AiSessionDbContext) {}
 
   async createOrUpdate(input: ICreateOrUpdateAiMessageFeedbackInput) {
     validateFeedbackRating(input.rating);

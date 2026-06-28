@@ -1,4 +1,4 @@
-// file: packages/ai/src/domain/workspace/entities/index.ts
+// file: packages/ai/src/domain/session/entities/index.ts
 
 export { AiSessionEntity } from "./ai-session.entity.js";
 export { AiSessionTimelineEntity } from "./ai-session-timeline.entity.js";

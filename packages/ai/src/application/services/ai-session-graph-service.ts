@@ -1,7 +1,7 @@
-// file: packages/ai/src/application/services/ai-workspace-graph-service.ts
+// file: packages/ai/src/application/services/ai-session-graph-service.ts
 
 import { Scoped } from "@genspire/core";
-import type { IGetAiSessionGraphInput } from "../contracts/ai-workspace-contracts.js";
+import type { IGetAiSessionGraphInput } from "../contracts/ai-session-contracts.js";
 import {
   AiGenerationRunEntity,
   AiSessionBranchEntity,
@@ -10,8 +10,8 @@ import {
   AiSessionTimelineEntity,
   AiSessionTimelineTurnEntity,
   AiSessionTurnEntity,
-} from "../../domain/workspace/index.js";
-import { AiWorkspaceDbContext } from "../../infrastructure/persistence/ai-workspace-db-context.js";
+} from "../../domain/session/index.js";
+import { AiSessionDbContext } from "../../infrastructure/persistence/ai-session-db-context.js";
 import {
   requireAccessibleSession,
   requireTimelineInSession,
@@ -23,13 +23,13 @@ import {
   toTimelineResponse,
   toTimelineTurnResponse,
   toTurnResponse,
-} from "./ai-workspace-shared.js";
+} from "./ai-session-shared.js";
 
 @Scoped()
-export class AiWorkspaceGraphService {
-  static inject = [AiWorkspaceDbContext];
+export class AiSessionGraphService {
+  static inject = [AiSessionDbContext];
 
-  constructor(private readonly db: AiWorkspaceDbContext) {}
+  constructor(private readonly db: AiSessionDbContext) {}
 
   async getGraph(input: IGetAiSessionGraphInput) {
     const session = await requireAccessibleSession(this.db, input.currentUser, input.sessionId);

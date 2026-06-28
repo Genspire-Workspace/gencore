@@ -2,7 +2,7 @@
 
 import type { GenExtension } from "@genspire/core";
 import { Server } from "@genspire/server";
-import { AiAdminGenerationController, AiWorkspaceSessionController } from "./controllers/index.js";
+import { AiAdminGenerationController, AiSessionController } from "./controllers/index.js";
 
 export interface IAiServerExtensionOptions {
   routePrefix?: string;
@@ -16,7 +16,7 @@ export function aiServerExtension(
     dependsOn: ["server", "ai"],
     register(app) {
       const server = app.get(Server);
-      const controllers = [AiAdminGenerationController, AiWorkspaceSessionController];
+      const controllers = [AiAdminGenerationController, AiSessionController];
 
       if (options.routePrefix) {
         server.group(options.routePrefix, () => {

@@ -1,4 +1,4 @@
-// file: packages/ai/src/domain/workspace/types/ai-workspace-types.ts
+// file: packages/ai/src/domain/session/types/ai-session-types.ts
 
 import type { IChatGenerationSettings } from "../../chat/chat-generation-settings.js";
 
@@ -25,7 +25,7 @@ export interface IAiSessionSettings {
   metadata?: Record<string, unknown>;
 }
 
-export interface IAiWorkspaceSseEvent {
+export interface IAiSessionSseEvent {
   type:
     | "started"
     | "delta"

@@ -1,4 +1,4 @@
-// file: packages/ai/src/infrastructure/persistence/ai-workspace-db-context.ts
+// file: packages/ai/src/infrastructure/persistence/ai-session-db-context.ts
 
 import { Scoped } from "@genspire/core";
 import { EntityManagerProvider, MikroOrmDbContext } from "@genspire/data-mikroorm";
@@ -11,10 +11,10 @@ import {
   AiSessionTimelineEntity,
   AiSessionTimelineTurnEntity,
   AiSessionTurnEntity,
-} from "../../domain/workspace/index.js";
+} from "../../domain/session/index.js";
 
 @Scoped()
-export class AiWorkspaceDbContext extends MikroOrmDbContext {
+export class AiSessionDbContext extends MikroOrmDbContext {
   static inject = [EntityManagerProvider];
 
   readonly sessions = this.set<AiSessionEntity, string>(AiSessionEntity);

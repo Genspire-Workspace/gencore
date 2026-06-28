@@ -1,9 +1,9 @@
-// file: packages/ai/src/domain/workspace/entities/ai-session-timeline.entity.ts
+// file: packages/ai/src/domain/session/entities/ai-session-timeline.entity.ts
 
 import { Entity, Index, PrimaryKey, Property } from "@mikro-orm/decorators";
 
-@Entity({ tableName: "ai_workspace_timelines" })
-@Index({ name: "ai_workspace_timelines_session_created_index", properties: ["sessionId", "createdAt"] })
+@Entity({ tableName: "ai_session_timelines" })
+@Index({ name: "ai_session_timelines_session_created_index", properties: ["sessionId", "createdAt"] })
 export class AiSessionTimelineEntity {
   @PrimaryKey({ type: "string" })
   id!: string;

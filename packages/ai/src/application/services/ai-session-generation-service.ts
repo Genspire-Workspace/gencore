@@ -1,17 +1,17 @@
-// file: packages/ai/src/application/services/ai-workspace-generation-service.ts
+// file: packages/ai/src/application/services/ai-session-generation-service.ts
 
 import { GenError, Scoped } from "@genspire/core";
 import type {
   IEditAiUserMessageAndRegenerateInput,
   IGenerateAiSessionTurnInput,
   IRegenerateAiAssistantMessageInput,
-} from "../contracts/ai-workspace-contracts.js";
+} from "../contracts/ai-session-contracts.js";
 import type { IChatGenerationChunk } from "../../domain/chat/chat-generation-chunk.js";
 import type { IChatGenerationRequest } from "../../domain/chat/chat-generation-request.js";
 import type {
   IAiSessionSettings,
-  IAiWorkspaceSseEvent,
-} from "../../domain/workspace/types/ai-workspace-types.js";
+  IAiSessionSseEvent,
+} from "../../domain/session/types/ai-session-types.js";
 import {
   AiGenerationRunEntity,
   AiSessionBranchEntity,
@@ -19,8 +19,8 @@ import {
   AiSessionTimelineEntity,
   AiSessionTimelineTurnEntity,
   AiSessionTurnEntity,
-} from "../../domain/workspace/index.js";
-import { AiWorkspaceDbContext } from "../../infrastructure/persistence/ai-workspace-db-context.js";
+} from "../../domain/session/index.js";
+import { AiSessionDbContext } from "../../infrastructure/persistence/ai-session-db-context.js";
 import { AiGenerationService } from "./ai-generation-service.js";
 import {
   cloneTimelinePrefix,
@@ -43,7 +43,7 @@ import {
   toTimelineTurnResponse,
   toToolDefinitions,
   validateSessionContent,
-} from "./ai-workspace-shared.js";
+} from "./ai-session-shared.js";
 
 const STREAM_HEARTBEAT_INTERVAL_MS = Number(
   process.env.AI_STREAM_HEARTBEAT_INTERVAL_MS ?? "1000",
@@ -64,15 +64,15 @@ type ReadNextChunkResult =
   | { kind: "heartbeat"; toolCallId: string; toolName?: string; elapsedMs: number };
 
 @Scoped()
-export class AiWorkspaceGenerationService {
-  static inject = [AiWorkspaceDbContext, AiGenerationService];
+export class AiSessionGenerationService {
+  static inject = [AiSessionDbContext, AiGenerationService];
 
   constructor(
-    private readonly db: AiWorkspaceDbContext,
+    private readonly db: AiSessionDbContext,
     private readonly generationService: AiGenerationService,
   ) {}
 
-  async *generate(input: IGenerateAiSessionTurnInput): AsyncIterable<IAiWorkspaceSseEvent> {
+  async *generate(input: IGenerateAiSessionTurnInput): AsyncIterable<IAiSessionSseEvent> {
     ensureStreamEnabled(input.settings);
     validateSessionContent(input.content);
     const session = await requireAccessibleSession(this.db, input.currentUser, input.sessionId);
@@ -99,7 +99,7 @@ export class AiWorkspaceGenerationService {
   ): Promise<{
     timeline: ReturnType<typeof toTimelineResponse>;
     branch: Record<string, unknown>;
-    stream: AsyncIterable<IAiWorkspaceSseEvent>;
+    stream: AsyncIterable<IAiSessionSseEvent>;
   }> {
     ensureStreamEnabled(input.settings);
     const session = await requireAccessibleSession(this.db, input.currentUser, input.sessionId);
@@ -185,7 +185,7 @@ export class AiWorkspaceGenerationService {
   ): Promise<{
     timeline: ReturnType<typeof toTimelineResponse>;
     branch: Record<string, unknown>;
-    stream: AsyncIterable<IAiWorkspaceSseEvent>;
+    stream: AsyncIterable<IAiSessionSseEvent>;
   }> {
     ensureStreamEnabled(input.settings);
     validateSessionContent(input.content);
@@ -372,7 +372,7 @@ export class AiWorkspaceGenerationService {
 
   private async *streamPreparedTurn(
     prepared: IPreparedTurnContext,
-  ): AsyncIterable<IAiWorkspaceSseEvent> {
+  ): AsyncIterable<IAiSessionSseEvent> {
     yield {
       type: "started",
       sessionId: prepared.sessionId,

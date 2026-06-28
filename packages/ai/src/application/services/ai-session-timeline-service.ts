@@ -1,10 +1,10 @@
-// file: packages/ai/src/application/services/ai-workspace-timeline-service.ts
+// file: packages/ai/src/application/services/ai-session-timeline-service.ts
 
 import { Scoped } from "@genspire/core";
 import type { ICurrentUser } from "@genspire/auth";
-import type { ICreateAiTimelineInput } from "../contracts/ai-workspace-contracts.js";
-import { AiSessionTimelineEntity } from "../../domain/workspace/index.js";
-import { AiWorkspaceDbContext } from "../../infrastructure/persistence/ai-workspace-db-context.js";
+import type { ICreateAiTimelineInput } from "../contracts/ai-session-contracts.js";
+import { AiSessionTimelineEntity } from "../../domain/session/index.js";
+import { AiSessionDbContext } from "../../infrastructure/persistence/ai-session-db-context.js";
 import {
   listTimelineTurnSnapshots,
   requireAccessibleSession,
@@ -14,13 +14,13 @@ import {
   toTimelineResponse,
   toTimelineTurnResponse,
   toTurnResponse,
-} from "./ai-workspace-shared.js";
+} from "./ai-session-shared.js";
 
 @Scoped()
-export class AiWorkspaceTimelineService {
-  static inject = [AiWorkspaceDbContext];
+export class AiSessionTimelineService {
+  static inject = [AiSessionDbContext];
 
-  constructor(private readonly db: AiWorkspaceDbContext) {}
+  constructor(private readonly db: AiSessionDbContext) {}
 
   async list(currentUser: ICurrentUser, sessionId: string) {
     const session = await requireAccessibleSession(this.db, currentUser, sessionId);

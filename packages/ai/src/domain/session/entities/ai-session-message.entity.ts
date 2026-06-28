@@ -1,11 +1,11 @@
-// file: packages/ai/src/domain/workspace/entities/ai-session-message.entity.ts
+// file: packages/ai/src/domain/session/entities/ai-session-message.entity.ts
 
 import { Entity, Index, PrimaryKey, Property, Unique } from "@mikro-orm/decorators";
-import type { AiSessionMessageRole } from "../types/ai-workspace-types.js";
+import type { AiSessionMessageRole } from "../types/ai-session-types.js";
 
-@Entity({ tableName: "ai_workspace_messages" })
-@Index({ name: "ai_workspace_messages_turn_index", properties: ["turnId", "index"] })
-@Unique({ name: "ai_workspace_messages_unique_turn_index", properties: ["turnId", "index"] })
+@Entity({ tableName: "ai_session_messages" })
+@Index({ name: "ai_session_messages_turn_index", properties: ["turnId", "index"] })
+@Unique({ name: "ai_session_messages_unique_turn_index", properties: ["turnId", "index"] })
 export class AiSessionMessageEntity {
   @PrimaryKey({ type: "string" })
   id!: string;

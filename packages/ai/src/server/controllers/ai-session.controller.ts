@@ -1,4 +1,4 @@
-// file: packages/ai/src/server/controllers/ai-workspace-session.controller.ts
+// file: packages/ai/src/server/controllers/ai-session.controller.ts
 
 import {
   Authorize,
@@ -15,12 +15,12 @@ import { requireCurrentUser } from "@genspire/auth";
 import { GenError } from "@genspire/core";
 import type { IChatGenerationSettings } from "../../domain/chat/chat-generation-settings.js";
 import type { IAiTool } from "../../domain/tools/ai-tool.js";
-import { AiWorkspaceBranchService } from "../../application/services/ai-workspace-branch-service.js";
-import { AiWorkspaceFeedbackService } from "../../application/services/ai-workspace-feedback-service.js";
-import { AiWorkspaceGenerationService } from "../../application/services/ai-workspace-generation-service.js";
-import { AiWorkspaceGraphService } from "../../application/services/ai-workspace-graph-service.js";
-import { AiWorkspaceSessionService } from "../../application/services/ai-workspace-session-service.js";
-import { AiWorkspaceTimelineService } from "../../application/services/ai-workspace-timeline-service.js";
+import { AiSessionBranchService } from "../../application/services/ai-session-branch-service.js";
+import { AiSessionFeedbackService } from "../../application/services/ai-session-feedback-service.js";
+import { AiSessionGenerationService } from "../../application/services/ai-session-generation-service.js";
+import { AiSessionGraphService } from "../../application/services/ai-session-graph-service.js";
+import { AiSessionService } from "../../application/services/ai-session-service.js";
+import { AiSessionTimelineService } from "../../application/services/ai-session-timeline-service.js";
 import { AiSseEventDto } from "../dtos/ai-admin.dto.js";
 import {
   CreateAiBranchResponseDto,
@@ -40,7 +40,7 @@ import {
   GenerateAiSessionTurnRequestDto,
   RegenerateAiAssistantRequestDto,
   UpdateAiSessionRequestDto,
-} from "../dtos/ai-workspace.dto.js";
+} from "../dtos/ai-session.dto.js";
 
 function toTools(tools: GenerateAiSessionTurnRequestDto["tools"]): IAiTool[] | undefined {
   return tools?.map((tool) => ({
@@ -100,7 +100,7 @@ function toSseResponse(events: AsyncIterable<unknown>): Response {
   });
 }
 
-function mapWorkspaceError(error: unknown): Response | null {
+function mapSessionError(error: unknown): Response | null {
   if (!(error instanceof GenError)) {
     return null;
   }
@@ -125,26 +125,26 @@ function mapWorkspaceError(error: unknown): Response | null {
 
 @Authorize()
 @Controller("/ai/sessions", {
-  tag: "AI Workspace",
-  description: "Authenticated AI workspace session endpoints",
+  tag: "AI Sessions",
+  description: "Authenticated AI session endpoints",
 })
-export class AiWorkspaceSessionController {
+export class AiSessionController {
   static inject = [
-    AiWorkspaceSessionService,
-    AiWorkspaceTimelineService,
-    AiWorkspaceGraphService,
-    AiWorkspaceBranchService,
-    AiWorkspaceFeedbackService,
-    AiWorkspaceGenerationService,
+    AiSessionService,
+    AiSessionTimelineService,
+    AiSessionGraphService,
+    AiSessionBranchService,
+    AiSessionFeedbackService,
+    AiSessionGenerationService,
   ];
 
   constructor(
-    private readonly sessionService: AiWorkspaceSessionService,
-    private readonly timelineService: AiWorkspaceTimelineService,
-    private readonly graphService: AiWorkspaceGraphService,
-    private readonly branchService: AiWorkspaceBranchService,
-    private readonly feedbackService: AiWorkspaceFeedbackService,
-    private readonly generationService: AiWorkspaceGenerationService,
+    private readonly sessionService: AiSessionService,
+    private readonly timelineService: AiSessionTimelineService,
+    private readonly graphService: AiSessionGraphService,
+    private readonly branchService: AiSessionBranchService,
+    private readonly feedbackService: AiSessionFeedbackService,
+    private readonly generationService: AiSessionGenerationService,
   ) {}
 
   @Get("/", {
@@ -182,7 +182,7 @@ export class AiWorkspaceSessionController {
     try {
       return await this.sessionService.getById(requireCurrentUser(ctx), ctx.params.sessionId!);
     } catch (error) {
-      return mapWorkspaceError(error) ?? problem({ status: 500, title: "Internal Server Error" });
+      return mapSessionError(error) ?? problem({ status: 500, title: "Internal Server Error" });
     }
   }
 
@@ -199,7 +199,7 @@ export class AiWorkspaceSessionController {
         ...(await ctx.json<UpdateAiSessionRequestDto>()),
       });
     } catch (error) {
-      return mapWorkspaceError(error) ?? problem({ status: 500, title: "Internal Server Error" });
+      return mapSessionError(error) ?? problem({ status: 500, title: "Internal Server Error" });
     }
   }
 
@@ -214,7 +214,7 @@ export class AiWorkspaceSessionController {
         sessionId: ctx.params.sessionId!,
       });
     } catch (error) {
-      return mapWorkspaceError(error) ?? problem({ status: 500, title: "Internal Server Error" });
+      return mapSessionError(error) ?? problem({ status: 500, title: "Internal Server Error" });
     }
   }
 
@@ -230,7 +230,7 @@ export class AiWorkspaceSessionController {
         timelineId: ctx.params.timelineId!,
       });
     } catch (error) {
-      return mapWorkspaceError(error) ?? problem({ status: 500, title: "Internal Server Error" });
+      return mapSessionError(error) ?? problem({ status: 500, title: "Internal Server Error" });
     }
   }
 
@@ -245,7 +245,7 @@ export class AiWorkspaceSessionController {
         ctx.params.sessionId!,
       );
     } catch (error) {
-      return mapWorkspaceError(error) ?? problem({ status: 500, title: "Internal Server Error" });
+      return mapSessionError(error) ?? problem({ status: 500, title: "Internal Server Error" });
     }
   }
 
@@ -262,7 +262,7 @@ export class AiWorkspaceSessionController {
         ...(await ctx.json<CreateAiTimelineRequestDto>()),
       }), { status: 201 });
     } catch (error) {
-      return mapWorkspaceError(error) ?? problem({ status: 500, title: "Internal Server Error" });
+      return mapSessionError(error) ?? problem({ status: 500, title: "Internal Server Error" });
     }
   }
 
@@ -278,7 +278,7 @@ export class AiWorkspaceSessionController {
         ctx.params.timelineId!,
       );
     } catch (error) {
-      return mapWorkspaceError(error) ?? problem({ status: 500, title: "Internal Server Error" });
+      return mapSessionError(error) ?? problem({ status: 500, title: "Internal Server Error" });
     }
   }
 
@@ -290,7 +290,7 @@ export class AiWorkspaceSessionController {
     try {
       return await this.branchService.list(requireCurrentUser(ctx), ctx.params.sessionId!);
     } catch (error) {
-      return mapWorkspaceError(error) ?? problem({ status: 500, title: "Internal Server Error" });
+      return mapSessionError(error) ?? problem({ status: 500, title: "Internal Server Error" });
     }
   }
 
@@ -307,7 +307,7 @@ export class AiWorkspaceSessionController {
         ...(await ctx.json<CreateAiBranchRequestDto>()),
       }), { status: 201 });
     } catch (error) {
-      return mapWorkspaceError(error) ?? problem({ status: 500, title: "Internal Server Error" });
+      return mapSessionError(error) ?? problem({ status: 500, title: "Internal Server Error" });
     }
   }
 
@@ -325,7 +325,7 @@ export class AiWorkspaceSessionController {
         ...(await ctx.json<CreateAiMessageFeedbackRequestDto>()),
       });
     } catch (error) {
-      return mapWorkspaceError(error) ?? problem({ status: 500, title: "Internal Server Error" });
+      return mapSessionError(error) ?? problem({ status: 500, title: "Internal Server Error" });
     }
   }
 
@@ -350,7 +350,7 @@ export class AiWorkspaceSessionController {
         metadata: body.metadata,
       }));
     } catch (error) {
-      return mapWorkspaceError(error) ?? problem({ status: 500, title: "Internal Server Error" });
+      return mapSessionError(error) ?? problem({ status: 500, title: "Internal Server Error" });
     }
   }
 
@@ -388,7 +388,7 @@ export class AiWorkspaceSessionController {
         }
       })());
     } catch (error) {
-      return mapWorkspaceError(error) ?? problem({ status: 500, title: "Internal Server Error" });
+      return mapSessionError(error) ?? problem({ status: 500, title: "Internal Server Error" });
     }
   }
 
@@ -421,7 +421,7 @@ export class AiWorkspaceSessionController {
         }
       })());
     } catch (error) {
-      return mapWorkspaceError(error) ?? problem({ status: 500, title: "Internal Server Error" });
+      return mapSessionError(error) ?? problem({ status: 500, title: "Internal Server Error" });
     }
   }
 }

@@ -1,10 +1,10 @@
-// file: packages/ai/src/domain/workspace/entities/ai-generation-run.entity.ts
+// file: packages/ai/src/domain/session/entities/ai-generation-run.entity.ts
 
 import { Entity, Index, PrimaryKey, Property } from "@mikro-orm/decorators";
-import type { AiGenerationRunStatus } from "../types/ai-workspace-types.js";
+import type { AiGenerationRunStatus } from "../types/ai-session-types.js";
 
-@Entity({ tableName: "ai_workspace_generation_runs" })
-@Index({ name: "ai_workspace_generation_runs_session_created_index", properties: ["sessionId", "createdAt"] })
+@Entity({ tableName: "ai_session_generation_runs" })
+@Index({ name: "ai_session_generation_runs_session_created_index", properties: ["sessionId", "createdAt"] })
 export class AiGenerationRunEntity {
   @PrimaryKey({ type: "string" })
   id!: string;

@@ -1,10 +1,10 @@
-// file: packages/ai/src/application/services/ai-workspace-branch-service.ts
+// file: packages/ai/src/application/services/ai-session-branch-service.ts
 
 import { Scoped } from "@genspire/core";
 import type { ICurrentUser } from "@genspire/auth";
-import type { ICreateAiBranchInput } from "../contracts/ai-workspace-contracts.js";
-import { AiSessionBranchEntity, AiSessionTimelineEntity } from "../../domain/workspace/index.js";
-import { AiWorkspaceDbContext } from "../../infrastructure/persistence/ai-workspace-db-context.js";
+import type { ICreateAiBranchInput } from "../contracts/ai-session-contracts.js";
+import { AiSessionBranchEntity, AiSessionTimelineEntity } from "../../domain/session/index.js";
+import { AiSessionDbContext } from "../../infrastructure/persistence/ai-session-db-context.js";
 import {
   cloneTimelinePrefix,
   getTimelineTurnByTurn,
@@ -13,13 +13,13 @@ import {
   requireTurnInSession,
   toBranchResponse,
   toTimelineResponse,
-} from "./ai-workspace-shared.js";
+} from "./ai-session-shared.js";
 
 @Scoped()
-export class AiWorkspaceBranchService {
-  static inject = [AiWorkspaceDbContext];
+export class AiSessionBranchService {
+  static inject = [AiSessionDbContext];
 
-  constructor(private readonly db: AiWorkspaceDbContext) {}
+  constructor(private readonly db: AiSessionDbContext) {}
 
   async list(currentUser: ICurrentUser, sessionId: string) {
     const session = await requireAccessibleSession(this.db, currentUser, sessionId);

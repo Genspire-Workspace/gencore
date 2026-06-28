@@ -1,4 +1,4 @@
-// file: packages/ai/src/application/services/ai-workspace-shared.ts
+// file: packages/ai/src/application/services/ai-session-shared.ts
 
 import { GenError } from "@genspire/core";
 import type { ICurrentUser } from "@genspire/auth";
@@ -14,11 +14,11 @@ import {
   AiSessionTimelineTurnEntity,
   AiSessionTurnEntity,
   type IAiSessionSettings,
-} from "../../domain/workspace/index.js";
+} from "../../domain/session/index.js";
 import type { IChatGenerationSettings } from "../../domain/chat/chat-generation-settings.js";
-import { AiWorkspaceDbContext } from "../../infrastructure/persistence/ai-workspace-db-context.js";
+import { AiSessionDbContext } from "../../infrastructure/persistence/ai-session-db-context.js";
 
-export interface IAiWorkspaceTurnSnapshot {
+export interface IAiSessionTurnSnapshot {
   timelineTurn: AiSessionTimelineTurnEntity;
   turn: AiSessionTurnEntity;
   messages: AiSessionMessageEntity[];
@@ -29,7 +29,7 @@ export function isAdmin(currentUser: ICurrentUser | null | undefined): boolean {
 }
 
 export async function requireAccessibleSession(
-  db: AiWorkspaceDbContext,
+  db: AiSessionDbContext,
   currentUser: ICurrentUser,
   sessionId: string,
 ): Promise<AiSessionEntity> {
@@ -41,7 +41,7 @@ export async function requireAccessibleSession(
 }
 
 export async function requireTimelineInSession(
-  db: AiWorkspaceDbContext,
+  db: AiSessionDbContext,
   session: AiSessionEntity,
   timelineId: string,
 ): Promise<AiSessionTimelineEntity> {
@@ -53,7 +53,7 @@ export async function requireTimelineInSession(
 }
 
 export async function requireTurnInSession(
-  db: AiWorkspaceDbContext,
+  db: AiSessionDbContext,
   session: AiSessionEntity,
   turnId: string,
 ): Promise<AiSessionTurnEntity> {
@@ -65,7 +65,7 @@ export async function requireTurnInSession(
 }
 
 export async function requireMessageInSession(
-  db: AiWorkspaceDbContext,
+  db: AiSessionDbContext,
   session: AiSessionEntity,
   messageId: string,
 ): Promise<AiSessionMessageEntity> {
@@ -77,7 +77,7 @@ export async function requireMessageInSession(
 }
 
 export async function listTimelineTurns(
-  db: AiWorkspaceDbContext,
+  db: AiSessionDbContext,
   timelineId: string,
 ): Promise<AiSessionTimelineTurnEntity[]> {
   return await db.timelineTurns.list({
@@ -88,7 +88,7 @@ export async function listTimelineTurns(
 }
 
 export async function listTurnMessages(
-  db: AiWorkspaceDbContext,
+  db: AiSessionDbContext,
   turnId: string,
 ): Promise<AiSessionMessageEntity[]> {
   return await db.messages.list({
@@ -99,11 +99,11 @@ export async function listTurnMessages(
 }
 
 export async function listTimelineTurnSnapshots(
-  db: AiWorkspaceDbContext,
+  db: AiSessionDbContext,
   timelineId: string,
-): Promise<IAiWorkspaceTurnSnapshot[]> {
+): Promise<IAiSessionTurnSnapshot[]> {
   const timelineTurns = await listTimelineTurns(db, timelineId);
-  const snapshots: IAiWorkspaceTurnSnapshot[] = [];
+  const snapshots: IAiSessionTurnSnapshot[] = [];
 
   for (const timelineTurn of timelineTurns) {
     const turn = await db.turns.findById(timelineTurn.turnId);
@@ -202,7 +202,7 @@ export function validateSessionContent(content: unknown): void {
 }
 
 export async function getTimelineTurnByTurn(
-  db: AiWorkspaceDbContext,
+  db: AiSessionDbContext,
   timelineId: string,
   turnId: string,
 ): Promise<AiSessionTimelineTurnEntity | null> {
@@ -215,7 +215,7 @@ export async function getTimelineTurnByTurn(
 }
 
 export async function cloneTimelinePrefix(
-  db: AiWorkspaceDbContext,
+  db: AiSessionDbContext,
   sourceTimelineId: string,
   targetTimelineId: string,
   sessionId: string,

@@ -1,10 +1,10 @@
-// file: packages/ai/src/domain/workspace/entities/ai-session-turn.entity.ts
+// file: packages/ai/src/domain/session/entities/ai-session-turn.entity.ts
 
 import { Entity, Index, PrimaryKey, Property } from "@mikro-orm/decorators";
-import type { AiSessionTurnStatus } from "../types/ai-workspace-types.js";
+import type { AiSessionTurnStatus } from "../types/ai-session-types.js";
 
-@Entity({ tableName: "ai_workspace_turns" })
-@Index({ name: "ai_workspace_turns_session_created_index", properties: ["sessionId", "createdAt"] })
+@Entity({ tableName: "ai_session_turns" })
+@Index({ name: "ai_session_turns_session_created_index", properties: ["sessionId", "createdAt"] })
 export class AiSessionTurnEntity {
   @PrimaryKey({ type: "string" })
   id!: string;

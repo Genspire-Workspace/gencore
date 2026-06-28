@@ -1,11 +1,11 @@
-// file: packages/ai/src/domain/workspace/entities/ai-session-message-feedback.entity.ts
+// file: packages/ai/src/domain/session/entities/ai-session-message-feedback.entity.ts
 
 import { Entity, Index, PrimaryKey, Property, Unique } from "@mikro-orm/decorators";
-import type { AiSessionFeedbackRating } from "../types/ai-workspace-types.js";
+import type { AiSessionFeedbackRating } from "../types/ai-session-types.js";
 
-@Entity({ tableName: "ai_workspace_message_feedback" })
-@Index({ name: "ai_workspace_message_feedback_message_created_index", properties: ["messageId", "createdAt"] })
-@Unique({ name: "ai_workspace_message_feedback_message_user_unique", properties: ["messageId", "userId"] })
+@Entity({ tableName: "ai_session_message_feedback" })
+@Index({ name: "ai_session_message_feedback_message_created_index", properties: ["messageId", "createdAt"] })
+@Unique({ name: "ai_session_message_feedback_message_user_unique", properties: ["messageId", "userId"] })
 export class AiSessionMessageFeedbackEntity {
   @PrimaryKey({ type: "string" })
   id!: string;

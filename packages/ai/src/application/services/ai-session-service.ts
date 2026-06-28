@@ -1,24 +1,24 @@
-// file: packages/ai/src/application/services/ai-workspace-session-service.ts
+// file: packages/ai/src/application/services/ai-session-service.ts
 
 import { Scoped } from "@genspire/core";
 import type {
   ICreateAiSessionInput,
   IUpdateAiSessionInput,
-} from "../contracts/ai-workspace-contracts.js";
-import { AiSessionEntity, AiSessionTimelineEntity } from "../../domain/workspace/index.js";
-import { AiWorkspaceDbContext } from "../../infrastructure/persistence/ai-workspace-db-context.js";
+} from "../contracts/ai-session-contracts.js";
+import { AiSessionEntity, AiSessionTimelineEntity } from "../../domain/session/index.js";
+import { AiSessionDbContext } from "../../infrastructure/persistence/ai-session-db-context.js";
 import {
   requireAccessibleSession,
   toSessionResponse,
   toTimelineResponse,
   validateSessionTitle,
-} from "./ai-workspace-shared.js";
+} from "./ai-session-shared.js";
 
 @Scoped()
-export class AiWorkspaceSessionService {
-  static inject = [AiWorkspaceDbContext];
+export class AiSessionService {
+  static inject = [AiSessionDbContext];
 
-  constructor(private readonly db: AiWorkspaceDbContext) {}
+  constructor(private readonly db: AiSessionDbContext) {}
 
   async list(currentUser: ICreateAiSessionInput["currentUser"]) {
     const sessions = await this.db.sessions.list({

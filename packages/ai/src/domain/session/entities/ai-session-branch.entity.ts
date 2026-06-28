@@ -1,10 +1,10 @@
-// file: packages/ai/src/domain/workspace/entities/ai-session-branch.entity.ts
+// file: packages/ai/src/domain/session/entities/ai-session-branch.entity.ts
 
 import { Entity, Index, PrimaryKey, Property } from "@mikro-orm/decorators";
-import type { AiSessionBranchReason } from "../types/ai-workspace-types.js";
+import type { AiSessionBranchReason } from "../types/ai-session-types.js";
 
-@Entity({ tableName: "ai_workspace_branches" })
-@Index({ name: "ai_workspace_branches_session_created_index", properties: ["sessionId", "createdAt"] })
+@Entity({ tableName: "ai_session_branches" })
+@Index({ name: "ai_session_branches_session_created_index", properties: ["sessionId", "createdAt"] })
 export class AiSessionBranchEntity {
   @PrimaryKey({ type: "string" })
   id!: string;

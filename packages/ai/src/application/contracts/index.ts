@@ -10,4 +10,4 @@ export type {
   IGetAiSessionGraphInput,
   IRegenerateAiAssistantMessageInput,
   IUpdateAiSessionInput,
-} from "./ai-workspace-contracts.js";
+} from "./ai-session-contracts.js";

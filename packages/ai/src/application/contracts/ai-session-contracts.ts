@@ -1,4 +1,4 @@
-// file: packages/ai/src/application/contracts/ai-workspace-contracts.ts
+// file: packages/ai/src/application/contracts/ai-session-contracts.ts
 
 import type { ICurrentUser } from "@genspire/auth";
 import type { IChatGenerationSettings } from "../../domain/chat/chat-generation-settings.js";
@@ -9,7 +9,7 @@ import type {
   AiSessionTimelineTurnSource,
   AiSessionType,
   IAiSessionSettings,
-} from "../../domain/workspace/types/ai-workspace-types.js";
+} from "../../domain/session/types/ai-session-types.js";
 
 export interface ICreateAiSessionInput {
   currentUser: ICurrentUser;

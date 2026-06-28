@@ -4,15 +4,15 @@ import type { GenExtension } from "@genspire/core";
 import type { IAiProviderClient } from "../providers/ai-provider-client.js";
 import { AiProviderClientRegistry } from "../providers/ai-provider-client-registry.js";
 import { AiGenerationService } from "../application/services/ai-generation-service.js";
-import { AiWorkspaceDbContext } from "../infrastructure/persistence/ai-workspace-db-context.js";
+import { AiSessionDbContext } from "../infrastructure/persistence/ai-session-db-context.js";
 import {
   AiAdminGenerationService,
-  AiWorkspaceBranchService,
-  AiWorkspaceFeedbackService,
-  AiWorkspaceGenerationService,
-  AiWorkspaceGraphService,
-  AiWorkspaceSessionService,
-  AiWorkspaceTimelineService,
+  AiSessionBranchService,
+  AiSessionFeedbackService,
+  AiSessionGenerationService,
+  AiSessionGraphService,
+  AiSessionService,
+  AiSessionTimelineService,
 } from "../application/services/index.js";
 
 export interface IAiDefaults {
@@ -41,14 +41,14 @@ export function aiExtension(options: IAiExtensionOptions): GenExtension {
 
       app.provide(AiProviderClientRegistry, registry);
       app.provide(AiGenerationService, service);
-      app.registerScoped(AiWorkspaceDbContext);
+      app.registerScoped(AiSessionDbContext);
       app.registerScoped(AiAdminGenerationService);
-      app.registerScoped(AiWorkspaceSessionService);
-      app.registerScoped(AiWorkspaceTimelineService);
-      app.registerScoped(AiWorkspaceGraphService);
-      app.registerScoped(AiWorkspaceBranchService);
-      app.registerScoped(AiWorkspaceFeedbackService);
-      app.registerScoped(AiWorkspaceGenerationService);
+      app.registerScoped(AiSessionService);
+      app.registerScoped(AiSessionTimelineService);
+      app.registerScoped(AiSessionGraphService);
+      app.registerScoped(AiSessionBranchService);
+      app.registerScoped(AiSessionFeedbackService);
+      app.registerScoped(AiSessionGenerationService);
     },
   };
 }

@@ -1,11 +1,11 @@
-// file: packages/ai/src/domain/workspace/entities/ai-session-timeline-turn.entity.ts
+// file: packages/ai/src/domain/session/entities/ai-session-timeline-turn.entity.ts
 
 import { Entity, Index, PrimaryKey, Property, Unique } from "@mikro-orm/decorators";
-import type { AiSessionTimelineTurnSource } from "../types/ai-workspace-types.js";
+import type { AiSessionTimelineTurnSource } from "../types/ai-session-types.js";
 
-@Entity({ tableName: "ai_workspace_timeline_turns" })
-@Index({ name: "ai_workspace_timeline_turns_timeline_index", properties: ["timelineId", "index"] })
-@Unique({ name: "ai_workspace_timeline_turns_unique_timeline_index", properties: ["timelineId", "index"] })
+@Entity({ tableName: "ai_session_timeline_turns" })
+@Index({ name: "ai_session_timeline_turns_timeline_index", properties: ["timelineId", "index"] })
+@Unique({ name: "ai_session_timeline_turns_unique_timeline_index", properties: ["timelineId", "index"] })
 export class AiSessionTimelineTurnEntity {
   @PrimaryKey({ type: "string" })
   id!: string;

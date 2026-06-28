@@ -6,7 +6,7 @@ import type { IChatGenerationRequest } from "../../domain/chat/chat-generation-r
 import type { IChatGenerationResponse } from "../../domain/chat/chat-generation-response.js";
 import type { IEmbeddingGenerationRequest } from "../../domain/embeddings/embedding-generation-request.js";
 import type { IEmbeddingGenerationResponse } from "../../domain/embeddings/embedding-generation-response.js";
-import type { IAiWorkspaceSseEvent } from "../../domain/workspace/types/ai-workspace-types.js";
+import type { IAiSessionSseEvent } from "../../domain/session/types/ai-session-types.js";
 import { AiGenerationService } from "./ai-generation-service.js";
 
 @Scoped()
@@ -27,7 +27,7 @@ export class AiAdminGenerationService {
 
   async *streamChat(
     request: IChatGenerationRequest,
-  ): AsyncIterable<IAiWorkspaceSseEvent> {
+  ): AsyncIterable<IAiSessionSseEvent> {
     yield {
       type: "started",
       provider: request.provider,
