@@ -27,7 +27,7 @@ export function applyAiSessionStreamChunk(
     ...current,
   };
 
-  if (chunk.type === 'text_delta' && typeof chunk.delta === 'string') {
+  if (chunk.type === 'delta' && typeof chunk.delta === 'string') {
     next.assistantText += chunk.delta;
   }
 
@@ -35,7 +35,7 @@ export function applyAiSessionStreamChunk(
     next.finalContent = chunk.message.content;
   }
 
-  if (chunk.type === 'finish') {
+  if (chunk.type === 'completed') {
     next.finished = true;
   }
 

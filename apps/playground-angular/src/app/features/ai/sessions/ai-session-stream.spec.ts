@@ -5,18 +5,18 @@ import {
   createAiSessionStreamAssembly,
   resolveAiSessionAssistantText,
 } from './ai-session-stream';
-import { readNdjsonLines } from '../shared/ai-ndjson';
+import { readSseEventData } from '../shared/ai-sse';
 
 describe('ai session stream helpers', () => {
   it('assembles assistant text from deltas and final message content', () => {
     let state = createAiSessionStreamAssembly();
 
     state = applyAiSessionStreamChunk(state, {
-      type: 'text_delta',
+      type: 'delta',
       delta: 'Mad',
     });
     state = applyAiSessionStreamChunk(state, {
-      type: 'text_delta',
+      type: 'delta',
       delta: 'rid',
     });
     state = applyAiSessionStreamChunk(state, {
@@ -27,17 +27,19 @@ describe('ai session stream helpers', () => {
       },
     });
     state = applyAiSessionStreamChunk(state, {
-      type: 'finish',
+      type: 'completed',
     });
 
     expect(state.finished).toBe(true);
     expect(resolveAiSessionAssistantText(state)).toBe('Madrid');
   });
 
-  it('splits buffered ndjson while preserving the trailing remainder', () => {
-    const extracted = readNdjsonLines('{"a":1}\n{"b":2}\n{"c":');
+  it('splits buffered sse events while preserving the trailing remainder', () => {
+    const extracted = readSseEventData(
+      'event: delta\ndata: {"a":1}\n\nevent: message\ndata: {"b":2}\n\ndata: {"c":',
+    );
 
-    expect(extracted.lines).toEqual(['{"a":1}', '{"b":2}']);
-    expect(extracted.remainder).toBe('{"c":');
+    expect(extracted.events).toEqual(['{"a":1}', '{"b":2}']);
+    expect(extracted.remainder).toBe('data: {"c":');
   });
 });

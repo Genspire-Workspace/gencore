@@ -1,84 +1,33 @@
 // file: apps\playground-angular\src\app\features\ai\sessions\ai-session-types.ts
 
+import type {
+  IAiSseEventDto,
+  IAiSessionGraphDto,
+  IAiSessionListResponseDto,
+  IAiSessionMessageResponseDto,
+  IAiSessionResponseDto,
+  IAiSessionTimelineResponseDto,
+  IAiSessionTimelineTurnItemDto,
+  IAiSessionTimelineTurnListResponseDto,
+  ICreateAiSessionRequestDto,
+  IGenerateAiSessionTurnRequestDto,
+  IUpdateAiSessionRequestDto,
+} from '@genspire/ai/server/contracts';
 import type { IAiChatMessageDto } from '../shared/ai-chat.types';
 
 export type { IAiChatMessageDto };
 
-export interface IAiSessionResponse {
-  id: string;
-  userId: string;
-  title?: string | null;
-  provider?: string | null;
-  model?: string | null;
-  systemPrompt?: string | null;
-  metadata?: Record<string, unknown> | null;
-  createdAt: string;
-  updatedAt: string;
-}
+export type IAiSessionResponse = IAiSessionResponseDto & {
+  defaultTimeline?: IAiSessionTimelineResponseDto;
+};
 
-export interface IAiSessionMessageDto {
-  id: string;
-  sessionId: string;
-  role: 'system' | 'user' | 'assistant' | 'tool';
-  content: unknown;
-  name?: string | null;
-  provider?: string | null;
-  model?: string | null;
-  finishReason?: string | null;
-  usage?: Record<string, unknown> | null;
-  toolCalls?: unknown[] | null;
-  toolResults?: unknown[] | null;
-  metadata?: Record<string, unknown> | null;
-  createdAt: string;
-}
-
-export interface IAiSessionListResponse {
-  items: IAiSessionResponse[];
-}
-
-export interface IAiSessionMessageListResponse {
-  items: IAiSessionMessageDto[];
-}
-
-export interface IAiSessionCreateRequest {
-  title?: string;
-  provider?: string;
-  model?: string;
-  systemPrompt?: string;
-  metadata?: Record<string, unknown>;
-}
-
-export interface IAiSessionMessageRequest {
-  content: unknown;
-  provider?: string;
-  model?: string;
-  apiKey?: string;
-  apiKeyId?: string;
-  systemPrompt?: string;
-  tools?: unknown[];
-  settings?: Record<string, unknown>;
-  metadata?: Record<string, unknown>;
-}
-
-export interface IAiSessionStreamChunk {
-  id?: string;
-  type?: string;
-  provider?: string;
-  model?: string;
-  delta?: string;
-  reasoningDelta?: string;
-  message?: IAiChatMessageDto;
-  toolCall?: unknown;
-  toolResult?: unknown;
-  finishReason?: string;
-  usage?: Record<string, unknown>;
-  metadata?: Record<string, unknown>;
-  phase?: string;
-  elapsedMs?: number;
-  toolCallId?: string;
-  toolName?: string;
-  sessionId?: string;
-  userMessageId?: string;
-  assistantMessageId?: string;
-  error?: string;
-}
+export type IAiSessionMessageDto = IAiSessionMessageResponseDto;
+export type IAiSessionListResponse = IAiSessionListResponseDto;
+export type IAiSessionTimelineTurnListResponse =
+  IAiSessionTimelineTurnListResponseDto;
+export type IAiSessionTimelineTurnSnapshotDto = IAiSessionTimelineTurnItemDto;
+export type IAiSessionGraphResponse = IAiSessionGraphDto;
+export type IAiSessionCreateRequest = ICreateAiSessionRequestDto;
+export type IAiSessionUpdateRequest = IUpdateAiSessionRequestDto;
+export type IAiSessionMessageRequest = IGenerateAiSessionTurnRequestDto;
+export type IAiSessionStreamChunk = IAiSseEventDto;

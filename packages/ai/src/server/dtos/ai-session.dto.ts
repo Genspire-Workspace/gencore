@@ -2,9 +2,35 @@
 
 import { ApiDto, ApiField, defineApiType } from "@genspire/server";
 import { AiChatSettingsDto, AiChatToolDto } from "./ai-admin.dto.js";
+import type {
+  IAiRegenerationBootstrapResponseDto,
+  IAiSessionBranchListResponseDto,
+  IAiSessionBranchResponseDto,
+  IAiSessionGenerationRunResponseDto,
+  IAiSessionGraphDto,
+  IAiSessionListResponseDto,
+  IAiSessionMessageFeedbackResponseDto,
+  IAiSessionMessageResponseDto,
+  IAiSessionResponseDto,
+  IAiSessionTimelineListResponseDto,
+  IAiSessionTimelineResponseDto,
+  IAiSessionTimelineTurnItemDto,
+  IAiSessionTimelineTurnListResponseDto,
+  IAiSessionTimelineTurnResponseDto,
+  IAiSessionTurnResponseDto,
+  ICreateAiBranchRequestDto,
+  ICreateAiBranchResponseDto,
+  ICreateAiMessageFeedbackRequestDto,
+  ICreateAiSessionRequestDto,
+  ICreateAiTimelineRequestDto,
+  IEditAiUserAndRegenerateRequestDto,
+  IGenerateAiSessionTurnRequestDto,
+  IRegenerateAiAssistantRequestDto,
+  IUpdateAiSessionRequestDto,
+} from "../contracts.js";
 
 @ApiDto({ description: "AI session response" })
-export class AiSessionResponseDto {
+export class AiSessionResponseDto implements IAiSessionResponseDto {
   @ApiField({ type: "string" })
   id!: string;
 
@@ -20,6 +46,9 @@ export class AiSessionResponseDto {
   @ApiField({ type: "string", required: false })
   defaultTimelineId?: string;
 
+  @ApiField({ dto: () => AiSessionTimelineResponseDto, required: false })
+  defaultTimeline?: AiSessionTimelineResponseDto;
+
   @ApiField({ type: "object", required: false })
   settings?: Record<string, unknown>;
 
@@ -34,7 +63,7 @@ export class AiSessionResponseDto {
 }
 
 @ApiDto({ description: "AI timeline response" })
-export class AiSessionTimelineResponseDto {
+export class AiSessionTimelineResponseDto implements IAiSessionTimelineResponseDto {
   @ApiField({ type: "string" })
   id!: string;
 
@@ -58,7 +87,7 @@ export class AiSessionTimelineResponseDto {
 }
 
 @ApiDto({ description: "Create AI session request" })
-export class CreateAiSessionRequestDto {
+export class CreateAiSessionRequestDto implements ICreateAiSessionRequestDto {
   @ApiField({ type: "string", required: false })
   title?: string;
 
@@ -73,7 +102,7 @@ export class CreateAiSessionRequestDto {
 }
 
 @ApiDto({ description: "Update AI session request" })
-export class UpdateAiSessionRequestDto {
+export class UpdateAiSessionRequestDto implements IUpdateAiSessionRequestDto {
   @ApiField({ type: "string", required: false })
   title?: string;
 
@@ -88,13 +117,13 @@ export class UpdateAiSessionRequestDto {
 }
 
 @ApiDto({ description: "AI session list response" })
-export class AiSessionListResponseDto {
+export class AiSessionListResponseDto implements IAiSessionListResponseDto {
   @ApiField({ arrayOf: AiSessionResponseDto })
   items!: AiSessionResponseDto[];
 }
 
 @ApiDto({ description: "Create AI timeline request" })
-export class CreateAiTimelineRequestDto {
+export class CreateAiTimelineRequestDto implements ICreateAiTimelineRequestDto {
   @ApiField({ type: "string", required: false })
   name?: string;
 
@@ -103,13 +132,13 @@ export class CreateAiTimelineRequestDto {
 }
 
 @ApiDto({ description: "AI timeline list response" })
-export class AiSessionTimelineListResponseDto {
+export class AiSessionTimelineListResponseDto implements IAiSessionTimelineListResponseDto {
   @ApiField({ arrayOf: AiSessionTimelineResponseDto })
   items!: AiSessionTimelineResponseDto[];
 }
 
 @ApiDto({ description: "AI timeline-turn edge response" })
-export class AiSessionTimelineTurnResponseDto {
+export class AiSessionTimelineTurnResponseDto implements IAiSessionTimelineTurnResponseDto {
   @ApiField({ type: "string" })
   id!: string;
 
@@ -136,7 +165,7 @@ export class AiSessionTimelineTurnResponseDto {
 }
 
 @ApiDto({ description: "AI turn response" })
-export class AiSessionTurnResponseDto {
+export class AiSessionTurnResponseDto implements IAiSessionTurnResponseDto {
   @ApiField({ type: "string" })
   id!: string;
 
@@ -178,7 +207,7 @@ export class AiSessionTurnResponseDto {
 }
 
 @ApiDto({ description: "AI message response" })
-export class AiSessionMessageResponseDto {
+export class AiSessionMessageResponseDto implements IAiSessionMessageResponseDto {
   @ApiField({ type: "string" })
   id!: string;
 
@@ -192,7 +221,7 @@ export class AiSessionMessageResponseDto {
   index!: number;
 
   @ApiField({ type: "string" })
-  role!: string;
+  role!: IAiSessionMessageResponseDto["role"];
 
   @ApiField({ type: "object" })
   content!: unknown;
@@ -232,7 +261,7 @@ export class AiSessionMessageResponseDto {
 }
 
 @ApiDto({ description: "AI generation run response" })
-export class AiSessionGenerationRunResponseDto {
+export class AiSessionGenerationRunResponseDto implements IAiSessionGenerationRunResponseDto {
   @ApiField({ type: "string" })
   id!: string;
 
@@ -283,7 +312,7 @@ export class AiSessionGenerationRunResponseDto {
 }
 
 @ApiDto({ description: "AI message feedback request" })
-export class CreateAiMessageFeedbackRequestDto {
+export class CreateAiMessageFeedbackRequestDto implements ICreateAiMessageFeedbackRequestDto {
   @ApiField({ type: "string" })
   rating!: "good" | "bad";
 
@@ -295,7 +324,7 @@ export class CreateAiMessageFeedbackRequestDto {
 }
 
 @ApiDto({ description: "AI message feedback response" })
-export class AiSessionMessageFeedbackResponseDto {
+export class AiSessionMessageFeedbackResponseDto implements IAiSessionMessageFeedbackResponseDto {
   @ApiField({ type: "string" })
   id!: string;
 
@@ -325,7 +354,7 @@ export class AiSessionMessageFeedbackResponseDto {
 }
 
 @ApiDto({ description: "AI branch response" })
-export class AiSessionBranchResponseDto {
+export class AiSessionBranchResponseDto implements IAiSessionBranchResponseDto {
   @ApiField({ type: "string" })
   id!: string;
 
@@ -358,13 +387,13 @@ export class AiSessionBranchResponseDto {
 }
 
 @ApiDto({ description: "AI branch list response" })
-export class AiSessionBranchListResponseDto {
+export class AiSessionBranchListResponseDto implements IAiSessionBranchListResponseDto {
   @ApiField({ arrayOf: AiSessionBranchResponseDto })
   items!: AiSessionBranchResponseDto[];
 }
 
 @ApiDto({ description: "Create AI branch request" })
-export class CreateAiBranchRequestDto {
+export class CreateAiBranchRequestDto implements ICreateAiBranchRequestDto {
   @ApiField({ type: "string" })
   sourceTimelineId!: string;
 
@@ -382,7 +411,7 @@ export class CreateAiBranchRequestDto {
 }
 
 @ApiDto({ description: "Create AI branch response" })
-export class CreateAiBranchResponseDto {
+export class CreateAiBranchResponseDto implements ICreateAiBranchResponseDto {
   @ApiField({ dto: AiSessionBranchResponseDto })
   branch!: AiSessionBranchResponseDto;
 
@@ -391,7 +420,7 @@ export class CreateAiBranchResponseDto {
 }
 
 @ApiDto({ description: "Timeline turn detail item" })
-export class AiSessionTimelineTurnItemDto {
+export class AiSessionTimelineTurnItemDto implements IAiSessionTimelineTurnItemDto {
   @ApiField({ dto: AiSessionTimelineTurnResponseDto })
   timelineTurn!: AiSessionTimelineTurnResponseDto;
 
@@ -406,13 +435,13 @@ export class AiSessionTimelineTurnItemDto {
 }
 
 @ApiDto({ description: "Timeline turn list response" })
-export class AiSessionTimelineTurnListResponseDto {
+export class AiSessionTimelineTurnListResponseDto implements IAiSessionTimelineTurnListResponseDto {
   @ApiField({ arrayOf: AiSessionTimelineTurnItemDto })
   items!: AiSessionTimelineTurnItemDto[];
 }
 
 @ApiDto({ description: "AI session graph response" })
-export class AiSessionGraphDto {
+export class AiSessionGraphDto implements IAiSessionGraphDto {
   @ApiField({ dto: AiSessionResponseDto })
   session!: AiSessionResponseDto;
 
@@ -439,7 +468,7 @@ export class AiSessionGraphDto {
 }
 
 @ApiDto({ description: "Generate session turn request" })
-export class GenerateAiSessionTurnRequestDto {
+export class GenerateAiSessionTurnRequestDto implements IGenerateAiSessionTurnRequestDto {
   @ApiField({ type: "object" })
   content!: unknown;
 
@@ -463,7 +492,7 @@ export class GenerateAiSessionTurnRequestDto {
 }
 
 @ApiDto({ description: "Regenerate assistant request" })
-export class RegenerateAiAssistantRequestDto {
+export class RegenerateAiAssistantRequestDto implements IRegenerateAiAssistantRequestDto {
   @ApiField({ type: "string" })
   sourceTurnId!: string;
 
@@ -487,7 +516,7 @@ export class RegenerateAiAssistantRequestDto {
 }
 
 @ApiDto({ description: "Edit user and regenerate request" })
-export class EditAiUserAndRegenerateRequestDto {
+export class EditAiUserAndRegenerateRequestDto implements IEditAiUserAndRegenerateRequestDto {
   @ApiField({ type: "string" })
   sourceTurnId!: string;
 
@@ -514,7 +543,7 @@ export class EditAiUserAndRegenerateRequestDto {
 }
 
 @ApiDto({ description: "Regeneration bootstrap response" })
-export class AiRegenerationBootstrapResponseDto {
+export class AiRegenerationBootstrapResponseDto implements IAiRegenerationBootstrapResponseDto {
   @ApiField({ dto: AiSessionTimelineResponseDto })
   timeline!: AiSessionTimelineResponseDto;
 

@@ -10,6 +10,7 @@
     "./application": "./src/application.ts",
     "./infrastructure": "./src/infrastructure.ts",
     "./server": "./src/server.ts",
+    "./server/contracts": "./src/server/contracts.ts",
     "./extension": "./src/extension/index.ts",
     "./providers": "./src/providers.ts",
     "./catalogue": "./src/catalogue.ts",

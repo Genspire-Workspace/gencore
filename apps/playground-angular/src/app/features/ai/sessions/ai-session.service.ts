@@ -5,18 +5,21 @@ import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { appEnv } from '../../../core/app-env';
 import { AuthService } from '../../auth/auth.service';
-import { readNdjsonLines } from '../shared/ai-ndjson';
+import { readSseEventData } from '../shared/ai-sse';
 import type {
   IAiSessionCreateRequest,
+  IAiSessionGraphResponse,
   IAiSessionListResponse,
-  IAiSessionMessageDto,
-  IAiSessionMessageListResponse,
   IAiSessionMessageRequest,
   IAiSessionResponse,
   IAiSessionStreamChunk,
+  IAiSessionTimelineTurnSnapshotDto,
+  IAiSessionTimelineTurnListResponse,
+  IAiSessionUpdateRequest,
 } from './ai-session-types';
 
 const ACTIVE_SESSION_STORAGE_KEY = 'playground-angular.ai-session-id';
+const AI_SESSION_API_PATH = '/api/v1/ai/sessions';
 
 function readStoredSessionId(): string | null {
   try {
@@ -55,7 +58,7 @@ export class AiSessionService {
   async listSessions(): Promise<IAiSessionResponse[]> {
     const response = await firstValueFrom(
       this.http.get<IAiSessionListResponse>(
-        `${appEnv.apiBaseUrl}/ai/sessions`,
+        `${appEnv.apiBaseUrl}${AI_SESSION_API_PATH}`,
       ),
     );
 
@@ -67,7 +70,7 @@ export class AiSessionService {
   ): Promise<IAiSessionResponse> {
     const session = await firstValueFrom(
       this.http.post<IAiSessionResponse>(
-        `${appEnv.apiBaseUrl}/ai/sessions`,
+        `${appEnv.apiBaseUrl}${AI_SESSION_API_PATH}`,
         input,
       ),
     );
@@ -94,7 +97,7 @@ export class AiSessionService {
     try {
       return await firstValueFrom(
         this.http.get<IAiSessionResponse>(
-          `${appEnv.apiBaseUrl}/ai/sessions/${sessionId}`,
+          `${appEnv.apiBaseUrl}${AI_SESSION_API_PATH}/${sessionId}`,
         ),
       );
     } catch (error) {
@@ -117,16 +120,47 @@ export class AiSessionService {
     }
 
     return await this.createSession({
+      type: 'chat',
       metadata: {
         source: 'playground-angular',
       },
     });
   }
 
-  async listMessages(sessionId: string): Promise<IAiSessionMessageDto[]> {
+  async updateSession(
+    sessionId: string,
+    input: IAiSessionUpdateRequest,
+  ): Promise<IAiSessionResponse> {
+    return await firstValueFrom(
+      this.http.patch<IAiSessionResponse>(
+        `${appEnv.apiBaseUrl}${AI_SESSION_API_PATH}/${sessionId}`,
+        input,
+      ),
+    );
+  }
+
+  async getSessionGraph(
+    sessionId: string,
+    timelineId?: string,
+  ): Promise<IAiSessionGraphResponse> {
+    const suffix = timelineId
+      ? `/timelines/${timelineId}/graph`
+      : '/graph';
+
+    return await firstValueFrom(
+      this.http.get<IAiSessionGraphResponse>(
+        `${appEnv.apiBaseUrl}${AI_SESSION_API_PATH}/${sessionId}${suffix}`,
+      ),
+    );
+  }
+
+  async listTimelineTurns(
+    sessionId: string,
+    timelineId: string,
+  ): Promise<IAiSessionTimelineTurnSnapshotDto[]> {
     const response = await firstValueFrom(
-      this.http.get<IAiSessionMessageListResponse>(
-        `${appEnv.apiBaseUrl}/ai/sessions/${sessionId}/messages`,
+      this.http.get<IAiSessionTimelineTurnListResponse>(
+        `${appEnv.apiBaseUrl}${AI_SESSION_API_PATH}/${sessionId}/timelines/${timelineId}/turns`,
       ),
     );
 
@@ -135,6 +169,7 @@ export class AiSessionService {
 
   async streamMessage(
     sessionId: string,
+    timelineId: string,
     input: IAiSessionMessageRequest,
     onChunk: (chunk: IAiSessionStreamChunk) => void,
   ): Promise<void> {
@@ -144,10 +179,11 @@ export class AiSessionService {
     }
 
     const response = await fetch(
-      `${appEnv.apiBaseUrl}/ai/sessions/${sessionId}/messages/stream`,
+      `${appEnv.apiBaseUrl}${AI_SESSION_API_PATH}/${sessionId}/timelines/${timelineId}/generate`,
       {
         method: 'POST',
         headers: {
+          accept: 'text/event-stream',
           'content-type': 'application/json',
           authorization: `Bearer ${accessToken}`,
         },
@@ -178,19 +214,18 @@ export class AiSessionService {
         }
 
         buffer += decoder.decode(value, { stream: true });
-        const extracted = readNdjsonLines(buffer);
+        const extracted = readSseEventData(buffer);
         buffer = extracted.remainder;
 
-        for (const line of extracted.lines) {
-          onChunk(JSON.parse(line) as IAiSessionStreamChunk);
+        for (const eventData of extracted.events) {
+          onChunk(JSON.parse(eventData) as IAiSessionStreamChunk);
         }
       }
 
       buffer += decoder.decode();
-      const trailing = buffer.trim();
-
-      if (trailing) {
-        onChunk(JSON.parse(trailing) as IAiSessionStreamChunk);
+      const trailing = readSseEventData(buffer);
+      for (const eventData of trailing.events) {
+        onChunk(JSON.parse(eventData) as IAiSessionStreamChunk);
       }
     } finally {
       reader.releaseLock();

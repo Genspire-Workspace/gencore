@@ -43,8 +43,8 @@ interface IUiChatMessage {
               Session playground
             </h1>
             <p class="mt-3 max-w-2xl text-sm text-slate-500">
-              Create one session, stream replies from the backend, and navigate
-              across saved sessions from the sidebar.
+              Create one session, stream timeline turns from the backend, and
+              navigate across saved sessions from the sidebar.
             </p>
           </div>
 
@@ -114,7 +114,8 @@ interface IUiChatMessage {
                       {{ item.title || 'Untitled session' }}
                     </div>
                     <div class="mt-1 text-xs text-slate-500">
-                      {{ item.provider || 'provider?' }} / {{ item.model || 'model?' }}
+                      {{ readSessionProvider(item) || 'provider?' }} /
+                      {{ readSessionModel(item) || 'model?' }}
                     </div>
                     <div class="mt-2 break-all text-[11px] text-slate-400">
                       {{ item.id }}
@@ -217,7 +218,8 @@ interface IUiChatMessage {
 
               <div class="flex items-center justify-between gap-3">
                 <p class="text-xs text-slate-500">
-                  Stream endpoint: <code>/ai/sessions/:id/messages/stream</code>
+                  Stream endpoint:
+                  <code>/api/v1/ai/sessions/:id/timelines/:timelineId/generate</code>
                 </p>
                 <button
                   class="rounded-2xl bg-sky-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:bg-sky-300"
@@ -238,6 +240,7 @@ export class AiSessionPageComponent {
   private readonly aiSessionService = inject(AiSessionService);
 
   protected readonly session = signal<IAiSessionResponse | null>(null);
+  protected readonly timelineId = signal<string | null>(null);
   protected readonly sessions = signal<IAiSessionResponse[]>([]);
   protected readonly messages = signal<IUiChatMessage[]>([]);
   protected readonly loading = signal(false);
@@ -260,10 +263,12 @@ export class AiSessionPageComponent {
     try {
       await this.reloadSessionListInternal();
       const session = await this.aiSessionService.ensureSession();
+      const timelineId = await this.resolveTimelineId(session);
       this.session.set(session);
-      this.provider.set(session.provider || appEnv.defaultAiProvider);
-      this.model.set(session.model || appEnv.defaultAiModel);
-      this.messages.set(await this.loadMessages(session.id));
+      this.timelineId.set(timelineId);
+      this.provider.set(this.readSessionProvider(session) || appEnv.defaultAiProvider);
+      this.model.set(this.readSessionModel(session) || appEnv.defaultAiModel);
+      this.messages.set(await this.loadMessages(session.id, timelineId));
     } catch (error) {
       this.error.set(this.readErrorMessage(error));
     } finally {
@@ -278,17 +283,19 @@ export class AiSessionPageComponent {
 
     try {
       const session = await this.aiSessionService.createSession({
-        provider: this.provider(),
-        model: this.model(),
+        type: 'chat',
+        settings: this.buildSessionSettings(),
         metadata: {
           source: 'playground-angular',
         },
       });
+      const timelineId = await this.resolveTimelineId(session);
 
       this.session.set(session);
+      this.timelineId.set(timelineId);
       this.messages.set([]);
-      this.provider.set(session.provider || appEnv.defaultAiProvider);
-      this.model.set(session.model || appEnv.defaultAiModel);
+      this.provider.set(this.readSessionProvider(session) || appEnv.defaultAiProvider);
+      this.model.set(this.readSessionModel(session) || appEnv.defaultAiModel);
       await this.reloadSessionListInternal();
     } catch (error) {
       this.error.set(this.readErrorMessage(error));
@@ -313,10 +320,13 @@ export class AiSessionPageComponent {
         throw new Error('Session was not found.');
       }
 
+      const timelineId = await this.resolveTimelineId(session);
+
       this.session.set(session);
-      this.provider.set(session.provider || appEnv.defaultAiProvider);
-      this.model.set(session.model || appEnv.defaultAiModel);
-      this.messages.set(await this.loadMessages(session.id));
+      this.timelineId.set(timelineId);
+      this.provider.set(this.readSessionProvider(session) || appEnv.defaultAiProvider);
+      this.model.set(this.readSessionModel(session) || appEnv.defaultAiModel);
+      this.messages.set(await this.loadMessages(session.id, timelineId));
     } catch (error) {
       this.error.set(this.readErrorMessage(error));
     } finally {
@@ -347,8 +357,18 @@ export class AiSessionPageComponent {
     this.error.set('');
     this.streamStatus.set('Waiting for stream...');
 
-    const session = this.session() ?? await this.aiSessionService.ensureSession();
+    let session = this.session() ?? await this.aiSessionService.ensureSession();
+    const timelineId = this.timelineId() ?? await this.resolveTimelineId(session);
+    const nextSettings = this.buildSessionSettings(session);
+
+    if (!this.areSessionSettingsEqual(session, nextSettings)) {
+      session = await this.aiSessionService.updateSession(session.id, {
+        settings: nextSettings,
+      });
+    }
+
     this.session.set(session);
+    this.timelineId.set(timelineId);
 
     const userMessage: IUiChatMessage = {
       id: `local-user-${Date.now()}`,
@@ -375,10 +395,11 @@ export class AiSessionPageComponent {
     try {
       await this.aiSessionService.streamMessage(
         session.id,
+        timelineId,
         {
           content,
-          provider: this.provider(),
-          model: this.model(),
+          provider: this.provider().trim() || undefined,
+          model: this.model().trim() || undefined,
           settings: {
             reasoningEffort: 'none',
           },
@@ -391,9 +412,9 @@ export class AiSessionPageComponent {
 
           if (chunk.type === 'heartbeat') {
             this.streamStatus.set(
-              `Streaming... ${chunk.toolName || 'waiting for provider'} (${Math.floor((chunk.elapsedMs || 0) / 1000)}s)`,
+              `Streaming... ${this.readHeartbeatToolName(chunk.metadata) || 'waiting for provider'} (${Math.floor((chunk.elapsedMs || 0) / 1000)}s)`,
             );
-          } else if (chunk.type === 'finish') {
+          } else if (chunk.type === 'completed') {
             this.streamStatus.set('Stream finished. Reloading saved history...');
           } else if (chunk.type === 'error') {
             this.streamStatus.set('Stream returned an error.');
@@ -420,7 +441,7 @@ export class AiSessionPageComponent {
         throw new Error(assembly.error);
       }
 
-      this.messages.set(await this.loadMessages(session.id));
+      this.messages.set(await this.loadMessages(session.id, timelineId));
       await this.reloadSessionListInternal();
       this.streamStatus.set('Latest assistant turn saved.');
     } catch (error) {
@@ -444,9 +465,22 @@ export class AiSessionPageComponent {
     }
   }
 
-  private async loadMessages(sessionId: string): Promise<IUiChatMessage[]> {
-    const messages = await this.aiSessionService.listMessages(sessionId);
-    return messages.map((message) => this.toUiMessage(message));
+  protected readSessionProvider(session: IAiSessionResponse): string {
+    return this.readSessionSettings(session).provider || '';
+  }
+
+  protected readSessionModel(session: IAiSessionResponse): string {
+    return this.readSessionSettings(session).model || '';
+  }
+
+  private async loadMessages(
+    sessionId: string,
+    timelineId: string,
+  ): Promise<IUiChatMessage[]> {
+    const turns = await this.aiSessionService.listTimelineTurns(sessionId, timelineId);
+    return turns.flatMap((turn) =>
+      turn.messages.map((message: IAiSessionMessageDto) => this.toUiMessage(message)),
+    );
   }
 
   private async reloadSessionListInternal(): Promise<void> {
@@ -459,6 +493,81 @@ export class AiSessionPageComponent {
       role: message.role,
       content: readAiContentText(message.content),
     };
+  }
+
+  private async resolveTimelineId(session: IAiSessionResponse): Promise<string> {
+    const timelineId = session.defaultTimeline?.id || session.defaultTimelineId;
+    if (timelineId) {
+      return timelineId;
+    }
+
+    const graph = await this.aiSessionService.getSessionGraph(session.id);
+    const fallbackTimelineId =
+      graph.session.defaultTimelineId ||
+      graph.timelines.find(
+        (timeline: { isDefault: boolean }) => timeline.isDefault,
+      )?.id ||
+      graph.timelines[0]?.id;
+
+    if (!fallbackTimelineId) {
+      throw new Error('Session does not have an active timeline.');
+    }
+
+    return fallbackTimelineId;
+  }
+
+  private buildSessionSettings(
+    session?: IAiSessionResponse | null,
+  ): Record<string, unknown> {
+    const current = this.readSessionSettings(session ?? null);
+    const provider = this.provider().trim();
+    const model = this.model().trim();
+
+    return {
+      ...current,
+      ...(provider ? { provider } : {}),
+      ...(model ? { model } : {}),
+    };
+  }
+
+  private readSessionSettings(
+    session: IAiSessionResponse | null,
+  ): { provider?: string; model?: string; systemPrompt?: string } {
+    const settings = session?.settings;
+    if (!settings || typeof settings !== 'object') {
+      return {};
+    }
+
+    return {
+      provider:
+        typeof settings['provider'] === 'string' ? settings['provider'] : undefined,
+      model: typeof settings['model'] === 'string' ? settings['model'] : undefined,
+      systemPrompt:
+        typeof settings['systemPrompt'] === 'string'
+          ? settings['systemPrompt']
+          : undefined,
+    };
+  }
+
+  private areSessionSettingsEqual(
+    session: IAiSessionResponse,
+    nextSettings: Record<string, unknown>,
+  ): boolean {
+    const current = this.readSessionSettings(session);
+    return (
+      current.provider === nextSettings['provider'] &&
+      current.model === nextSettings['model'] &&
+      current.systemPrompt === nextSettings['systemPrompt']
+    );
+  }
+
+  private readHeartbeatToolName(metadata: unknown): string | null {
+    if (!metadata || typeof metadata !== 'object') {
+      return null;
+    }
+
+    const toolName = (metadata as Record<string, unknown>)['toolName'];
+    return typeof toolName === 'string' ? toolName : null;
   }
 
   private readErrorMessage(error: unknown): string {

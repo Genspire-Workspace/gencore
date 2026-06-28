@@ -49,6 +49,7 @@
       "@genspire/ai/application": ["./packages/ai/src/application.ts"],
       "@genspire/ai/providers": ["./packages/ai/src/providers.ts"],
       "@genspire/ai/server": ["./packages/ai/src/server.ts"],
+      "@genspire/ai/server/contracts": ["./packages/ai/src/server/contracts.ts"],
       "@genspire/ai/extension": ["./packages/ai/src/extension/index.ts"],
       "@genspire/ai/infrastructure": ["./packages/ai/src/infrastructure.ts"],
       "@genspire/ai/catalogue": ["./packages/ai/src/catalogue.ts"],

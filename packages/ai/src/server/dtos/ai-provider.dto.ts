@@ -1,9 +1,24 @@
 // file: packages\ai\src\server\dtos\ai-provider.dto.ts
 
 import { ApiDto, ApiField } from "@genspire/server";
+import type {
+  IAiApiKeyListResponseDto,
+  IAiApiKeyResponseDto,
+  IAiModelListResponseDto,
+  IAiModelResponseDto,
+  IAiProviderListResponseDto,
+  IAiProviderResponseDto,
+  ICreateAiApiKeyRequestDto,
+  ICreateAiModelRequestDto,
+  ICreateAiProviderRequestDto,
+  IDeleteAiProviderResponseDto,
+  IUpdateAiApiKeyRequestDto,
+  IUpdateAiModelRequestDto,
+  IUpdateAiProviderRequestDto,
+} from "../contracts.js";
 
 @ApiDto({ description: "AI provider response" })
-export class AiProviderResponseDto {
+export class AiProviderResponseDto implements IAiProviderResponseDto {
   @ApiField({ type: "string" })
   id!: string;
 
@@ -39,13 +54,13 @@ export class AiProviderResponseDto {
 }
 
 @ApiDto({ description: "AI provider list response" })
-export class AiProviderListResponseDto {
+export class AiProviderListResponseDto implements IAiProviderListResponseDto {
   @ApiField({ arrayOf: AiProviderResponseDto })
   items!: AiProviderResponseDto[];
 }
 
 @ApiDto({ description: "Create AI provider request" })
-export class CreateAiProviderRequestDto {
+export class CreateAiProviderRequestDto implements ICreateAiProviderRequestDto {
   @ApiField({ type: "string", required: false })
   id?: string;
 
@@ -75,7 +90,7 @@ export class CreateAiProviderRequestDto {
 }
 
 @ApiDto({ description: "Update AI provider request" })
-export class UpdateAiProviderRequestDto {
+export class UpdateAiProviderRequestDto implements IUpdateAiProviderRequestDto {
   @ApiField({ type: "string", required: false })
   name?: string;
 
@@ -102,7 +117,7 @@ export class UpdateAiProviderRequestDto {
 }
 
 @ApiDto({ description: "Delete response" })
-export class DeleteAiProviderResponseDto {
+export class DeleteAiProviderResponseDto implements IDeleteAiProviderResponseDto {
   @ApiField({ type: "boolean" })
   deleted!: boolean;
 
@@ -111,7 +126,7 @@ export class DeleteAiProviderResponseDto {
 }
 
 @ApiDto({ description: "AI model response" })
-export class AiModelResponseDto {
+export class AiModelResponseDto implements IAiModelResponseDto {
   @ApiField({ type: "string" })
   id!: string;
 
@@ -138,13 +153,13 @@ export class AiModelResponseDto {
 }
 
 @ApiDto({ description: "AI model list response" })
-export class AiModelListResponseDto {
+export class AiModelListResponseDto implements IAiModelListResponseDto {
   @ApiField({ arrayOf: AiModelResponseDto })
   items!: AiModelResponseDto[];
 }
 
 @ApiDto({ description: "Create AI model request" })
-export class CreateAiModelRequestDto {
+export class CreateAiModelRequestDto implements ICreateAiModelRequestDto {
   @ApiField({ type: "string" })
   name!: string;
 
@@ -159,7 +174,7 @@ export class CreateAiModelRequestDto {
 }
 
 @ApiDto({ description: "Update AI model request" })
-export class UpdateAiModelRequestDto {
+export class UpdateAiModelRequestDto implements IUpdateAiModelRequestDto {
   @ApiField({ type: "string", required: false })
   name?: string;
 
@@ -174,7 +189,7 @@ export class UpdateAiModelRequestDto {
 }
 
 @ApiDto({ description: "AI provider API key response (value is masked)" })
-export class AiApiKeyResponseDto {
+export class AiApiKeyResponseDto implements IAiApiKeyResponseDto {
   @ApiField({ type: "string" })
   id!: string;
 
@@ -213,13 +228,13 @@ export class AiApiKeyResponseDto {
 }
 
 @ApiDto({ description: "AI API key list response" })
-export class AiApiKeyListResponseDto {
+export class AiApiKeyListResponseDto implements IAiApiKeyListResponseDto {
   @ApiField({ arrayOf: AiApiKeyResponseDto })
   items!: AiApiKeyResponseDto[];
 }
 
 @ApiDto({ description: "Create AI provider API key request" })
-export class CreateAiApiKeyRequestDto {
+export class CreateAiApiKeyRequestDto implements ICreateAiApiKeyRequestDto {
   @ApiField({ type: "string" })
   name!: string;
 
@@ -240,7 +255,7 @@ export class CreateAiApiKeyRequestDto {
 }
 
 @ApiDto({ description: "Update AI provider API key request" })
-export class UpdateAiApiKeyRequestDto {
+export class UpdateAiApiKeyRequestDto implements IUpdateAiApiKeyRequestDto {
   @ApiField({ type: "string", required: false })
   name?: string;
 
