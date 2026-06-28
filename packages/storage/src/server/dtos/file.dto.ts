@@ -1,11 +1,19 @@
 // file: packages/storage/src/server/dtos/file.dto.ts
 
 import { ApiDto, ApiField } from "@genspire/server";
+import type {
+  IDeleteFileResponseDto,
+  IFileListResponseDto,
+  IFileResponseDto,
+  IPrepareUploadRequestDto,
+  IPrepareUploadResponseDto,
+  IUploadFileDto,
+} from "../contracts.js";
 
 @ApiDto({
   description: "A persisted file record",
 })
-export class FileResponseDto {
+export class FileResponseDto implements IFileResponseDto {
   @ApiField({ type: "string" })
   id!: string;
 
@@ -43,7 +51,7 @@ export class FileResponseDto {
 @ApiDto({
   description: "A list of file records",
 })
-export class FileListResponseDto {
+export class FileListResponseDto implements IFileListResponseDto {
   @ApiField({
     arrayOf: FileResponseDto,
     description: "File items",
@@ -61,7 +69,7 @@ export class FileListResponseDto {
   contentType: "multipart/form-data",
   description: "File upload payload. Bucket is derived from the authenticated user.",
 })
-export class UploadFileDto {
+export class UploadFileDto implements IUploadFileDto {
   @ApiField({ type: "string", format: "binary", description: "The file to upload" })
   file!: Blob;
 }
@@ -69,7 +77,7 @@ export class UploadFileDto {
 @ApiDto({
   description: "Delete file response",
 })
-export class DeleteFileResponseDto {
+export class DeleteFileResponseDto implements IDeleteFileResponseDto {
   @ApiField({
     type: "boolean",
     description: "Whether the file was deleted.",
@@ -80,7 +88,7 @@ export class DeleteFileResponseDto {
 @ApiDto({
   description: "Request to prepare a presigned upload URL",
 })
-export class PrepareUploadRequestDTO {
+export class PrepareUploadRequestDTO implements IPrepareUploadRequestDto {
   @ApiField({ type: "string", description: "Original file name" })
   originalName!: string;
 }
@@ -88,7 +96,7 @@ export class PrepareUploadRequestDTO {
 @ApiDto({
   description: "Presigned upload URL response",
 })
-export class PrepareUploadResponseDTO {
+export class PrepareUploadResponseDTO implements IPrepareUploadResponseDto {
   @ApiField({ type: "object", dto: FileResponseDto })
   entity!: FileResponseDto;
 

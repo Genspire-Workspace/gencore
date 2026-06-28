@@ -1,23 +1,12 @@
 // file: apps\playground-angular\src\app\features\auth\auth-types.ts
 
-export interface IAuthUser {
-  id: string;
-  email: string;
-  displayName?: string | null;
-  emailConfirmed: boolean;
-  state: string;
-  createdAt: string;
-  updatedAt: string;
-  lastLoginAt?: string | null;
-}
+import type {
+  IAuthResponseDto,
+  IAuthUserResponseDto,
+} from '@genspire/auth/server/contracts';
 
-export interface IAuthResponse {
-  user: IAuthUser;
-  accessToken: string;
-  refreshToken: string;
-  expiresIn: number;
-  tokenType: string;
-}
+export type IAuthUser = IAuthUserResponseDto;
+export type IAuthResponse = IAuthResponseDto;
 
 export interface IStoredAuthState extends IAuthResponse {
   expiresAt: number;

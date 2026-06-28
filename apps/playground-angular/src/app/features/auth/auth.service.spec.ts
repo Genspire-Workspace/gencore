@@ -2,8 +2,8 @@
 
 import '@angular/compiler';
 import { createEnvironmentInjector, runInInjectionContext } from '@angular/core';
-import { of } from 'rxjs';
 import { AuthService } from './auth.service';
+import { AuthApiClient } from './auth-api.client';
 import { clearStoredAuthState, writeStoredAuthState } from './auth-storage';
 
 function installMemoryStorage(): void {
@@ -53,12 +53,14 @@ describe('AuthService', () => {
       expiresAt: Date.now() + 3600_000,
     });
 
-    const { HttpClient } = await import('@angular/common/http');
     const injector = createEnvironmentInjector([
       {
-        provide: HttpClient,
+        provide: AuthApiClient,
         useValue: {
-          post: () => of(null),
+          login: async () => null,
+          register: async () => null,
+          refresh: async () => null,
+          logout: async () => undefined,
         },
       },
     ]);
@@ -71,15 +73,14 @@ describe('AuthService', () => {
   });
 
   it('persists login responses to localStorage', async () => {
-    const requests: Array<{ url: string; body: unknown }> = [];
-    const { HttpClient } = await import('@angular/common/http');
+    const requests: Array<{ action: string; body: unknown }> = [];
     const injector = createEnvironmentInjector([
       {
-        provide: HttpClient,
+        provide: AuthApiClient,
         useValue: {
-          post: (url: string, body: unknown) => {
-            requests.push({ url, body });
-            return of({
+          login: async (body: unknown) => {
+            requests.push({ action: 'login', body });
+            return {
               user: {
                 id: 'user-1',
                 email: 'user@example.com',
@@ -92,8 +93,11 @@ describe('AuthService', () => {
               refreshToken: 'new-refresh-token',
               expiresIn: 3600,
               tokenType: 'Bearer',
-            });
+            };
           },
+          register: async () => null,
+          refresh: async () => null,
+          logout: async () => undefined,
         },
       },
     ]);
@@ -103,7 +107,7 @@ describe('AuthService', () => {
 
     expect(requests).toEqual([
       {
-        url: 'http://localhost:3000/login',
+        action: 'login',
         body: {
           email: 'user@example.com',
           password: 'secret',
@@ -118,7 +122,7 @@ describe('AuthService', () => {
   });
 
   it('refreshes the access token when it is nearing expiration', async () => {
-    const requests: Array<{ url: string; body: unknown }> = [];
+    const requests: Array<{ action: string; body: unknown }> = [];
     writeStoredAuthState({
       user: {
         id: 'user-1',
@@ -135,14 +139,15 @@ describe('AuthService', () => {
       expiresAt: Date.now() + 5_000,
     });
 
-    const { HttpClient } = await import('@angular/common/http');
     const injector = createEnvironmentInjector([
       {
-        provide: HttpClient,
+        provide: AuthApiClient,
         useValue: {
-          post: (url: string, body: unknown) => {
-            requests.push({ url, body });
-            return of({
+          login: async () => null,
+          register: async () => null,
+          refresh: async (body: unknown) => {
+            requests.push({ action: 'refresh', body });
+            return {
               user: {
                 id: 'user-1',
                 email: 'user@example.com',
@@ -155,8 +160,9 @@ describe('AuthService', () => {
               refreshToken: 'rotated-refresh-token',
               expiresIn: 3600,
               tokenType: 'Bearer',
-            });
+            };
           },
+          logout: async () => undefined,
         },
       },
     ]);
@@ -167,7 +173,7 @@ describe('AuthService', () => {
     expect(token).toBe('refreshed-access-token');
     expect(requests).toEqual([
       {
-        url: 'http://localhost:3000/refresh',
+        action: 'refresh',
         body: {
           refreshToken: 'refresh-token',
         },

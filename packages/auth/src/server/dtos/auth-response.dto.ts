@@ -2,9 +2,10 @@
 
 import { ApiDto, ApiField } from "@genspire/server";
 import { AuthUserResponseDto } from "./auth-user.dto.js";
+import type { IAuthResponseDto } from "../contracts.js";
 
 @ApiDto({ description: "Authentication response with tokens and user" })
-export class AuthResponseDto {
+export class AuthResponseDto implements IAuthResponseDto {
   @ApiField({ dto: AuthUserResponseDto, description: "Authenticated user" })
   user!: AuthUserResponseDto;
 

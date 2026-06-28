@@ -1,9 +1,16 @@
 // file: packages/auth/src/server/dtos/role.dto.ts
 
 import { ApiDto, ApiField } from "@genspire/server";
+import type {
+  IAssignRoleRequestDto,
+  ICreateRoleRequestDto,
+  IRoleResponseDto,
+  IUpdateRoleRequestDto,
+  IUserRolesResponseDto,
+} from "../contracts.js";
 
 @ApiDto({ description: "A role" })
-export class RoleResponseDto {
+export class RoleResponseDto implements IRoleResponseDto {
   @ApiField({ type: "string", description: "Role ID" })
   id!: string;
 
@@ -24,7 +31,7 @@ export class RoleResponseDto {
 }
 
 @ApiDto({ description: "Request payload for creating a role" })
-export class CreateRoleRequestDto {
+export class CreateRoleRequestDto implements ICreateRoleRequestDto {
   @ApiField({ type: "string", description: "Role name" })
   name!: string;
 
@@ -33,7 +40,7 @@ export class CreateRoleRequestDto {
 }
 
 @ApiDto({ description: "Request payload for updating a role" })
-export class UpdateRoleRequestDto {
+export class UpdateRoleRequestDto implements IUpdateRoleRequestDto {
   @ApiField({ type: "string", description: "Role name", required: false })
   name?: string;
 
@@ -42,13 +49,13 @@ export class UpdateRoleRequestDto {
 }
 
 @ApiDto({ description: "Request payload for assigning a role to a user" })
-export class AssignRoleRequestDto {
+export class AssignRoleRequestDto implements IAssignRoleRequestDto {
   @ApiField({ type: "string", description: "Role name to assign" })
   roleName!: string;
 }
 
 @ApiDto({ description: "List of role names for a user" })
-export class UserRolesResponseDto {
+export class UserRolesResponseDto implements IUserRolesResponseDto {
   @ApiField({ type: "string", description: "User ID", required: false })
   userId?: string;
 

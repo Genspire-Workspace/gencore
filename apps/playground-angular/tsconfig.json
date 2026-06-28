@@ -12,7 +12,9 @@
     "experimentalDecorators": true,
     "importHelpers": true,
     "paths": {
-      "@genspire/ai/server/contracts": ["../../packages/ai/src/server/contracts.ts"]
+      "@genspire/ai/server/contracts": ["../../packages/ai/src/server/contracts.ts"],
+      "@genspire/auth/server/contracts": ["../../packages/auth/src/server/contracts.ts"],
+      "@genspire/storage/server/contracts": ["../../packages/storage/src/server/contracts.ts"]
     },
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "target": "ES2022",

@@ -9,7 +9,8 @@
     "./domain": "./src/domain.ts",
     "./application": "./src/application.ts",
     "./infrastructure": "./src/infrastructure.ts",
-    "./server": "./src/server.ts"
+    "./server": "./src/server.ts",
+    "./server/contracts": "./src/server/contracts.ts"
   },
   "dependencies": {
     "@genspire/core": "workspace:*",

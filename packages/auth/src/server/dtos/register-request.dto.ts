@@ -1,9 +1,10 @@
 // file: packages/auth/src/server/dtos/register-request.dto.ts
 
 import { ApiDto, ApiField } from "@genspire/server";
+import type { IRegisterRequestDto } from "../contracts.js";
 
 @ApiDto({ description: "Register a new user" })
-export class RegisterRequestDto {
+export class RegisterRequestDto implements IRegisterRequestDto {
   @ApiField({ type: "string", description: "Email address" })
   email!: string;
 

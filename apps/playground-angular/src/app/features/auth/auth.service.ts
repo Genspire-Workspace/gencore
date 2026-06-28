@@ -1,14 +1,12 @@
 // file: apps\playground-angular\src\app\features\auth\auth.service.ts
 
 import { Injectable, computed, inject, signal } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { firstValueFrom } from 'rxjs';
-import { appEnv } from '../../core/app-env';
 import type {
   IAuthResponse,
   IAuthUser,
   IStoredAuthState,
 } from './auth-types';
+import { AuthApiClient } from './auth-api.client';
 import {
   clearStoredAuthState,
   readStoredAuthState,
@@ -37,7 +35,7 @@ function readJwtExpiration(accessToken: string): number | null {
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  private readonly http = inject(HttpClient);
+  private readonly authApiClient = inject(AuthApiClient);
   private readonly state = signal<IStoredAuthState | null>(
     readStoredAuthState(),
   );
@@ -69,23 +67,19 @@ export class AuthService {
   }
 
   async login(email: string, password: string): Promise<void> {
-    const response = await firstValueFrom(
-      this.http.post<IAuthResponse>(`${appEnv.apiBaseUrl}/login`, {
-        email,
-        password,
-      }),
-    );
+    const response = await this.authApiClient.login({
+      email,
+      password,
+    });
 
     this.setAuthState(response);
   }
 
   async register(email: string, password: string): Promise<void> {
-    const response = await firstValueFrom(
-      this.http.post<IAuthResponse>(`${appEnv.apiBaseUrl}/register`, {
-        email,
-        password,
-      }),
-    );
+    const response = await this.authApiClient.register({
+      email,
+      password,
+    });
 
     this.setAuthState(response);
   }
@@ -95,9 +89,7 @@ export class AuthService {
 
     if (refreshToken) {
       try {
-        await firstValueFrom(
-          this.http.post(`${appEnv.apiBaseUrl}/logout`, { refreshToken }),
-        );
+        await this.authApiClient.logout({ refreshToken });
       } catch {
         // Local state should still be cleared even if server logout fails.
       }
@@ -133,11 +125,9 @@ export class AuthService {
 
     this.refreshPromise = (async () => {
       try {
-        const response = await firstValueFrom(
-          this.http.post<IAuthResponse>(`${appEnv.apiBaseUrl}/refresh`, {
-            refreshToken,
-          }),
-        );
+        const response = await this.authApiClient.refresh({
+          refreshToken,
+        });
 
         this.setAuthState(response);
         return response.accessToken;

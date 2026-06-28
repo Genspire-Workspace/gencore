@@ -1,31 +1,22 @@
 // file: apps\playground-angular\src\app\features\files\file.service.ts
 
 import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { firstValueFrom } from 'rxjs';
-import { appEnv } from '../../core/app-env';
 import type { IFileListResponse, IFileResponse } from './file-types';
+import { StorageApiClient } from './storage-api.client';
 
 @Injectable({ providedIn: 'root' })
 export class FileService {
-  private readonly http = inject(HttpClient);
+  private readonly storageApiClient = inject(StorageApiClient);
 
   async listFiles(): Promise<IFileListResponse> {
-    return await firstValueFrom(
-      this.http.get<IFileListResponse>(`${appEnv.apiBaseUrl}/file`),
-    );
+    return await this.storageApiClient.listFiles();
   }
 
   async uploadFile(file: File): Promise<IFileResponse> {
-    const formData = new FormData();
-    formData.set('file', file, file.name);
-
-    return await firstValueFrom(
-      this.http.post<IFileResponse>(`${appEnv.apiBaseUrl}/file`, formData),
-    );
+    return await this.storageApiClient.uploadFile(file);
   }
 
   createDownloadUrl(fileId: string): string {
-    return `${appEnv.apiBaseUrl}/file/${fileId}`;
+    return this.storageApiClient.createDownloadUrl(fileId);
   }
 }

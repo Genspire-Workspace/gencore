@@ -1,9 +1,10 @@
 // file: packages/auth/src/server/dtos/auth-user.dto.ts
 
 import { ApiDto, ApiField } from "@genspire/server";
+import type { IAuthUserResponseDto } from "../contracts.js";
 
 @ApiDto({ description: "Authenticated user information" })
-export class AuthUserResponseDto {
+export class AuthUserResponseDto implements IAuthUserResponseDto {
   @ApiField({ type: "string", description: "User ID" })
   id!: string;
 
