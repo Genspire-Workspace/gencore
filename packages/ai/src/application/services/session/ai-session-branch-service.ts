@@ -1,10 +1,10 @@
-// file: packages/ai/src/application/services/ai-session-branch-service.ts
+// file: packages\ai\src\application\services\session\branch-service.ts
 
 import { Scoped } from "@genspire/core";
 import type { ICurrentUser } from "@genspire/auth";
-import type { ICreateAiBranchInput } from "../contracts/ai-session-contracts.js";
-import { AiSessionBranchEntity, AiSessionTimelineEntity } from "../../domain/session/index.js";
-import { AiSessionDbContext } from "../../infrastructure/persistence/ai-session-db-context.js";
+import type { ICreateAiBranchInput } from "../../contracts/ai-session-contracts.js";
+import { AiSessionBranchEntity, AiSessionTimelineEntity } from "../../../domain/session/index.js";
+import { AiSessionDbContext } from "../../../infrastructure/persistence/ai-session-db-context.js";
 import {
   cloneTimelinePrefix,
   getTimelineTurnByTurn,
@@ -13,7 +13,7 @@ import {
   requireTurnInSession,
   toBranchResponse,
   toTimelineResponse,
-} from "./ai-session-shared.js";
+} from "./shared.js";
 
 @Scoped()
 export class AiSessionBranchService {

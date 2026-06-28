@@ -1,6 +1,6 @@
 // file: apps/playground-app-ai/src/index.ts
 
-import { AiGenerationService } from "../../../packages/ai/src/application/services/ai-generation-service.js";
+import { AiGenerationService } from "../../../packages/ai/src/application/services/generation/ai-generation-service.js";
 import { createPlaygroundAiApp } from "./playground-ai-app.js";
 import { createAiAppProvidersFromEnv } from "./ai/providers.js";
 import { createAppAiLogger, createLocalImagePart, verifyProvider } from "./verify/shared/index.js";

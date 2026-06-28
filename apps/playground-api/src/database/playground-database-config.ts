@@ -20,6 +20,9 @@ import {
   AiSessionTimelineEntity,
   AiSessionTimelineTurnEntity,
   AiSessionTurnEntity,
+  AiApiKeyEntity,
+  AiModelEntity,
+  AiProviderEntity,
 } from "@genspire/ai/domain";
 
 export type PlaygroundSchemaMode = "update" | "migrations" | "none";
@@ -61,6 +64,9 @@ export async function createPlaygroundMikroOrmConfig(
     AiSessionMessageFeedbackEntity,
     AiSessionBranchEntity,
     AiGenerationRunEntity,
+    AiApiKeyEntity,
+    AiModelEntity,
+    AiProviderEntity,
     AiPromptEntity,
     AiSkillEntity,
     PlaygroundAuthUserEntity,

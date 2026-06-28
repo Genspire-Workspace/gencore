@@ -1,7 +1,7 @@
 // file: packages/ai/src/application/agents/agent-loop.ts
 
 import { AiContext } from "../../domain/context/ai-context.js";
-import type { AiGenerationService } from "../services/ai-generation-service.js";
+import type { AiGenerationService } from "../services/index.js";
 import type { IChatGenerationChunk } from "../../domain/chat/chat-generation-chunk.js";
 import type { IChatGenerationRequest } from "../../domain/chat/chat-generation-request.js";
 import type { IChatGenerationResponse } from "../../domain/chat/chat-generation-response.js";

@@ -2,7 +2,7 @@
 
 import path from "node:path";
 import { describe, expect, test } from "bun:test";
-import { AiGenerationService } from "../../../../packages/ai/src/application/services/ai-generation-service.js";
+import { AiGenerationService } from "../../../../packages/ai/src/application/services/generation/ai-generation-service.js";
 import { createPlaygroundAiApp } from "../playground-ai-app.js";
 import { createMockProviderClient } from "../ai/mock-provider-client.js";
 import {

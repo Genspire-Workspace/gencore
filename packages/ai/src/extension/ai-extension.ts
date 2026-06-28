@@ -3,16 +3,20 @@
 import type { GenExtension } from "@genspire/core";
 import type { IAiProviderClient } from "../providers/ai-provider-client.js";
 import { AiProviderClientRegistry } from "../providers/ai-provider-client-registry.js";
-import { AiGenerationService } from "../application/services/ai-generation-service.js";
 import { AiSessionDbContext } from "../infrastructure/persistence/ai-session-db-context.js";
+import { AiProviderDbContext } from "../infrastructure/persistence/ai-provider-db-context.js";
 import {
   AiAdminGenerationService,
+  AiGenerationService,
   AiSessionBranchService,
   AiSessionFeedbackService,
   AiSessionGenerationService,
   AiSessionGraphService,
   AiSessionService,
   AiSessionTimelineService,
+  AiApiKeyService,
+  AiModelService,
+  AiProviderService,
 } from "../application/services/index.js";
 
 export interface IAiDefaults {
@@ -49,6 +53,10 @@ export function aiExtension(options: IAiExtensionOptions): GenExtension {
       app.registerScoped(AiSessionBranchService);
       app.registerScoped(AiSessionFeedbackService);
       app.registerScoped(AiSessionGenerationService);
+      app.registerScoped(AiProviderDbContext);
+      app.registerScoped(AiProviderService);
+      app.registerScoped(AiModelService);
+      app.registerScoped(AiApiKeyService);
     },
   };
 }

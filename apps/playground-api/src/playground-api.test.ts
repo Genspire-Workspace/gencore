@@ -1196,4 +1196,97 @@ Review {{item}}.`,
       await app.stop();
     }
   });
+
+  test("ai providers, models, and per-user api keys CRUD via the package server extension", async () => {
+    const app = await createPlaygroundApp({
+      port: 0,
+      env: createTestEnv(dbPath),
+    });
+
+    await app.start();
+
+    try {
+      const server = app.get(Server);
+      const owner = await registerAndGetToken(server);
+      await assignAdminRole(app, owner.userId);
+      const member = await registerAndGetToken(server, "member-" + crypto.randomUUID() + "@example.com");
+
+      const listRes = await server.handle(
+        new Request("http://localhost/api/v1/ai/providers", {
+          headers: authHeaders(member.accessToken),
+        }),
+      );
+      expect(listRes.status).toBe(200);
+      const list = await listRes.json() as { items: { id: string; name: string }[] };
+      expect(list.items.map((provider) => provider.id).sort()).toEqual(["ollama", "openai-compatible"]);
+
+      const forbiddenRes = await server.handle(
+        new Request("http://localhost/api/v1/ai/providers", {
+          method: "POST",
+          headers: authHeaders(member.accessToken),
+          body: JSON.stringify({ name: "Anthropic", kind: "cloud", clientKind: "anthropic" }),
+        }),
+      );
+      expect(forbiddenRes.status).toBe(403);
+
+      const modelRes = await server.handle(
+        new Request("http://localhost/api/v1/ai/providers/ollama/models", {
+          method: "POST",
+          headers: authHeaders(owner.accessToken),
+          body: JSON.stringify({ name: "gemma3:4b" }),
+        }),
+      );
+      expect(modelRes.status).toBe(201);
+      const model = await modelRes.json() as { id: string; providerId: string; name: string };
+      expect(model.providerId).toBe("ollama");
+      expect(model.name).toBe("gemma3:4b");
+
+      const modelsListRes = await server.handle(
+        new Request("http://localhost/api/v1/ai/providers/ollama/models", {
+          headers: authHeaders(member.accessToken),
+        }),
+      );
+      expect(modelsListRes.status).toBe(200);
+      expect((await modelsListRes.json() as { items: unknown[] }).items.length).toBe(1);
+
+      const apiKeyRes = await server.handle(
+        new Request("http://localhost/api/v1/ai/providers/ollama/api-keys", {
+          method: "POST",
+          headers: authHeaders(member.accessToken),
+          body: JSON.stringify({ name: "My Ollama key", value: "secret-key-123456" }),
+        }),
+      );
+      expect(apiKeyRes.status).toBe(201);
+      const apiKey = await apiKeyRes.json() as { id: string; hasValue: boolean; valuePreview: string | undefined };
+      expect(apiKey.hasValue).toBe(true);
+      expect(apiKey.valuePreview).toBe("3456");
+
+      const dupKeyRes = await server.handle(
+        new Request("http://localhost/api/v1/ai/providers/ollama/api-keys", {
+          method: "POST",
+          headers: authHeaders(member.accessToken),
+          body: JSON.stringify({ name: "Second key", value: "another-secret" }),
+        }),
+      );
+      expect(dupKeyRes.status).toBe(400);
+
+      const keyListRes = await server.handle(
+        new Request("http://localhost/api/v1/ai/providers/ollama/api-keys", {
+          headers: authHeaders(member.accessToken),
+        }),
+      );
+      expect(keyListRes.status).toBe(200);
+      expect((await keyListRes.json() as { items: unknown[] }).items.length).toBe(1);
+
+      const deleteModelRes = await server.handle(
+        new Request("http://localhost/api/v1/ai/providers/ollama/models/" + model.id, {
+          method: "DELETE",
+          headers: authHeaders(owner.accessToken),
+        }),
+      );
+      expect(deleteModelRes.status).toBe(200);
+    } finally {
+      await app.stop();
+    }
+  });
 });

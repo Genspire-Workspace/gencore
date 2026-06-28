@@ -6,7 +6,7 @@ import {
   Post,
   RequestContext,
 } from "@genspire/server";
-import { AiAdminGenerationService } from "../../application/services/ai-admin-generation-service.js";
+import { AiAdminGenerationService } from "../../application/services/index.js";
 import type { IAiTool } from "../../domain/tools/ai-tool.js";
 import {
   AiAdminChatGenerateRequestDto,

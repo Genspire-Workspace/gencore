@@ -8,7 +8,7 @@ import type { IEmbeddingGenerationRequest } from "../../../../../packages/ai/src
 import type { IAiImagePart } from "../../../../../packages/ai/src/domain/messages/ai-content-part.js";
 import { Agent } from "../../../../../packages/ai/src/application/agents/agent.js";
 import { AiContext } from "../../../../../packages/ai/src/domain/context/ai-context.js";
-import { AiGenerationService } from "../../../../../packages/ai/src/application/services/ai-generation-service.js";
+import { AiGenerationService } from "../../../../../packages/ai/src/application/services/generation/ai-generation-service.js";
 import type { IAiAgentLoopResult, IAiAgentStep } from "../../../../../packages/ai/src/application/agents/index.js";
 import { defineAiTool } from "../../../../../packages/ai/src/domain/tools/define-ai-tool.js";
 import type { IAiToolResult } from "../../../../../packages/ai/src/domain/tools/ai-tool-result.js";

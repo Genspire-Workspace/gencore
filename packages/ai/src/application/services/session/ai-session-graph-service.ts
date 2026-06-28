@@ -1,7 +1,7 @@
-// file: packages/ai/src/application/services/ai-session-graph-service.ts
+// file: packages\ai\src\application\services\session\graph-service.ts
 
 import { Scoped } from "@genspire/core";
-import type { IGetAiSessionGraphInput } from "../contracts/ai-session-contracts.js";
+import type { IGetAiSessionGraphInput } from "../../contracts/ai-session-contracts.js";
 import {
   AiGenerationRunEntity,
   AiSessionBranchEntity,
@@ -10,8 +10,8 @@ import {
   AiSessionTimelineEntity,
   AiSessionTimelineTurnEntity,
   AiSessionTurnEntity,
-} from "../../domain/session/index.js";
-import { AiSessionDbContext } from "../../infrastructure/persistence/ai-session-db-context.js";
+} from "../../../domain/session/index.js";
+import { AiSessionDbContext } from "../../../infrastructure/persistence/ai-session-db-context.js";
 import {
   requireAccessibleSession,
   requireTimelineInSession,
@@ -23,7 +23,7 @@ import {
   toTimelineResponse,
   toTimelineTurnResponse,
   toTurnResponse,
-} from "./ai-session-shared.js";
+} from "./shared.js";
 
 @Scoped()
 export class AiSessionGraphService {

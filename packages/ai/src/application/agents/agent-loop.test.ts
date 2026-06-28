@@ -1,7 +1,7 @@
 // file: packages/ai/src/application/agents/agent-loop.test.ts
 
 import { describe, expect, test } from "bun:test";
-import { AiGenerationService } from "../services/ai-generation-service.js";
+import { AiGenerationService } from "../services/index.js";
 import { AiProviderClientRegistry } from "../../providers/ai-provider-client-registry.js";
 import { AiContext } from "../../domain/context/ai-context.js";
 import { defineAiTool } from "../../domain/tools/define-ai-tool.js";

@@ -1,7 +1,7 @@
 // file: packages/ai/src/application/agents/agent.ts
 
 import { AiContext } from "../../domain/context/ai-context.js";
-import type { AiGenerationService } from "../services/ai-generation-service.js";
+import type { AiGenerationService } from "../services/index.js";
 import type {
   IAiAgentLoopOptions,
   IAiAgentLoopResult,

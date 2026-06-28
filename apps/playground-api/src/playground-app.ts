@@ -15,6 +15,8 @@ import path from "node:path";
 import { mkdirSync } from "node:fs";
 import { PlaygroundAuthUserEntity } from "./auth/playground-auth-user.entity.js";
 import { createPlaygroundAuthSeeder } from "./auth/auth-seeder.js";
+import { seedAiProviders } from "@genspire/ai/application";
+import { AiProviderDbContext } from "@genspire/ai/infrastructure";
 import { readPlaygroundEnv, type IPlaygroundEnv } from "./config/playground-env.js";
 import {
   createPlaygroundMikroOrmConfig,
@@ -117,6 +119,13 @@ export async function createPlaygroundApp(
         }
 
         await seeder.run(orm.em.fork());
+
+        const aiSeedScope = currentApp.createScope();
+        try {
+          await seedAiProviders(aiSeedScope.resolve(AiProviderDbContext));
+        } finally {
+          await aiSeedScope.destroy();
+        }
       },
     });
   }

@@ -50,6 +50,7 @@
       "@genspire/ai/providers": ["./packages/ai/src/providers.ts"],
       "@genspire/ai/server": ["./packages/ai/src/server.ts"],
       "@genspire/ai/extension": ["./packages/ai/src/extension/index.ts"],
+      "@genspire/ai/infrastructure": ["./packages/ai/src/infrastructure.ts"],
       "@genspire/ai/catalogue": ["./packages/ai/src/catalogue.ts"],
       "@genspire/ai/providers/ollama": ["./packages/ai/src/providers/ollama/index.ts"],
       "@genspire/ai/providers/openai-compatible": ["./packages/ai/src/providers/openai-compatible/index.ts"],

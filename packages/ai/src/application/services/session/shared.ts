@@ -1,9 +1,9 @@
-// file: packages/ai/src/application/services/ai-session-shared.ts
+// file: packages\ai\src\application\services\session\shared.ts
 
 import { GenError } from "@genspire/core";
 import type { ICurrentUser } from "@genspire/auth";
-import type { IChatMessage } from "../../domain/chat/chat-message.js";
-import type { IAiTool } from "../../domain/tools/ai-tool.js";
+import type { IChatMessage } from "../../../domain/chat/chat-message.js";
+import type { IAiTool } from "../../../domain/tools/ai-tool.js";
 import {
   AiGenerationRunEntity,
   AiSessionBranchEntity,
@@ -14,9 +14,9 @@ import {
   AiSessionTimelineTurnEntity,
   AiSessionTurnEntity,
   type IAiSessionSettings,
-} from "../../domain/session/index.js";
-import type { IChatGenerationSettings } from "../../domain/chat/chat-generation-settings.js";
-import { AiSessionDbContext } from "../../infrastructure/persistence/ai-session-db-context.js";
+} from "../../../domain/session/index.js";
+import type { IChatGenerationSettings } from "../../../domain/chat/chat-generation-settings.js";
+import { AiSessionDbContext } from "../../../infrastructure/persistence/ai-session-db-context.js";
 
 export interface IAiSessionTurnSnapshot {
   timelineTurn: AiSessionTimelineTurnEntity;

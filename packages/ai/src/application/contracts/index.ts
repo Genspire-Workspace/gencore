@@ -11,3 +11,11 @@ export type {
   IRegenerateAiAssistantMessageInput,
   IUpdateAiSessionInput,
 } from "./ai-session-contracts.js";
+export type {
+  ICreateAiProviderInput,
+  IUpdateAiProviderInput,
+  ICreateAiModelInput,
+  IUpdateAiModelInput,
+  ICreateAiApiKeyInput,
+  IUpdateAiApiKeyInput,
+} from "./ai-provider-contracts.js";

@@ -1,12 +1,12 @@
 // file: apps/playground-app-ai/src/ai/verify-ai.ts
 
 import type { GenApp } from "@genspire/core";
-import { AiGenerationService } from "../../../../packages/ai/src/application/services/ai-generation-service.js";
 import type {
   AiMessageContent,
   IAiImagePart,
 } from "../../../../packages/ai/src/domain/messages/index.js";
 import { createDefaultImagePart } from "../verify/shared/images.js";
+import { AiGenerationService } from "../../../../packages/ai/src/application/services/generation/ai-generation-service.js";
 
 export interface AiVerificationResult {
   chatReply: string;

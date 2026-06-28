@@ -1,10 +1,10 @@
-// file: packages/ai/src/application/services/ai-generation-service.test.ts
+// file: packages\ai\src\application\services\generation\service.test.ts
 
 import { describe, expect, test } from "bun:test";
-import { AiProviderClientRegistry } from "../../providers/ai-provider-client-registry.js";
+import { AiProviderClientRegistry } from "../../../providers/ai-provider-client-registry.js";
 import { AiGenerationService } from "./ai-generation-service.js";
-import type { IAiProviderClient } from "../../providers/ai-provider-client.js";
-import type { IAiTokenUsage } from "../../domain/models/ai-token-usage.js";
+import type { IAiProviderClient } from "../../../providers/ai-provider-client.js";
+import type { IAiTokenUsage } from "../../../domain/models/ai-token-usage.js";
 
 function createMockClient(
   id: string,

@@ -1,12 +1,12 @@
-// file: packages/ai/src/application/services/ai-admin-generation-service.ts
+// file: packages\ai\src\application\services\generation\admin-generation-service.ts
 
 import { Scoped } from "@genspire/core";
-import type { IChatGenerationChunk } from "../../domain/chat/chat-generation-chunk.js";
-import type { IChatGenerationRequest } from "../../domain/chat/chat-generation-request.js";
-import type { IChatGenerationResponse } from "../../domain/chat/chat-generation-response.js";
-import type { IEmbeddingGenerationRequest } from "../../domain/embeddings/embedding-generation-request.js";
-import type { IEmbeddingGenerationResponse } from "../../domain/embeddings/embedding-generation-response.js";
-import type { IAiSessionSseEvent } from "../../domain/session/types/ai-session-types.js";
+import type { IChatGenerationChunk } from "../../../domain/chat/chat-generation-chunk.js";
+import type { IChatGenerationRequest } from "../../../domain/chat/chat-generation-request.js";
+import type { IChatGenerationResponse } from "../../../domain/chat/chat-generation-response.js";
+import type { IEmbeddingGenerationRequest } from "../../../domain/embeddings/embedding-generation-request.js";
+import type { IEmbeddingGenerationResponse } from "../../../domain/embeddings/embedding-generation-response.js";
+import type { IAiSessionSseEvent } from "../../../domain/session/types/ai-session-types.js";
 import { AiGenerationService } from "./ai-generation-service.js";
 
 @Scoped()

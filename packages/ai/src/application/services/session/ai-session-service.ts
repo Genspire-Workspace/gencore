@@ -1,18 +1,18 @@
-// file: packages/ai/src/application/services/ai-session-service.ts
+// file: packages\ai\src\application\services\session\service.ts
 
 import { Scoped } from "@genspire/core";
 import type {
   ICreateAiSessionInput,
   IUpdateAiSessionInput,
-} from "../contracts/ai-session-contracts.js";
-import { AiSessionEntity, AiSessionTimelineEntity } from "../../domain/session/index.js";
-import { AiSessionDbContext } from "../../infrastructure/persistence/ai-session-db-context.js";
+} from "../../contracts/ai-session-contracts.js";
+import { AiSessionEntity, AiSessionTimelineEntity } from "../../../domain/session/index.js";
+import { AiSessionDbContext } from "../../../infrastructure/persistence/ai-session-db-context.js";
 import {
   requireAccessibleSession,
   toSessionResponse,
   toTimelineResponse,
   validateSessionTitle,
-} from "./ai-session-shared.js";
+} from "./shared.js";
 
 @Scoped()
 export class AiSessionService {

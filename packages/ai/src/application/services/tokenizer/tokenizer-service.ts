@@ -1,4 +1,4 @@
-// file: packages/ai/src/application/services/ai-tokenizer-service.ts
+// file: packages\ai\src\application\services\tokenizer\service.ts
 
 import {
   encodingForModel,
@@ -6,19 +6,19 @@ import {
   type Tiktoken,
   type TiktokenModel,
 } from "js-tiktoken";
-import type { IChatMessage } from "../../domain/chat/chat-message.js";
+import type { IChatMessage } from "../../../domain/chat/chat-message.js";
 import type {
   AiContentPart,
   AiMessageContent,
-} from "../../domain/messages/ai-content-part.js";
-import type { IAiContext } from "../../domain/context/ai-context.js";
-import type { IAiTokenChunk } from "../../domain/tokenization/ai-token-chunk.js";
-import type { IAiTokenChunkResult } from "../../domain/tokenization/ai-token-chunk-result.js";
-import type { IAiTokenCountResult } from "../../domain/tokenization/ai-token-count-result.js";
+} from "../../../domain/messages/ai-content-part.js";
+import type { IAiContext } from "../../../domain/context/ai-context.js";
+import type { IAiTokenChunk } from "../../../domain/tokenization/ai-token-chunk.js";
+import type { IAiTokenChunkResult } from "../../../domain/tokenization/ai-token-chunk-result.js";
+import type { IAiTokenCountResult } from "../../../domain/tokenization/ai-token-count-result.js";
 import type {
   IAiTokenChunkOptions,
   IAiTokenizerResolveOptions,
-} from "../../domain/tokenization/ai-tokenizer-options.js";
+} from "../../../domain/tokenization/ai-tokenizer-options.js";
 
 const DEFAULT_ENCODING = "cl100k_base";
 
