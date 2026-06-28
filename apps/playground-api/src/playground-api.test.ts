@@ -8,9 +8,9 @@ import { Server } from "@genspire/server";
 import { AuthRoleService } from "@genspire/auth";
 import { createPlaygroundApp } from "./playground-app.js";
 import { aiPlaygroundRuntime } from "./ai/runtime/ai-service-factory.js";
-import { AiGenerationService } from "../../../packages/ai/src/application/services/ai-generation-service.js";
-import type { IChatGenerationRequest } from "../../../packages/ai/src/domain/chat/chat-generation-request.js";
-import type { IChatGenerationResponse } from "../../../packages/ai/src/domain/chat/chat-generation-response.js";
+import { AiGenerationService } from "@genspire/ai/application";
+import type { IChatGenerationRequest } from "@genspire/ai/domain";
+import type { IChatGenerationResponse } from "@genspire/ai/domain";
 
 async function registerAndGetToken(
   server: Server,

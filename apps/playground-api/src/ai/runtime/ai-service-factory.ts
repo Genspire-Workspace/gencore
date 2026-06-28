@@ -1,7 +1,7 @@
-import { AiProviderClientRegistry } from "../../../../../packages/ai/src/providers/ai-provider-client-registry.js";
-import { OpenAICompatibleClient } from "../../../../../packages/ai/src/providers/openai-compatible/index.js";
-import { AiGenerationService } from "../../../../../packages/ai/src/application/services/ai-generation-service.js";
-import { AiToolRegistry } from "../../../../../packages/ai/src/application/tools/ai-tool-registry.js";
+import { AiClientRegistry as AiProviderClientRegistry } from "@genspire/ai/providers";
+import { OpenAICompatibleClient } from "@genspire/ai/providers/openai-compatible";
+import { AiGenerationService } from "@genspire/ai/application";
+import { AiToolRegistry } from "@genspire/ai/application";
 import {
   createAiPlaygroundProviderDefinitions,
   type IAiPlaygroundProviderInfo,

@@ -1,5 +1,5 @@
 import { Entity, Index, PrimaryKey, Property } from "@mikro-orm/decorators";
-import type { AiPromptTemplate } from "../../../../../packages/ai/src/domain/prompts/ai-prompt.js";
+import type { AiPromptTemplate } from "@genspire/ai/domain";
 
 export type AiPromptVisibility = "private" | "shared" | "system";
 

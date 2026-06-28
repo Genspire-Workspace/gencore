@@ -1,6 +1,6 @@
-import type { IAiTool } from "../../../../../packages/ai/src/domain/tools/ai-tool.js";
-import { defineAiTool } from "../../../../../packages/ai/src/domain/tools/define-ai-tool.js";
-import { AiToolRegistry } from "../../../../../packages/ai/src/application/tools/ai-tool-registry.js";
+import type { IAiTool } from "@genspire/ai/domain";
+import { defineAiTool } from "@genspire/ai/domain";
+import { AiToolRegistry } from "@genspire/ai/application";
 
 function toRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === "object"

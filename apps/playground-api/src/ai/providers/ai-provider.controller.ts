@@ -2,7 +2,7 @@
 
 import { AllowAnonymous, Controller, Get } from "@genspire/server";
 import { aiPlaygroundRuntime } from "../runtime/ai-service-factory.js";
-import { AiProvidersResponseDto } from "../generation/ai.dto.js";
+import { AiProvidersResponseDto } from "./ai-provider.dto.js";
 
 @Controller("/ai", {
   tag: "AI",

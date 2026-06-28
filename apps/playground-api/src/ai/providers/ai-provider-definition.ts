@@ -1,4 +1,4 @@
-import type { IOpenAICompatibleClientOptions } from "../../../../../packages/ai/src/providers/openai-compatible/index.js";
+import type { IOpenAICompatibleClientOptions } from "@genspire/ai/providers/openai-compatible";
 
 export interface IAiPlaygroundProviderInfo {
   id: string;

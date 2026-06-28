@@ -20,7 +20,7 @@ import {
   AiSessionTimelineEntity,
   AiSessionTimelineTurnEntity,
   AiSessionTurnEntity,
-} from "../../../../packages/ai/src/domain/session/index.js";
+} from "@genspire/ai/domain";
 
 export type PlaygroundSchemaMode = "update" | "migrations" | "none";
 

@@ -19,9 +19,9 @@ import { readPlaygroundEnv, type IPlaygroundEnv } from "./config/playground-env.
 import {
   createPlaygroundMikroOrmConfig,
 } from "./database/playground-database-config.js";
-import { aiExtension } from "../../../packages/ai/src/extension/ai-extension.js";
-import { aiServerExtension } from "../../../packages/ai/src/server/ai-server-extension.js";
-import { OpenAICompatibleClient } from "../../../packages/ai/src/providers/openai-compatible/index.js";
+import { aiExtension } from "@genspire/ai/extension";
+import { aiServerExtension } from "@genspire/ai/server";
+import { OpenAICompatibleClient } from "@genspire/ai/providers/openai-compatible";
 import { PlaygroundDbContext } from "./database/playground-db-context.js";
 import { createPlaygroundStorageProvider } from "./storage/playground-storage-provider.js";
 import { AuthActivityController } from "./auth/auth-activity.controller.js";

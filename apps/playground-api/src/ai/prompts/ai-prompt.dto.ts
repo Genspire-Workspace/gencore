@@ -1,5 +1,5 @@
 import { ApiDto, ApiField, defineApiType } from "@genspire/server";
-import { AiChatMessageDto } from "../generation/ai.dto.js";
+import { AiChatMessageDto } from "@genspire/ai/server";
 
 export type AiPromptVisibilityDto = "private" | "shared" | "system";
 
