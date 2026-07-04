@@ -1,6 +1,7 @@
 // file: packages\ai\src\server\controllers\ai-provider.controller.ts
 
 import {
+  AllowAnonymous,
   Authorize,
   Controller,
   Delete,
@@ -22,6 +23,7 @@ import {
   AiApiKeyService,
   AiModelService,
   AiProviderService,
+  AiProviderRuntimeCatalogue,
 } from "../../application/services/index.js";
 import {
   AiApiKeyListResponseDto,
@@ -38,6 +40,7 @@ import {
   UpdateAiModelRequestDto,
   UpdateAiProviderRequestDto,
 } from "../dtos/ai-provider.dto.js";
+import { AiProviderDiscoveryListResponseDto } from "../dtos/ai-provider-discovery.dto.js";
 
 function mapProviderError(error: unknown): Response | null {
   if (!(error instanceof GenError)) {
@@ -77,16 +80,27 @@ function handle(error: unknown): Response {
 })
 export class AiProviderController {
   static inject = [
+    AiProviderRuntimeCatalogue,
     AiProviderService,
     AiModelService,
     AiApiKeyService,
   ];
 
   constructor(
+    private readonly providerCatalogue: AiProviderRuntimeCatalogue,
     private readonly providerService: AiProviderService,
     private readonly modelService: AiModelService,
     private readonly apiKeyService: AiApiKeyService,
   ) {}
+
+  @AllowAnonymous()
+  @Get("/discover", {
+    summary: "List configured AI runtime providers",
+    response: AiProviderDiscoveryListResponseDto,
+  })
+  getDiscovery() {
+    return this.providerCatalogue.toDiscoveryResponse();
+  }
 
   @Get("/", {
     summary: "List AI providers",

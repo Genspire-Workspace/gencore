@@ -2,24 +2,6 @@
 
 import '@angular/compiler';
 import { createEnvironmentInjector, runInInjectionContext } from '@angular/core';
-<<<<<<< ours
-import { of } from 'rxjs';
-import { FileService } from './file.service';
-
-describe('FileService', () => {
-  it('requests the file list from the API', async () => {
-    const requests: Array<{ method: string; url: string; body?: unknown }> = [];
-    const { HttpClient } = await import('@angular/common/http');
-    const injector = createEnvironmentInjector([
-      {
-        provide: HttpClient,
-        useValue: {
-          get: (url: string) => {
-            requests.push({ method: 'GET', url });
-            return of({ items: [], hasMore: false });
-          },
-          post: () => of(null),
-=======
 import { FileService } from './file.service';
 import { StorageApiClient } from './storage-api.client';
 
@@ -36,7 +18,6 @@ describe('FileService', () => {
           },
           uploadFile: async () => null,
           createDownloadUrl: () => '',
->>>>>>> theirs
         },
       },
     ]);
@@ -48,29 +29,12 @@ describe('FileService', () => {
     });
     expect(requests).toEqual([
       {
-<<<<<<< ours
-        method: 'GET',
-        url: 'http://localhost:3000/file',
-=======
         action: 'listFiles',
->>>>>>> theirs
       },
     ]);
   });
 
   it('uploads multipart form data with a file field', async () => {
-<<<<<<< ours
-    const requests: Array<{ method: string; url: string; body?: unknown }> = [];
-    const { HttpClient } = await import('@angular/common/http');
-    const injector = createEnvironmentInjector([
-      {
-        provide: HttpClient,
-        useValue: {
-          get: () => of({ items: [], hasMore: false }),
-          post: (url: string, body: unknown) => {
-            requests.push({ method: 'POST', url, body });
-            return of({
-=======
     const requests: Array<{ action: string; body?: unknown }> = [];
     const injector = createEnvironmentInjector([
       {
@@ -80,7 +44,6 @@ describe('FileService', () => {
           uploadFile: async (file: File) => {
             requests.push({ action: 'uploadFile', body: file });
             return {
->>>>>>> theirs
               id: 'file-1',
               bucket: 'uploads',
               key: 'hello.txt',
@@ -88,14 +51,9 @@ describe('FileService', () => {
               size: 5,
               createdAt: '2026-06-26T00:00:00.000Z',
               updatedAt: '2026-06-26T00:00:00.000Z',
-<<<<<<< ours
-            });
-          },
-=======
             };
           },
           createDownloadUrl: () => '',
->>>>>>> theirs
         },
       },
     ]);
@@ -109,18 +67,8 @@ describe('FileService', () => {
     });
 
     expect(requests).toHaveLength(1);
-<<<<<<< ours
-    expect(requests[0]?.method).toBe('POST');
-    expect(requests[0]?.url).toBe('http://localhost:3000/file');
-    expect(requests[0]?.body instanceof FormData).toBe(true);
-
-    const uploaded = (requests[0]?.body as FormData).get('file');
-    expect(uploaded instanceof File).toBe(true);
-    expect((uploaded as File).name).toBe('hello.txt');
-=======
     expect(requests[0]?.action).toBe('uploadFile');
     expect(requests[0]?.body instanceof File).toBe(true);
     expect((requests[0]?.body as File).name).toBe('hello.txt');
->>>>>>> theirs
   });
 });

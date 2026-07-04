@@ -12,10 +12,7 @@ import {
   resolveAiSessionAssistantText,
 } from './ai-session-stream';
 import { readAiContentText } from '../shared/ai-content';
-import type {
-  IAiSessionMessageDto,
-  IAiSessionResponse,
-} from './ai-session-types';
+import type { IAiSessionMessageDto, IAiSessionResponse } from './ai-session-types';
 import type { IProblemDetails } from '../../../core/problem-details';
 
 interface IUiChatMessage {
@@ -33,24 +30,22 @@ interface IUiChatMessage {
   imports: [CommonModule, FormsModule],
   template: `
     <section class="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
-      <div class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+      <div class="rounded-3xl border border-base-300 bg-base-100 p-6 shadow-sm">
         <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <p class="text-sm font-medium uppercase tracking-[0.2em] text-sky-600">
-              AI
-            </p>
-            <h1 class="mt-2 text-3xl font-semibold tracking-tight text-slate-900">
+            <p class="text-sm font-medium uppercase tracking-[0.2em] text-primary">AI</p>
+            <h1 class="mt-2 text-3xl font-semibold tracking-tight text-base-content">
               Session playground
             </h1>
-            <p class="mt-3 max-w-2xl text-sm text-slate-500">
-              Create one session, stream timeline turns from the backend, and
-              navigate across saved sessions from the sidebar.
+            <p class="mt-3 max-w-2xl text-sm text-base-content/60">
+              Create one session, stream timeline turns from the backend, and navigate across saved
+              sessions from the sidebar.
             </p>
           </div>
 
           <div class="flex flex-wrap gap-3">
             <button
-              class="rounded-2xl border border-slate-300 px-4 py-3 text-sm font-medium text-slate-700 transition hover:border-slate-400 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+              class="rounded-2xl border border-base-300 px-4 py-3 text-sm font-medium text-base-content transition hover:border-base-content/40 hover:bg-base-200 disabled:cursor-not-allowed disabled:opacity-60"
               type="button"
               (click)="reloadSession()"
               [disabled]="loading() || sending()"
@@ -61,18 +56,24 @@ interface IUiChatMessage {
         </div>
       </div>
 
-      <div class="mt-6 grid min-h-0 flex-1 auto-rows-fr gap-6 overflow-hidden lg:grid-cols-[20rem_minmax(0,1fr)]">
-        <aside class="flex h-full min-h-0 flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+      <div
+        class="mt-6 grid min-h-0 flex-1 auto-rows-fr gap-6 overflow-hidden lg:grid-cols-[20rem_minmax(0,1fr)]"
+      >
+        <aside
+          class="flex h-full min-h-0 flex-col overflow-hidden rounded-3xl border border-base-300 bg-base-100 p-6 shadow-sm"
+        >
           <div class="flex items-center justify-between gap-3">
-            <h2 class="text-lg font-semibold text-slate-900">Sessions</h2>
-            <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
+            <h2 class="text-lg font-semibold text-base-content">Sessions</h2>
+            <span
+              class="rounded-full bg-base-200 px-3 py-1 text-xs font-medium text-base-content/70"
+            >
               {{ sessions().length }}
             </span>
           </div>
 
           <div class="mt-4 space-y-3">
             <button
-              class="w-full rounded-2xl bg-slate-900 px-4 py-3 text-sm font-medium text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:bg-slate-400"
+              class="w-full rounded-2xl bg-accent px-4 py-3 text-sm font-medium text-accent-content transition hover:bg-accent/80 disabled:cursor-not-allowed disabled:bg-base-300"
               type="button"
               (click)="newSession()"
               [disabled]="loading() || sending()"
@@ -81,7 +82,7 @@ interface IUiChatMessage {
             </button>
 
             <button
-              class="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm font-medium text-slate-700 transition hover:border-slate-400 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+              class="w-full rounded-2xl border border-base-300 px-4 py-3 text-sm font-medium text-base-content transition hover:border-base-content/40 hover:bg-base-200 disabled:cursor-not-allowed disabled:opacity-60"
               type="button"
               (click)="reloadSessionList()"
               [disabled]="loading() || sending()"
@@ -92,7 +93,9 @@ interface IUiChatMessage {
 
           <div class="mt-6 min-h-0 flex-1 overflow-hidden">
             @if (sessions().length === 0 && !loading()) {
-              <div class="rounded-2xl border border-dashed border-slate-300 px-4 py-6 text-center text-sm text-slate-500">
+              <div
+                class="rounded-2xl border border-dashed border-base-300 px-4 py-6 text-center text-sm text-base-content/60"
+              >
                 No sessions yet.
               </div>
             } @else {
@@ -100,12 +103,12 @@ interface IUiChatMessage {
                 @for (item of sessions(); track item.id) {
                   <button
                     class="block w-full rounded-2xl border px-4 py-3 text-left transition"
-                    [class.border-sky-300]="item.id === session()?.id"
-                    [class.bg-sky-50]="item.id === session()?.id"
-                    [class.text-sky-900]="item.id === session()?.id"
-                    [class.border-slate-200]="item.id !== session()?.id"
-                    [class.bg-white]="item.id !== session()?.id"
-                    [class.text-slate-800]="item.id !== session()?.id"
+                    [class.border-primary]="item.id === session()?.id"
+                    [class.bg-base-200]="item.id === session()?.id"
+                    [class.text-primary]="item.id === session()?.id"
+                    [class.border-base-300]="item.id !== session()?.id"
+                    [class.bg-base-100]="item.id !== session()?.id"
+                    [class.text-base-content]="item.id !== session()?.id"
                     type="button"
                     (click)="openSession(item.id)"
                     [disabled]="sending()"
@@ -113,11 +116,11 @@ interface IUiChatMessage {
                     <div class="text-sm font-semibold">
                       {{ item.title || 'Untitled session' }}
                     </div>
-                    <div class="mt-1 text-xs text-slate-500">
+                    <div class="mt-1 text-xs text-base-content/60">
                       {{ readSessionProvider(item) || 'provider?' }} /
                       {{ readSessionModel(item) || 'model?' }}
                     </div>
-                    <div class="mt-2 break-all text-[11px] text-slate-400">
+                    <div class="mt-2 break-all text-[11px] text-base-content/40">
                       {{ item.id }}
                     </div>
                   </button>
@@ -126,14 +129,14 @@ interface IUiChatMessage {
             }
           </div>
 
-          <div class="mt-8 shrink-0 border-t border-slate-200 pt-6">
-            <h3 class="text-lg font-semibold text-slate-900">Session config</h3>
+          <div class="mt-8 shrink-0 border-t border-base-300 pt-6">
+            <h3 class="text-lg font-semibold text-base-content">Session config</h3>
 
             <div class="mt-6 space-y-4">
               <label class="block space-y-2">
-                <span class="text-sm font-medium text-slate-700">Provider</span>
+                <span class="text-sm font-medium text-base-content/80">Provider</span>
                 <input
-                  class="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-sky-500"
+                  class="w-full rounded-2xl border border-base-300 bg-base-100 px-4 py-3 text-base-content outline-none transition focus:border-primary"
                   type="text"
                   [ngModel]="provider()"
                   (ngModelChange)="provider.set($event)"
@@ -141,9 +144,9 @@ interface IUiChatMessage {
               </label>
 
               <label class="block space-y-2">
-                <span class="text-sm font-medium text-slate-700">Model</span>
+                <span class="text-sm font-medium text-base-content/80">Model</span>
                 <input
-                  class="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-sky-500"
+                  class="w-full rounded-2xl border border-base-300 bg-base-100 px-4 py-3 text-base-content outline-none transition focus:border-primary"
                   type="text"
                   [ngModel]="model()"
                   (ngModelChange)="model.set($event)"
@@ -153,32 +156,42 @@ interface IUiChatMessage {
           </div>
 
           @if (streamStatus()) {
-            <div class="mt-4 shrink-0 rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-700">
+            <div
+              class="mt-4 shrink-0 rounded-2xl border border-info/20 bg-info/10 px-4 py-3 text-sm text-info"
+            >
               {{ streamStatus() }}
             </div>
           }
 
           @if (error()) {
-            <div class="mt-4 shrink-0 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+            <div
+              class="mt-4 shrink-0 rounded-2xl border border-danger/20 bg-danger/10 px-4 py-3 text-sm text-danger"
+            >
               {{ error() }}
             </div>
           }
         </aside>
 
-        <div class="flex h-full min-h-0 flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div
+          class="flex h-full min-h-0 flex-col overflow-hidden rounded-3xl border border-base-300 bg-base-100 p-6 shadow-sm"
+        >
           <div class="flex items-center justify-between gap-4">
-            <h2 class="text-lg font-semibold text-slate-900">
+            <h2 class="text-lg font-semibold text-base-content">
               {{ session()?.title || 'Untitled session' }}
             </h2>
-            <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
+            <span
+              class="rounded-full bg-base-200 px-3 py-1 text-xs font-medium text-base-content/70"
+            >
               {{ messages().length }} message{{ messages().length === 1 ? '' : 's' }}
             </span>
           </div>
 
           <div class="mt-6 flex min-h-0 flex-1 flex-col overflow-hidden">
-            <div class="flex min-h-0 flex-1 flex-col overflow-hidden rounded-3xl bg-slate-50 p-4">
+            <div class="flex min-h-0 flex-1 flex-col overflow-hidden rounded-3xl bg-base-200 p-4">
               @if (messages().length === 0 && !loading()) {
-                <div class="flex flex-1 items-center justify-center rounded-2xl border border-dashed border-slate-300 px-6 py-12 text-center text-sm text-slate-500">
+                <div
+                  class="flex flex-1 items-center justify-center rounded-2xl border border-dashed border-base-300 px-6 py-12 text-center text-sm text-base-content/60"
+                >
                   Start a session and send a message to see streamed responses.
                 </div>
               } @else {
@@ -187,14 +200,16 @@ interface IUiChatMessage {
                     <article
                       class="max-w-[85%] rounded-2xl px-4 py-3 text-sm shadow-sm"
                       [class.self-end]="message.role === 'user'"
-                      [class.bg-slate-900]="message.role === 'user'"
-                      [class.text-white]="message.role === 'user'"
-                      [class.bg-white]="message.role !== 'user'"
-                      [class.text-slate-800]="message.role !== 'user'"
+                      [class.bg-primary]="message.role === 'user'"
+                      [class.text-primary-content]="message.role === 'user'"
+                      [class.bg-base-100]="message.role !== 'user'"
+                      [class.text-base-content]="message.role !== 'user'"
                       [class.border]="message.role !== 'user'"
-                      [class.border-slate-200]="message.role !== 'user'"
+                      [class.border-base-300]="message.role !== 'user'"
                     >
-                      <div class="mb-1 text-[11px] font-semibold uppercase tracking-[0.2em] opacity-60">
+                      <div
+                        class="mb-1 text-[11px] font-semibold uppercase tracking-[0.2em] opacity-60"
+                      >
                         {{ message.role }}
                       </div>
                       <div class="whitespace-pre-wrap">
@@ -208,7 +223,7 @@ interface IUiChatMessage {
 
             <form class="mt-6 flex flex-col gap-3" (ngSubmit)="sendMessage()">
               <textarea
-                class="min-h-28 w-full resize-y rounded-3xl border border-slate-300 bg-white px-4 py-4 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-sky-500"
+                class="min-h-28 w-full resize-y rounded-3xl border border-base-300 bg-base-100 px-4 py-4 text-base-content outline-none transition placeholder:text-base-content/40 focus:border-primary"
                 [ngModel]="prompt()"
                 (ngModelChange)="prompt.set($event)"
                 name="prompt"
@@ -217,12 +232,12 @@ interface IUiChatMessage {
               ></textarea>
 
               <div class="flex items-center justify-between gap-3">
-                <p class="text-xs text-slate-500">
+                <p class="text-xs text-base-content/60">
                   Stream endpoint:
                   <code>/api/v1/ai/sessions/:id/timelines/:timelineId/generate</code>
                 </p>
                 <button
-                  class="rounded-2xl bg-sky-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:bg-sky-300"
+                  class="rounded-2xl bg-primary px-5 py-3 text-sm font-semibold text-primary-content transition hover:bg-primary/80 disabled:cursor-not-allowed disabled:bg-base-300"
                   type="submit"
                   [disabled]="sending() || !prompt().trim()"
                 >
@@ -357,8 +372,8 @@ export class AiSessionPageComponent {
     this.error.set('');
     this.streamStatus.set('Waiting for stream...');
 
-    let session = this.session() ?? await this.aiSessionService.ensureSession();
-    const timelineId = this.timelineId() ?? await this.resolveTimelineId(session);
+    let session = this.session() ?? (await this.aiSessionService.ensureSession());
+    const timelineId = this.timelineId() ?? (await this.resolveTimelineId(session));
     const nextSettings = this.buildSessionSettings(session);
 
     if (!this.areSessionSettingsEqual(session, nextSettings)) {
@@ -382,11 +397,7 @@ export class AiSessionPageComponent {
       pending: true,
     };
 
-    this.messages.update((messages) => [
-      ...messages,
-      userMessage,
-      assistantMessage,
-    ]);
+    this.messages.update((messages) => [...messages, userMessage, assistantMessage]);
 
     this.prompt.set('');
 
@@ -452,9 +463,7 @@ export class AiSessionPageComponent {
           message.id === assistantMessage.id
             ? {
                 ...message,
-                content:
-                  resolveAiSessionAssistantText(assembly) ||
-                  'Assistant stream failed.',
+                content: resolveAiSessionAssistantText(assembly) || 'Assistant stream failed.',
                 pending: false,
               }
             : message,
@@ -473,10 +482,7 @@ export class AiSessionPageComponent {
     return this.readSessionSettings(session).model || '';
   }
 
-  private async loadMessages(
-    sessionId: string,
-    timelineId: string,
-  ): Promise<IUiChatMessage[]> {
+  private async loadMessages(sessionId: string, timelineId: string): Promise<IUiChatMessage[]> {
     const turns = await this.aiSessionService.listTimelineTurns(sessionId, timelineId);
     return turns.flatMap((turn) =>
       turn.messages.map((message: IAiSessionMessageDto) => this.toUiMessage(message)),
@@ -504,9 +510,7 @@ export class AiSessionPageComponent {
     const graph = await this.aiSessionService.getSessionGraph(session.id);
     const fallbackTimelineId =
       graph.session.defaultTimelineId ||
-      graph.timelines.find(
-        (timeline: { isDefault: boolean }) => timeline.isDefault,
-      )?.id ||
+      graph.timelines.find((timeline: { isDefault: boolean }) => timeline.isDefault)?.id ||
       graph.timelines[0]?.id;
 
     if (!fallbackTimelineId) {
@@ -516,9 +520,7 @@ export class AiSessionPageComponent {
     return fallbackTimelineId;
   }
 
-  private buildSessionSettings(
-    session?: IAiSessionResponse | null,
-  ): Record<string, unknown> {
+  private buildSessionSettings(session?: IAiSessionResponse | null): Record<string, unknown> {
     const current = this.readSessionSettings(session ?? null);
     const provider = this.provider().trim();
     const model = this.model().trim();
@@ -530,22 +532,21 @@ export class AiSessionPageComponent {
     };
   }
 
-  private readSessionSettings(
-    session: IAiSessionResponse | null,
-  ): { provider?: string; model?: string; systemPrompt?: string } {
+  private readSessionSettings(session: IAiSessionResponse | null): {
+    provider?: string;
+    model?: string;
+    systemPrompt?: string;
+  } {
     const settings = session?.settings;
     if (!settings || typeof settings !== 'object') {
       return {};
     }
 
     return {
-      provider:
-        typeof settings['provider'] === 'string' ? settings['provider'] : undefined,
+      provider: typeof settings['provider'] === 'string' ? settings['provider'] : undefined,
       model: typeof settings['model'] === 'string' ? settings['model'] : undefined,
       systemPrompt:
-        typeof settings['systemPrompt'] === 'string'
-          ? settings['systemPrompt']
-          : undefined,
+        typeof settings['systemPrompt'] === 'string' ? settings['systemPrompt'] : undefined,
     };
   }
 
@@ -571,11 +572,7 @@ export class AiSessionPageComponent {
   }
 
   private readErrorMessage(error: unknown): string {
-    if (
-      error instanceof HttpErrorResponse &&
-      error.error &&
-      typeof error.error === 'object'
-    ) {
+    if (error instanceof HttpErrorResponse && error.error && typeof error.error === 'object') {
       return (
         (error.error as IProblemDetails).detail ||
         (error.error as IProblemDetails).title ||

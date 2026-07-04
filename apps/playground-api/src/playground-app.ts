@@ -15,7 +15,7 @@ import path from "node:path";
 import { mkdirSync } from "node:fs";
 import { PlaygroundAuthUserEntity } from "./auth/playground-auth-user.entity.js";
 import { createPlaygroundAuthSeeder } from "./auth/auth-seeder.js";
-import { seedAiProviders } from "@genspire/ai/application";
+import { AiProviderRuntimeCatalogue, seedAiProviders } from "@genspire/ai/application";
 import { AiProviderDbContext } from "@genspire/ai/infrastructure";
 import { readPlaygroundEnv, type IPlaygroundEnv } from "./config/playground-env.js";
 import {
@@ -23,13 +23,10 @@ import {
 } from "./database/playground-database-config.js";
 import { aiExtension } from "@genspire/ai/extension";
 import { aiServerExtension } from "@genspire/ai/server";
-import { OpenAICompatibleClient } from "@genspire/ai/providers/openai-compatible";
 import { PlaygroundDbContext } from "./database/playground-db-context.js";
 import { createPlaygroundStorageProvider } from "./storage/playground-storage-provider.js";
 import { AuthActivityController } from "./auth/auth-activity.controller.js";
 import { AuthBanController } from "./auth/auth-ban.controller.js";
-import { AiProviderController } from "./ai/providers/ai-provider.controller.js";
-import { createAiPlaygroundProviderDefinitions } from "./ai/providers/ai-provider-definition.js";
 import { AiPromptController } from "./ai/prompts/ai-prompt.controller.js";
 import { AiSkillController } from "./ai/skills/ai-skill.controller.js";
 import { HealthController } from "./health/health.controller.js";
@@ -40,6 +37,22 @@ export interface PlaygroundAppOptions {
   repoRoot?: string;
   env?: NodeJS.ProcessEnv;
   rateLimit?: RateLimitOptions;
+}
+
+function isAllowedLocalhostOrigin(origin: string | null): boolean {
+  if (!origin) {
+    return false;
+  }
+
+  try {
+    const url = new URL(origin);
+    return (
+      (url.protocol === "http:" || url.protocol === "https:")
+      && (url.hostname === "localhost" || url.hostname === "127.0.0.1")
+    );
+  } catch {
+    return false;
+  }
 }
 
 export async function createPlaygroundApp(
@@ -81,24 +94,15 @@ export async function createPlaygroundApp(
     }),
   );
 
-  const providerDefinitions = createAiPlaygroundProviderDefinitions();
-  const aiClients = providerDefinitions
-    .filter((provider) => provider.client)
-    .map((provider) => new OpenAICompatibleClient({
-      id: provider.id,
-      name: provider.name,
-      ...provider.client!,
-    }));
+  const aiProviderCatalogue = AiProviderRuntimeCatalogue.createDefault(
+    options.env ?? (process.env as Record<string, string | undefined>),
+  );
 
   await app.use(
     aiExtension({
-      clients: aiClients,
-      defaults: {
-        chatProvider: process.env.AI_CHAT_PROVIDER ?? "ollama",
-        chatModel: process.env.AI_CHAT_MODEL ?? process.env.OLLAMA_CHAT_MODEL ?? "gemma4:12b",
-        embeddingProvider: process.env.AI_EMBEDDING_PROVIDER ?? "ollama",
-        embeddingModel: process.env.AI_EMBEDDING_MODEL ?? process.env.OLLAMA_EMBED_MODEL ?? "embeddinggemma:latest",
-      },
+      clients: aiProviderCatalogue.createClients(),
+      defaults: aiProviderCatalogue.getDefaults(),
+      providerCatalogue: aiProviderCatalogue,
     }),
   );
 
@@ -122,7 +126,10 @@ export async function createPlaygroundApp(
 
         const aiSeedScope = currentApp.createScope();
         try {
-          await seedAiProviders(aiSeedScope.resolve(AiProviderDbContext));
+          await seedAiProviders(
+            aiSeedScope.resolve(AiProviderDbContext),
+            aiProviderCatalogue.createSeedInputs(),
+          );
         } finally {
           await aiSeedScope.destroy();
         }
@@ -138,10 +145,7 @@ export async function createPlaygroundApp(
       idleTimeout: 120,
       trustProxy: true,
       cors: {
-        origin: [
-          "http://localhost:4200",
-          "http://127.0.0.1:4200",
-        ],
+        origin: isAllowedLocalhostOrigin,
         methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"],
         headers: ["Content-Type", "Authorization"],
         credentials: true,
@@ -167,7 +171,7 @@ export async function createPlaygroundApp(
   await app.use(storageServerExtension());
   await app.use(aiServerExtension({ routePrefix: "/api/v1" }));
 
-  app.get(Server).registerControllers(HealthController, AiProviderController, AiPromptController, AiSkillController, AuthActivityController, AuthBanController, TodoController);
+  app.get(Server).registerControllers(HealthController, AiPromptController, AiSkillController, AuthActivityController, AuthBanController, TodoController);
 
   return app;
 }

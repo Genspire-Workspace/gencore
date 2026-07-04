@@ -24,11 +24,14 @@ export const defaultAiProviders: readonly ISeedAiProviderInput[] = [
     website: "https://ollama.com",
   },
   {
-    id: "openai-compatible",
-    name: "OpenAI Compatible",
-    kind: "gateway",
+    id: "deepseek",
+    name: "DeepSeek",
+    kind: "cloud",
     clientKind: "openai-compatible",
-    api: "openai-compatible",
+    baseUrl: "https://api.deepseek.com/v1",
+    api: "https://api.deepseek.com/v1",
+    doc: "https://api-docs.deepseek.com/quick_start/pricing",
+    website: "https://www.deepseek.com",
   },
 ];
 

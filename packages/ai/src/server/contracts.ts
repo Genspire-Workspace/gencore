@@ -88,6 +88,35 @@ export interface IAiProviderListResponseDto {
   items: IAiProviderResponseDto[];
 }
 
+export interface IAiProviderDiscoveryResponseDto {
+  id: string;
+  name: string;
+  kind: string;
+  clientKind: string;
+  baseUrl?: string;
+  api?: string;
+  doc?: string;
+  website?: string;
+  supportsChat: boolean;
+  supportsEmbeddings: boolean;
+  defaultChatModel?: string;
+  defaultEmbeddingModel?: string;
+  host?: string;
+  configured: boolean;
+}
+
+export interface IAiProviderDiscoveryDefaultsDto {
+  chatProvider?: string;
+  chatModel?: string;
+  embeddingProvider?: string;
+  embeddingModel?: string;
+}
+
+export interface IAiProviderDiscoveryListResponseDto {
+  providers: IAiProviderDiscoveryResponseDto[];
+  defaults: IAiProviderDiscoveryDefaultsDto;
+}
+
 export interface ICreateAiProviderRequestDto {
   id?: string;
   name: string;

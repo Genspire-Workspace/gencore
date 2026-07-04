@@ -3,5 +3,10 @@
 export { AiProviderService } from "./ai-provider-service.js";
 export { AiModelService } from "./ai-model-service.js";
 export { AiApiKeyService } from "./api-key-service.js";
+export { AiProviderRuntimeCatalogue } from "./ai-provider-runtime-catalogue.js";
+export type {
+  IAiProviderDiscoveryResponse,
+  IAiRuntimeProviderInfo,
+} from "./ai-provider-runtime-catalogue.js";
 export { seedAiProviders, defaultAiProviders } from "./ai-provider-model-seeder.js";
 export type { ISeedAiProviderInput } from "./ai-provider-model-seeder.js";

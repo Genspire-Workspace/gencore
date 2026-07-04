@@ -3,3 +3,4 @@
 export * from "./ai-admin.dto.js";
 export * from "./ai-session.dto.js";
 export * from "./ai-provider.dto.js";
+export * from "./ai-provider-discovery.dto.js";

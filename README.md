@@ -145,6 +145,75 @@ Use this for:
 - `FileService` — upload, download, list, delete with DB + storage
 - `FileController` — REST controller (`POST /file`, `GET /file`, `GET /file/:id`, `DELETE /file/:id`)
 
+### `@genspire/ai`
+
+Use this for:
+
+- `aiExtension()`
+- `aiServerExtension()`
+- provider/model/API-key CRUD under `/api/v1/ai/providers`
+- runtime provider discovery under `/api/v1/ai/providers/discover`
+- session generation under `/api/v1/ai/sessions`
+- raw admin generation under `/api/v1/ai/admin`
+
+The AI package owns provider seeding and runtime provider definitions. App code should supply environment configuration and mount the extension, not maintain a separate provider catalogue.
+
+## Adding AI Providers and Models
+
+There are two separate AI provider concerns:
+
+- persisted provider records seeded into the database
+- runtime provider definitions used to create clients and resolve aliases
+
+### Add a Provider
+
+1. Add the persisted provider seed in [packages/ai/src/application/services/provider/ai-provider-model-seeder.ts](/C:/Users/PC/Documents/GitHub/Gencore/packages/ai/src/application/services/provider/ai-provider-model-seeder.ts).
+   This controls the default provider rows created in the DB.
+
+2. Add the runtime provider definition in [packages/ai/src/application/services/provider/ai-provider-runtime-catalogue.ts](/C:/Users/PC/Documents/GitHub/Gencore/packages/ai/src/application/services/provider/ai-provider-runtime-catalogue.ts).
+   This is where the package defines:
+   - env vars
+   - `configured` detection
+   - default models
+   - client construction
+   - alias resolution from generic forms like `openai-compatible` to concrete provider ids like `deepseek`
+
+3. If the provider needs a new client implementation, add it under `packages/ai/src/providers/**` and instantiate it from `AiProviderRuntimeCatalogue.createClients()`.
+   OpenAI-compatible vendors should normally be modeled as concrete providers with `clientKind: "openai-compatible"`, not as a generic provider id.
+
+4. If the provider needs provider-specific model or output normalization, update `packages/ai/src/application/model-transforms/**`.
+
+### Add Models
+
+For runtime default models:
+
+- update the provider entry in [packages/ai/src/application/services/provider/ai-provider-runtime-catalogue.ts](/C:/Users/PC/Documents/GitHub/Gencore/packages/ai/src/application/services/provider/ai-provider-runtime-catalogue.ts)
+- set `defaultChatModel` and/or `defaultEmbeddingModel`
+- add env vars following the existing naming pattern such as `DEEPSEEK_CHAT_MODEL` or `OLLAMA_EMBED_MODEL`
+
+For persisted provider models:
+
+- create them through `POST /api/v1/ai/providers/:id/models`
+- or seed them from app startup through `AiModelService` if you need app-specific model data
+
+### Discovery and Request Routing
+
+Use `GET /api/v1/ai/providers/discover` when a client needs the configured runtime providers and defaults. The response includes:
+
+- concrete provider ids such as `ollama` or `deepseek`
+- `clientKind` such as `ollama` or `openai-compatible`
+- capability flags for chat and embeddings
+- default models
+- whether the provider is configured from env
+
+Prefer concrete provider ids in generation requests:
+
+- preferred: `provider: "deepseek"`
+- supported compatibility form: `provider: "provider:deepseek"`
+- supported legacy alias form: `provider: "openai-compatible"` together with a concrete model such as `deepseek-v4-flash`
+
+Avoid using a generic provider id like `openai-compatible` as the canonical persisted id for a vendor-specific provider.
+
 ## Building an API
 
 The recommended stack for a documented SQL-backed API is:

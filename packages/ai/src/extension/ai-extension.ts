@@ -17,6 +17,7 @@ import {
   AiApiKeyService,
   AiModelService,
   AiProviderService,
+  AiProviderRuntimeCatalogue,
 } from "../application/services/index.js";
 
 export interface IAiDefaults {
@@ -26,9 +27,26 @@ export interface IAiDefaults {
   embeddingModel?: string;
 }
 
+export interface IAiProviderResolutionInput {
+  provider?: string;
+  model?: string;
+  kind: "chat" | "embedding";
+}
+
+export interface IAiProviderResolutionResult {
+  provider?: string;
+  model?: string;
+}
+
+export interface IAiProviderResolver {
+  resolve(input: IAiProviderResolutionInput): IAiProviderResolutionResult;
+}
+
 export interface IAiExtensionOptions {
   clients: IAiProviderClient[];
   defaults?: IAiDefaults;
+  providerResolver?: IAiProviderResolver;
+  providerCatalogue?: AiProviderRuntimeCatalogue;
 }
 
 export function aiExtension(options: IAiExtensionOptions): GenExtension {
@@ -41,9 +59,17 @@ export function aiExtension(options: IAiExtensionOptions): GenExtension {
         registry.register(client);
       }
 
-      const service = new AiGenerationService(registry, options.defaults);
+      const providerCatalogue =
+        options.providerCatalogue ??
+        new AiProviderRuntimeCatalogue(options.defaults ?? {}, []);
+      const service = new AiGenerationService(
+        registry,
+        options.defaults,
+        options.providerResolver ?? providerCatalogue,
+      );
 
       app.provide(AiProviderClientRegistry, registry);
+      app.provide(AiProviderRuntimeCatalogue, providerCatalogue);
       app.provide(AiGenerationService, service);
       app.registerScoped(AiSessionDbContext);
       app.registerScoped(AiAdminGenerationService);
@@ -52,7 +78,7 @@ export function aiExtension(options: IAiExtensionOptions): GenExtension {
       app.registerScoped(AiSessionGraphService);
       app.registerScoped(AiSessionBranchService);
       app.registerScoped(AiSessionFeedbackService);
-      app.registerScoped(AiSessionGenerationService);
+      app.registerScoped(AiSessionGenerationService );
       app.registerScoped(AiProviderDbContext);
       app.registerScoped(AiProviderService);
       app.registerScoped(AiModelService);

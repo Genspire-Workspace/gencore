@@ -5,7 +5,10 @@ import type { IChatGenerationResponse } from "../../../domain/chat/chat-generati
 import type { IChatGenerationChunk } from "../../../domain/chat/chat-generation-chunk.js";
 import type { IEmbeddingGenerationRequest } from "../../../domain/embeddings/embedding-generation-request.js";
 import type { IEmbeddingGenerationResponse } from "../../../domain/embeddings/embedding-generation-response.js";
-import type { IAiDefaults } from "../../../extension/ai-extension.js";
+import type {
+  IAiDefaults,
+  IAiProviderResolver,
+} from "../../../extension/ai-extension.js";
 import { AiProviderClientRegistry } from "../../../providers/ai-provider-client-registry.js";
 import { AiError } from "../../../errors/ai-error.js";
 
@@ -13,12 +16,14 @@ export class AiGenerationService {
   constructor(
     private readonly registry: AiProviderClientRegistry,
     private readonly defaults?: IAiDefaults,
+    private readonly providerResolver?: IAiProviderResolver,
   ) {}
 
   async generateChat(
     request: IChatGenerationRequest,
   ): Promise<IChatGenerationResponse> {
-    const client = this.resolveChatClient(request.provider);
+    const resolvedRequest = this.normalizeChatRequest(request);
+    const client = this.resolveChatClient(resolvedRequest.provider);
     if (!client.chat) {
       throw new AiError(
         `AI client '${client.id}' does not support chat generation.`,
@@ -26,14 +31,15 @@ export class AiGenerationService {
     }
 
     return client.chat.generateChat(
-      this.applyChatDefaults(request),
+      resolvedRequest,
     );
   }
 
   streamChat(
     request: IChatGenerationRequest,
   ): AsyncIterable<IChatGenerationChunk> {
-    const client = this.resolveChatClient(request.provider);
+    const resolvedRequest = this.normalizeChatRequest(request);
+    const client = this.resolveChatClient(resolvedRequest.provider);
     if (!client.chat) {
       throw new AiError(
         `AI client '${client.id}' does not support chat generation.`,
@@ -41,14 +47,15 @@ export class AiGenerationService {
     }
 
     return client.chat.streamChat(
-      this.applyChatDefaults(request),
+      resolvedRequest,
     );
   }
 
   async generateEmbedding(
     request: IEmbeddingGenerationRequest,
   ): Promise<IEmbeddingGenerationResponse> {
-    const client = this.resolveEmbeddingClient(request.provider);
+    const resolvedRequest = this.normalizeEmbeddingRequest(request);
+    const client = this.resolveEmbeddingClient(resolvedRequest.provider);
     if (!client.embeddings) {
       throw new AiError(
         `AI client '${client.id}' does not support embeddings.`,
@@ -56,7 +63,7 @@ export class AiGenerationService {
     }
 
     return client.embeddings.generateEmbedding(
-      this.applyEmbeddingDefaults(request),
+      resolvedRequest,
     );
   }
 
@@ -80,23 +87,35 @@ export class AiGenerationService {
     return this.registry.get(id);
   }
 
-  private applyChatDefaults(
+  private normalizeChatRequest(
     request: IChatGenerationRequest,
   ): IChatGenerationRequest {
-    return {
-      ...request,
+    const resolved = this.providerResolver?.resolve({
       provider: request.provider ?? this.defaults?.chatProvider,
       model: request.model ?? this.defaults?.chatModel,
+      kind: "chat",
+    });
+
+    return {
+      ...request,
+      provider: resolved?.provider ?? request.provider ?? this.defaults?.chatProvider,
+      model: resolved?.model ?? request.model ?? this.defaults?.chatModel,
     };
   }
 
-  private applyEmbeddingDefaults(
+  private normalizeEmbeddingRequest(
     request: IEmbeddingGenerationRequest,
   ): IEmbeddingGenerationRequest {
-    return {
-      ...request,
+    const resolved = this.providerResolver?.resolve({
       provider: request.provider ?? this.defaults?.embeddingProvider,
       model: request.model ?? this.defaults?.embeddingModel,
+      kind: "embedding",
+    });
+
+    return {
+      ...request,
+      provider: resolved?.provider ?? request.provider ?? this.defaults?.embeddingProvider,
+      model: resolved?.model ?? request.model ?? this.defaults?.embeddingModel,
     };
   }
 }

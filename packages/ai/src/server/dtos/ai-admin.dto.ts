@@ -145,7 +145,7 @@ export class AiAdminChatGenerateResponseDto implements IAiAdminChatGenerateRespo
 })
 export class AiSseEventDto implements IAiSseEventDto {
   @ApiField({ type: "string" })
-  type!: string;
+  type!: IAiSseEventDto["type"];
 
   @ApiField({ type: "string", required: false })
   sessionId?: string;
@@ -190,7 +190,7 @@ export class AiSseEventDto implements IAiSseEventDto {
   metadata?: Record<string, unknown>;
 
   @ApiField({ type: "object", required: false })
-  message?: unknown;
+  message?: IAiSseEventDto["message"];
 
   @ApiField({ type: "object", required: false })
   toolCall?: unknown;

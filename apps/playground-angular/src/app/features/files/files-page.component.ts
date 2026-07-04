@@ -15,22 +15,19 @@ import type { IFileResponse } from './file-types';
   imports: [CommonModule],
   template: `
     <section class="flex h-full min-h-0 flex-1 flex-col gap-6 overflow-hidden">
-      <div class="flex flex-col gap-4 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:flex-row sm:items-end sm:justify-between">
+      <div
+        class="flex flex-col gap-4 rounded-3xl border border-base-300 bg-base-100 p-6 shadow-sm sm:flex-row sm:items-end sm:justify-between"
+      >
         <div>
-          <p class="text-sm font-medium uppercase tracking-[0.2em] text-sky-600">
-            Storage
-          </p>
-          <h1 class="mt-2 text-3xl font-semibold tracking-tight text-slate-900">
-            Files
-          </h1>
-          <p class="mt-3 max-w-2xl text-sm text-slate-500">
-            Upload a file to the playground bucket and inspect the metadata
-            returned by the API.
+          <p class="text-sm font-medium uppercase tracking-[0.2em] text-primary">Storage</p>
+          <h1 class="mt-2 text-3xl font-semibold tracking-tight text-base-content">Files</h1>
+          <p class="mt-3 max-w-2xl text-sm text-base-content/60">
+            Upload a file to the playground bucket and inspect the metadata returned by the API.
           </p>
         </div>
 
         <button
-          class="rounded-2xl border border-slate-300 px-4 py-3 text-sm font-medium text-slate-700 transition hover:border-slate-400 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+          class="rounded-2xl border border-base-300 px-4 py-3 text-sm font-medium text-base-content transition hover:border-base-content/40 hover:bg-base-200 disabled:cursor-not-allowed disabled:opacity-60"
           type="button"
           (click)="loadFiles()"
           [disabled]="loading()"
@@ -40,21 +37,21 @@ import type { IFileResponse } from './file-types';
       </div>
 
       <div class="grid gap-6 lg:grid-cols-[22rem_minmax(0,1fr)]">
-        <div class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h2 class="text-lg font-semibold text-slate-900">Upload file</h2>
-          <p class="mt-2 text-sm text-slate-500">
+        <div class="rounded-3xl border border-base-300 bg-base-100 p-6 shadow-sm">
+          <h2 class="text-lg font-semibold text-base-content">Upload file</h2>
+          <p class="mt-2 text-sm text-base-content/60">
             Send a multipart upload directly to <code>/file</code>.
           </p>
 
           <div class="mt-6 space-y-4">
             <input
-              class="block w-full rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-4 text-sm text-slate-600 file:mr-4 file:rounded-full file:border-0 file:bg-slate-900 file:px-4 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-slate-700"
+              class="block w-full rounded-2xl border border-dashed border-base-300 bg-base-200 px-4 py-4 text-sm text-base-content/70 file:mr-4 file:rounded-full file:border-0 file:bg-accent file:px-4 file:py-2 file:text-sm file:font-medium file:text-accent-content hover:file:bg-accent/80"
               type="file"
               (change)="onFileSelected($event)"
             />
 
             <button
-              class="w-full rounded-2xl bg-sky-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:bg-sky-300"
+              class="w-full rounded-2xl bg-primary px-4 py-3 text-sm font-semibold text-primary-content transition hover:bg-primary/80 disabled:cursor-not-allowed disabled:bg-base-300"
               type="button"
               (click)="upload()"
               [disabled]="uploading() || !selectedFile()"
@@ -64,34 +61,42 @@ import type { IFileResponse } from './file-types';
           </div>
 
           @if (uploadMessage()) {
-            <div class="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+            <div
+              class="mt-4 rounded-2xl border border-success/20 bg-success/10 px-4 py-3 text-sm text-success"
+            >
               {{ uploadMessage() }}
             </div>
           }
 
           @if (error()) {
-            <div class="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+            <div
+              class="mt-4 rounded-2xl border border-danger/20 bg-danger/10 px-4 py-3 text-sm text-danger"
+            >
               {{ error() }}
             </div>
           }
         </div>
 
-        <div class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div class="rounded-3xl border border-base-300 bg-base-100 p-6 shadow-sm">
           <div class="flex items-center justify-between gap-4">
-            <h2 class="text-lg font-semibold text-slate-900">Stored files</h2>
-            <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
+            <h2 class="text-lg font-semibold text-base-content">Stored files</h2>
+            <span
+              class="rounded-full bg-base-200 px-3 py-1 text-xs font-medium text-base-content/70"
+            >
               {{ files().length }} item{{ files().length === 1 ? '' : 's' }}
             </span>
           </div>
 
           @if (files().length === 0 && !loading()) {
-            <div class="mt-6 rounded-2xl border border-dashed border-slate-300 px-6 py-12 text-center text-sm text-slate-500">
+            <div
+              class="mt-6 rounded-2xl border border-dashed border-base-300 px-6 py-12 text-center text-sm text-base-content/60"
+            >
               No files uploaded yet.
             </div>
           } @else {
-            <div class="mt-6 overflow-hidden rounded-2xl border border-slate-200">
-              <table class="min-w-full divide-y divide-slate-200 text-left text-sm">
-                <thead class="bg-slate-50 text-slate-500">
+            <div class="mt-6 overflow-hidden rounded-2xl border border-base-300">
+              <table class="min-w-full divide-y divide-base-300 text-left text-sm">
+                <thead class="bg-base-200 text-base-content/60">
                   <tr>
                     <th class="px-4 py-3 font-medium">Name</th>
                     <th class="px-4 py-3 font-medium">Size</th>
@@ -99,26 +104,26 @@ import type { IFileResponse } from './file-types';
                     <th class="px-4 py-3 font-medium">Open</th>
                   </tr>
                 </thead>
-                <tbody class="divide-y divide-slate-100 bg-white">
+                <tbody class="divide-y divide-base-200 bg-base-100">
                   @for (file of files(); track file.id) {
                     <tr class="align-top">
                       <td class="px-4 py-4">
-                        <div class="font-medium text-slate-900">
+                        <div class="font-medium text-base-content">
                           {{ file.originalName }}
                         </div>
-                        <div class="mt-1 text-xs text-slate-500">
+                        <div class="mt-1 text-xs text-base-content/60">
                           {{ file.bucket }}/{{ file.key }}
                         </div>
                       </td>
-                      <td class="px-4 py-4 text-slate-600">
+                      <td class="px-4 py-4 text-base-content/70">
                         {{ formatBytes(file.size) }}
                       </td>
-                      <td class="px-4 py-4 text-slate-600">
+                      <td class="px-4 py-4 text-base-content/70">
                         {{ formatDate(file.createdAt) }}
                       </td>
                       <td class="px-4 py-4">
                         <a
-                          class="text-sm font-medium text-sky-700 hover:text-sky-800"
+                          class="text-sm font-medium text-primary hover:text-primary/80"
                           [href]="downloadUrl(file)"
                           target="_blank"
                           rel="noreferrer"
@@ -220,11 +225,7 @@ export class FilesPageComponent {
   }
 
   private readErrorMessage(error: unknown): string {
-    if (
-      error instanceof HttpErrorResponse &&
-      error.error &&
-      typeof error.error === 'object'
-    ) {
+    if (error instanceof HttpErrorResponse && error.error && typeof error.error === 'object') {
       return (
         (error.error as IProblemDetails).detail ||
         (error.error as IProblemDetails).title ||

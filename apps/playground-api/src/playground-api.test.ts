@@ -8,7 +8,7 @@ import { Server } from "@genspire/server";
 import { AuthRoleService } from "@genspire/auth";
 import { createPlaygroundApp } from "./playground-app.js";
 import { aiPlaygroundRuntime } from "./ai/runtime/ai-service-factory.js";
-import { AiGenerationService } from "@genspire/ai/application";
+import { AiGenerationService, AiProviderRuntimeCatalogue } from "@genspire/ai/application";
 import type { IChatGenerationRequest } from "@genspire/ai/domain";
 import type { IChatGenerationResponse } from "@genspire/ai/domain";
 
@@ -311,7 +311,7 @@ describe("playground api", () => {
     }
   });
 
-  test("ai providers route and swagger routes are registered", async () => {
+  test("ai provider discovery route and swagger routes are registered", async () => {
     const app = await createPlaygroundApp({
       port: 0,
       env: createTestEnv(dbPath),
@@ -322,7 +322,7 @@ describe("playground api", () => {
     try {
       const server = app.get(Server);
       const providersResponse = await server.handle(
-        new Request("http://localhost/ai/providers"),
+        new Request("http://localhost/api/v1/ai/providers/discover"),
       );
 
       expect(providersResponse.status).toBe(200);
@@ -348,7 +348,7 @@ describe("playground api", () => {
         paths: Record<string, unknown>;
       };
 
-      expect(swaggerDocument.paths["/ai/providers"]).toBeDefined();
+      expect(swaggerDocument.paths["/api/v1/ai/providers/discover"]).toBeDefined();
       expect(swaggerDocument.paths["/api/v1/ai/admin/chat/generate"]).toBeDefined();
       expect(swaggerDocument.paths["/api/v1/ai/admin/embeddings/generate"]).toBeDefined();
       expect(swaggerDocument.paths["/api/v1/ai/sessions"]).toBeDefined();
@@ -364,6 +364,66 @@ describe("playground api", () => {
     } finally {
       await app.stop();
     }
+  });
+
+  test("provider catalogue maps openai-compatible aliases to concrete providers", () => {
+    const resolver = new AiProviderRuntimeCatalogue(
+      {
+        chatProvider: "ollama",
+        chatModel: "gemma4:12b",
+        embeddingProvider: "ollama",
+        embeddingModel: "embeddinggemma:latest",
+      },
+      [
+        {
+          id: "ollama",
+          name: "Ollama",
+          kind: "local",
+          clientKind: "ollama",
+          supportsChat: true,
+          supportsEmbeddings: true,
+          defaultChatModel: "gemma4:12b",
+          defaultEmbeddingModel: "embeddinggemma:latest",
+          configured: true,
+        },
+        {
+          id: "deepseek",
+          name: "DeepSeek",
+          kind: "cloud",
+          clientKind: "openai-compatible",
+          supportsChat: true,
+          supportsEmbeddings: false,
+          defaultChatModel: "deepseek-v4-flash",
+          configured: true,
+        },
+      ],
+    );
+
+    expect(
+      resolver.resolve({
+        kind: "chat",
+        provider: "openai-compatible",
+        model: "deepseek-v4-flash",
+      }),
+    ).toEqual({
+      provider: "deepseek",
+      model: "deepseek-v4-flash",
+    });
+
+    expect(
+      resolver.resolve({
+        kind: "chat",
+        provider: "provider:openai-compatible:deepseek",
+        model: "deepseek-v4-flash",
+      }).provider,
+    ).toBe("deepseek");
+
+    expect(
+      resolver.resolve({
+        kind: "chat",
+        provider: "provider:deepseek",
+      }).provider,
+    ).toBe("deepseek");
   });
 
   test("ai prompt CRUD supports array templates, rendering, and visibility filtering", async () => {
@@ -1218,7 +1278,7 @@ Review {{item}}.`,
       );
       expect(listRes.status).toBe(200);
       const list = await listRes.json() as { items: { id: string; name: string }[] };
-      expect(list.items.map((provider) => provider.id).sort()).toEqual(["ollama", "openai-compatible"]);
+      expect(list.items.map((provider) => provider.id).sort()).toEqual(["deepseek", "ollama"]);
 
       const forbiddenRes = await server.handle(
         new Request("http://localhost/api/v1/ai/providers", {

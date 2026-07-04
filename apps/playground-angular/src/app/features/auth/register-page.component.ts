@@ -16,25 +16,24 @@ import type { IProblemDetails } from '../../core/problem-details';
   imports: [CommonModule, FormsModule, RouterLink],
   template: `
     <section class="flex h-full min-h-0 w-full flex-1 items-center justify-center overflow-hidden">
-      <div class="mx-auto w-full max-w-md rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
+      <div
+        class="mx-auto w-full max-w-md rounded-3xl border border-base-300 bg-base-100 p-8 shadow-sm"
+      >
         <div class="mb-8">
-          <p class="text-sm font-medium uppercase tracking-[0.2em] text-sky-600">
-            Playground
-          </p>
-          <h1 class="mt-2 text-3xl font-semibold tracking-tight text-slate-900">
+          <p class="text-sm font-medium uppercase tracking-[0.2em] text-primary">Playground</p>
+          <h1 class="mt-2 text-3xl font-semibold tracking-tight text-base-content">
             Create account
           </h1>
-          <p class="mt-3 text-sm text-slate-500">
-            Register a local playground account and continue directly into the
-            file and AI pages.
+          <p class="mt-3 text-sm text-base-content/60">
+            Register a local playground account and continue directly into the file and AI pages.
           </p>
         </div>
 
         <form class="space-y-4" (ngSubmit)="submit()">
           <label class="block space-y-2">
-            <span class="text-sm font-medium text-slate-700">Email</span>
+            <span class="text-sm font-medium text-base-content/80">Email</span>
             <input
-              class="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-sky-500"
+              class="w-full rounded-2xl border border-base-300 bg-base-100 px-4 py-3 text-base-content outline-none transition placeholder:text-base-content/40 focus:border-primary"
               type="email"
               name="email"
               [ngModel]="email()"
@@ -45,9 +44,9 @@ import type { IProblemDetails } from '../../core/problem-details';
           </label>
 
           <label class="block space-y-2">
-            <span class="text-sm font-medium text-slate-700">Password</span>
+            <span class="text-sm font-medium text-base-content/80">Password</span>
             <input
-              class="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-sky-500"
+              class="w-full rounded-2xl border border-base-300 bg-base-100 px-4 py-3 text-base-content outline-none transition placeholder:text-base-content/40 focus:border-primary"
               type="password"
               name="password"
               [ngModel]="password()"
@@ -58,13 +57,15 @@ import type { IProblemDetails } from '../../core/problem-details';
           </label>
 
           @if (error()) {
-            <div class="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+            <div
+              class="rounded-2xl border border-danger/20 bg-danger/10 px-4 py-3 text-sm text-danger"
+            >
               {{ error() }}
             </div>
           }
 
           <button
-            class="w-full rounded-2xl bg-sky-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:bg-sky-300"
+            class="w-full rounded-2xl bg-primary px-4 py-3 text-sm font-semibold text-primary-content transition hover:bg-primary/80 disabled:cursor-not-allowed disabled:bg-base-300"
             type="submit"
             [disabled]="submitting()"
           >
@@ -72,11 +73,9 @@ import type { IProblemDetails } from '../../core/problem-details';
           </button>
         </form>
 
-        <p class="mt-6 text-sm text-slate-500">
+        <p class="mt-6 text-sm text-base-content/60">
           Already registered?
-          <a class="font-medium text-sky-700 hover:text-sky-800" routerLink="/login">
-            Login
-          </a>
+          <a class="font-medium text-primary hover:text-primary/80" routerLink="/login"> Login </a>
         </p>
       </div>
     </section>
@@ -106,11 +105,7 @@ export class RegisterPageComponent {
   }
 
   private readErrorMessage(error: unknown): string {
-    if (
-      error instanceof HttpErrorResponse &&
-      error.error &&
-      typeof error.error === 'object'
-    ) {
+    if (error instanceof HttpErrorResponse && error.error && typeof error.error === 'object') {
       return (
         (error.error as IProblemDetails).detail ||
         (error.error as IProblemDetails).title ||
