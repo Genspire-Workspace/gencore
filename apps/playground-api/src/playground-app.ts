@@ -1,6 +1,6 @@
 // file: apps\playground-api\src\playground-app.ts
 
-import { createApp } from "@genspire/core";
+import { createApp, defineApp } from "@genspire/core";
 import { dataExtension } from "@genspire/data";
 import {
   MikroOrmMigrationRunner,
@@ -175,3 +175,10 @@ export async function createPlaygroundApp(
 
   return app;
 }
+
+export const playgroundApp = defineApp({
+  key: "apps/playground-api",
+  async create() {
+    return await createPlaygroundApp();
+  },
+});

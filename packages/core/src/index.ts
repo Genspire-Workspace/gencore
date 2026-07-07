@@ -1,7 +1,11 @@
 // file: packages\core\src\index.ts
 
 export { createApp } from "./app/create-app.js";
+export { defineApp } from "./app/define-app.js";
+export { runApp, stopApp } from "./app/run-app.js";
+export type { IDefineAppOptions as DefineAppOptions, IDefinedApp as DefinedApp } from "./app/define-app.js";
 export type { IGenAppOptions as GenAppOptions } from "./app/gen-app-options.js";
+export type { IRunAppOptions as RunAppOptions } from "./app/run-app.js";
 export { GenApp } from "./app/gen-app.js";
 export type { IGenExtension as GenExtension } from "./app/gen-extension.js";
 

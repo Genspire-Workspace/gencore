@@ -33,6 +33,8 @@ The current architecture is:
 Use this for:
 
 - `createApp()`
+- `defineApp()`
+- `runApp()`
 - `GenApp` and `GenExtension`
 - dependency injection and service lifetimes
 - scoped resolution
@@ -55,6 +57,37 @@ logger.info("core works");
 await app.start();
 await app.stop();
 ```
+
+Hot-reloadable app entrypoint example:
+
+```ts
+import { createApp, defineApp } from "@genspire/core";
+import { serverExtension, Server } from "@genspire/server";
+
+export const demoApp = defineApp({
+  key: "apps/demo-api",
+  async create() {
+    const app = createApp();
+    await app.use(serverExtension({ port: 3000 }));
+    app.get(Server).get("/health", () => ({ ok: true }));
+    return app;
+  },
+});
+```
+
+```ts
+import { demoApp } from "./demo-app.js";
+
+await demoApp.run();
+```
+
+Run the entrypoint with Bun hot mode:
+
+```bash
+bun --hot apps/demo-api/src/index.ts
+```
+
+On each backend code change, Genspire stops the previous app instance and starts a fresh one under the same process.
 
 ### `@genspire/server`
 
@@ -250,6 +283,44 @@ const server = app.get(Server);
 await app.start();
 ```
 
+## App Entrypoints and Hot Reload
+
+Use `defineApp()` for runnable app entrypoints and keep `createApp()` for pure app construction.
+
+- `createApp()` builds a `GenApp`
+- `defineApp()` standardizes `create()`, `run()`, and `stop()` for a keyed app
+- `run()` is designed for Bun `--hot`, so the previous live app instance is stopped before the new one starts
+
+Pattern:
+
+```ts
+// src/my-app.ts
+import { createApp, defineApp } from "@genspire/core";
+
+export async function createMyApp() {
+  const app = createApp();
+  return app;
+}
+
+export const myApp = defineApp({
+  key: "apps/my-app",
+  create: createMyApp,
+});
+```
+
+```ts
+// src/index.ts
+import { myApp } from "./my-app.js";
+
+await myApp.run();
+```
+
+```bash
+bun --hot apps/my-app/src/index.ts
+```
+
+Use a unique app key per runnable app so reload state is isolated.
+
 ## Function-First Routes
 
 `@genspire/server` supports direct route registration:
@@ -407,6 +478,8 @@ cp .env.local.example .env
 bun run dev:playground-api
 ```
 
+`dev:playground-api` uses Bun hot mode, so changes under the imported backend module graph trigger an in-process reload of the playground app.
+
 Key env settings:
 
 | Variable | Value | Description |
@@ -426,6 +499,8 @@ cp .env.local.docker.example .env
 docker compose -f docker-compose.example.yml up -d
 bun run dev:playground-api
 ```
+
+This uses the same hot-reload entrypoint behavior as local mode.
 
 Key env settings:
 
@@ -499,6 +574,12 @@ Run playground API:
 
 ```bash
 bun run dev:playground-api
+```
+
+That script currently expands to:
+
+```bash
+bun --hot apps/playground-api/src/index.ts
 ```
 
 Database migrations (playground):
