@@ -117,6 +117,7 @@ export class AiGenerationController {
     const request: IChatGenerationRequest = {
       provider: body.provider,
       model: body.model,
+      signal: ctx.req.signal,
       settings: toSettings(body.settings),
       messages: toMessages(body),
       tools: toTools(body.tools),

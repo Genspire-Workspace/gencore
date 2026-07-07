@@ -885,6 +885,73 @@ Review {{item}}.`,
     }
   });
 
+  test("package AI stream route forwards request abort to the generation provider", async () => {
+    const app = await createPlaygroundApp({
+      port: 0,
+      env: createTestEnv(dbPath),
+    });
+    const generationService = app.get(AiGenerationService);
+    const originalStreamChat = generationService.streamChat.bind(generationService);
+    let providerSawAbort = false;
+
+    await app.start();
+
+    try {
+      const server = app.get(Server);
+      const owner = await registerAndGetToken(server);
+      await assignAdminRole(app, owner.userId);
+
+      generationService.streamChat = (async function* (request: IChatGenerationRequest) {
+        await new Promise<void>((resolve, reject) => {
+          if (request.signal?.aborted) {
+            providerSawAbort = true;
+            reject(new DOMException("Aborted", "AbortError"));
+            return;
+          }
+
+          request.signal?.addEventListener(
+            "abort",
+            () => {
+              providerSawAbort = true;
+              reject(new DOMException("Aborted", "AbortError"));
+            },
+            { once: true },
+          );
+        });
+      }) as typeof generationService.streamChat;
+
+      const requestController = new AbortController();
+      const response = await server.handle(
+        new Request("http://localhost/api/v1/ai/generation/chat/generate", {
+          method: "POST",
+          headers: authHeaders(owner.accessToken),
+          body: JSON.stringify({
+            provider: "ollama",
+            model: "gemma4:12b",
+            settings: {
+              stream: true,
+            },
+            messages: [
+              {
+                role: "user",
+                content: "Hello",
+              },
+            ],
+          }),
+          signal: requestController.signal,
+        }),
+      );
+
+      expect(response.status).toBe(200);
+      requestController.abort();
+      await response.text();
+      expect(providerSawAbort).toBe(true);
+    } finally {
+      generationService.streamChat = originalStreamChat;
+      await app.stop();
+    }
+  });
+
   test("workspace session generation emits SSE and persists messages when provider yields no chunks", async () => {
     const app = await createPlaygroundApp({
       port: 0,
