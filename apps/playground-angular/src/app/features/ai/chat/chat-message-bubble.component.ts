@@ -15,7 +15,7 @@ import { isUrlData, summarizeToolCallArguments, toUiChatContentParts } from './c
     <article
       class="text-sm"
       [ngClass]="{
-        'ml-auto w-fit max-w-[80%] rounded-2xl bg-primary px-4 py-3 text-primary-content shadow-sm':
+        'ml-auto w-fit max-w-[80%] rounded-2xl rounded-br-md bg-base-200 px-4 py-3 text-base-content shadow-sm':
           message().role === 'user',
         'w-full text-base-content': message().role === 'assistant',
       }"

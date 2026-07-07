@@ -58,27 +58,27 @@ const CHAT_COMPOSER_ACCEPT =
         (change)="onFilesSelected($event)"
       />
 
-      <div class="flex items-center justify-between gap-3 border-t border-base-200 px-2 pt-3">
+      <div class="flex items-center justify-between gap-3 px-2 pt-3">
         <button
-          class="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-base-300 bg-base-100 text-xl leading-none text-base-content transition hover:border-base-content/30 hover:bg-base-200 disabled:cursor-not-allowed disabled:opacity-50"
+          class="inline-flex h-12 w-12 items-center justify-center rounded-2xl border border-base-300 bg-base-100 text-xl leading-none text-base-content transition hover:border-base-content/30 hover:bg-base-200 disabled:cursor-not-allowed disabled:opacity-50"
           type="button"
           [disabled]="sending()"
           (click)="fileInput.click()"
           aria-label="Attach files"
         >
-          +
+          📎
         </button>
 
         <button
           [class]="
             sending()
-              ? 'inline-flex min-w-28 items-center justify-center rounded-2xl bg-error px-5 py-3 text-sm font-semibold text-error-content transition hover:bg-error/80 disabled:cursor-not-allowed'
-              : 'inline-flex min-w-28 items-center justify-center rounded-2xl bg-primary px-5 py-3 text-sm font-semibold text-primary-content transition hover:bg-primary/80 disabled:cursor-not-allowed disabled:bg-base-300'
+              ? 'inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-error text-xl leading-none text-error-content transition hover:bg-error/80 disabled:cursor-not-allowed'
+              : 'inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-primary text-xl leading-none text-primary-content transition hover:bg-primary/80 disabled:cursor-not-allowed disabled:bg-base-300'
           "
           type="submit"
           [disabled]="!sending() && !canSubmit()"
         >
-          {{ sending() ? 'Stop' : 'Send' }}
+          {{ sending() ? '🛑' : '📤' }}
         </button>
       </div>
     </form>

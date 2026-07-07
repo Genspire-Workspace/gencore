@@ -8,7 +8,7 @@ import type { IUiChatMessage } from './chat-message.types';
 @Component({
   selector: 'app-ai-chat-history',
   host: {
-    class: 'block flex min-h-0 flex-1 flex-col overflow-hidden rounded-3xl bg-base-200 p-4',
+    class: 'block flex min-h-0 flex-1 flex-col overflow-hidden rounded-3xl bg-base p-4',
   },
   imports: [CommonModule, ChatMessageBubbleComponent],
   template: `
