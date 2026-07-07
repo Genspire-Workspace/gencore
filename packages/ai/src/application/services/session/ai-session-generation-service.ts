@@ -81,6 +81,7 @@ export class AiSessionGenerationService {
       sessionId: session.id,
       timelineId: input.timelineId,
       content: input.content,
+      signal: input.signal,
       provider: input.provider,
       model: input.model,
       systemPrompt: input.systemPrompt,
@@ -152,6 +153,7 @@ export class AiSessionGenerationService {
       sessionId: session.id,
       timelineId: branchTimeline.id,
       content: sourceUserMessage.content,
+      signal: input.signal,
       provider: input.provider,
       model: input.model,
       systemPrompt: input.systemPrompt,
@@ -233,6 +235,7 @@ export class AiSessionGenerationService {
       sessionId: session.id,
       timelineId: branchTimeline.id,
       content: input.content,
+      signal: input.signal,
       provider: input.provider,
       model: input.model,
       systemPrompt: input.systemPrompt,
@@ -265,6 +268,7 @@ export class AiSessionGenerationService {
     sessionId: string;
     timelineId: string;
     content: unknown;
+    signal?: AbortSignal;
     provider?: string;
     model?: string;
     systemPrompt?: string;
@@ -357,6 +361,7 @@ export class AiSessionGenerationService {
       ],
       tools: toToolDefinitions(input.tools),
       metadata: input.metadata ?? undefined,
+      signal: input.signal,
     };
 
     return {
@@ -542,6 +547,18 @@ export class AiSessionGenerationService {
         metadata: prepared.run.metadata ?? undefined,
       };
     } catch (error) {
+      if (this.isAbortError(error)) {
+        await this.finalizeAbort(
+          prepared,
+          finalMessageChunk,
+          terminalChunk,
+          accumulatedText,
+          toolCalls,
+          toolResults,
+        );
+        return;
+      }
+
       await this.finalizeFailure(prepared, error);
       yield {
         type: "error",
@@ -603,25 +620,15 @@ export class AiSessionGenerationService {
     toolResults: Array<NonNullable<IChatGenerationChunk["toolResult"]>>,
   ) {
     const now = new Date();
-    const assistantMessage = new AiSessionMessageEntity();
-    assistantMessage.id = crypto.randomUUID();
-    assistantMessage.sessionId = prepared.sessionId;
-    assistantMessage.turnId = prepared.turn.id;
-    assistantMessage.index = 1;
-    assistantMessage.role = "assistant";
-    assistantMessage.content = finalMessageChunk?.message?.content ?? accumulatedText;
-    assistantMessage.name = finalMessageChunk?.message?.name ?? null;
-    assistantMessage.provider = terminalChunk?.provider ?? prepared.request.provider ?? null;
-    assistantMessage.model = terminalChunk?.model ?? prepared.request.model ?? null;
-    assistantMessage.usage =
-      (terminalChunk?.usage as Record<string, unknown> | undefined) ??
-      (finalMessageChunk?.usage as Record<string, unknown> | undefined) ??
-      null;
-    assistantMessage.toolCalls = toolCalls.length ? toolCalls : null;
-    assistantMessage.toolResults = toolResults.length ? toolResults : null;
-    assistantMessage.metadata = finalMessageChunk?.metadata ?? terminalChunk?.metadata ?? null;
-    assistantMessage.createdAt = now;
-    assistantMessage.updatedAt = now;
+    const assistantMessage = this.createAssistantMessage(
+      prepared,
+      finalMessageChunk,
+      terminalChunk,
+      accumulatedText,
+      toolCalls,
+      toolResults,
+      now,
+    );
 
     prepared.turn.status = "completed";
     prepared.turn.provider = assistantMessage.provider;
@@ -681,6 +688,51 @@ export class AiSessionGenerationService {
     return assistantMessage;
   }
 
+  private async finalizeAbort(
+    prepared: IPreparedTurnContext,
+    finalMessageChunk: IChatGenerationChunk | null,
+    terminalChunk: IChatGenerationChunk | null,
+    accumulatedText: string,
+    toolCalls: unknown[],
+    toolResults: Array<NonNullable<IChatGenerationChunk["toolResult"]>>,
+  ): Promise<void> {
+    const now = new Date();
+    const assistantMessage = this.createAssistantMessage(
+      prepared,
+      finalMessageChunk,
+      terminalChunk,
+      accumulatedText,
+      toolCalls,
+      toolResults,
+      now,
+    );
+
+    prepared.turn.status = "aborted";
+    prepared.turn.provider = assistantMessage.provider;
+    prepared.turn.model = assistantMessage.model;
+    prepared.turn.finishedAt = now;
+    prepared.turn.durationMs = prepared.turn.startedAt
+      ? now.getTime() - prepared.turn.startedAt.getTime()
+      : null;
+    prepared.turn.finishReason = "aborted";
+    prepared.turn.error = null;
+    prepared.turn.updatedAt = now;
+
+    prepared.run.status = "aborted";
+    prepared.run.provider = assistantMessage.provider;
+    prepared.run.model = assistantMessage.model;
+    prepared.run.finishedAt = now;
+    prepared.run.durationMs = prepared.run.startedAt
+      ? now.getTime() - prepared.run.startedAt.getTime()
+      : null;
+    prepared.run.finishReason = "aborted";
+    prepared.run.usage = assistantMessage.usage;
+    prepared.run.error = null;
+    prepared.run.updatedAt = now;
+
+    await this.persistAssistantArtifacts(prepared, assistantMessage, toolResults, now);
+  }
+
   private async finalizeFailure(
     prepared: IPreparedTurnContext,
     error: unknown,
@@ -707,5 +759,86 @@ export class AiSessionGenerationService {
     await this.db.turns.update(prepared.turn);
     await this.db.generationRuns.update(prepared.run);
     await this.db.saveChanges();
+  }
+
+  private createAssistantMessage(
+    prepared: IPreparedTurnContext,
+    finalMessageChunk: IChatGenerationChunk | null,
+    terminalChunk: IChatGenerationChunk | null,
+    accumulatedText: string,
+    toolCalls: unknown[],
+    toolResults: Array<NonNullable<IChatGenerationChunk["toolResult"]>>,
+    now: Date,
+  ): AiSessionMessageEntity {
+    const assistantMessage = new AiSessionMessageEntity();
+    assistantMessage.id = crypto.randomUUID();
+    assistantMessage.sessionId = prepared.sessionId;
+    assistantMessage.turnId = prepared.turn.id;
+    assistantMessage.index = 1;
+    assistantMessage.role = "assistant";
+    assistantMessage.content = finalMessageChunk?.message?.content ?? accumulatedText;
+    assistantMessage.name = finalMessageChunk?.message?.name ?? null;
+    assistantMessage.provider = terminalChunk?.provider ?? prepared.request.provider ?? null;
+    assistantMessage.model = terminalChunk?.model ?? prepared.request.model ?? null;
+    assistantMessage.usage =
+      (terminalChunk?.usage as Record<string, unknown> | undefined) ??
+      (finalMessageChunk?.usage as Record<string, unknown> | undefined) ??
+      null;
+    assistantMessage.toolCalls = toolCalls.length ? toolCalls : null;
+    assistantMessage.toolResults = toolResults.length ? toolResults : null;
+    assistantMessage.metadata = finalMessageChunk?.metadata ?? terminalChunk?.metadata ?? null;
+    assistantMessage.createdAt = now;
+    assistantMessage.updatedAt = now;
+    return assistantMessage;
+  }
+
+  private async persistAssistantArtifacts(
+    prepared: IPreparedTurnContext,
+    assistantMessage: AiSessionMessageEntity,
+    toolResults: Array<NonNullable<IChatGenerationChunk["toolResult"]>>,
+    now: Date,
+  ): Promise<void> {
+    await this.db.messages.add(assistantMessage);
+
+    let messageIndex = 2;
+    for (const toolResult of toolResults) {
+      const toolMessage = new AiSessionMessageEntity();
+      toolMessage.id = crypto.randomUUID();
+      toolMessage.sessionId = prepared.sessionId;
+      toolMessage.turnId = prepared.turn.id;
+      toolMessage.index = messageIndex;
+      toolMessage.role = "tool";
+      toolMessage.content = toolResult.result ?? null;
+      toolMessage.name = toolResult.name ?? null;
+      toolMessage.provider = assistantMessage.provider;
+      toolMessage.model = assistantMessage.model;
+      toolMessage.metadata = null;
+      toolMessage.createdAt = now;
+      toolMessage.updatedAt = now;
+      await this.db.messages.add(toolMessage);
+      messageIndex += 1;
+    }
+
+    await this.db.turns.update(prepared.turn);
+    await this.db.generationRuns.update(prepared.run);
+
+    const session = await this.db.sessions.findById(prepared.sessionId);
+    if (session) {
+      session.updatedAt = now;
+      if (!session.title) {
+        session.title = "AI session";
+      }
+      await this.db.sessions.update(session);
+    }
+
+    await this.db.saveChanges();
+  }
+
+  private isAbortError(error: unknown): boolean {
+    return (
+      error instanceof DOMException && error.name === "AbortError"
+    ) || (
+      error instanceof Error && error.name === "AbortError"
+    );
   }
 }

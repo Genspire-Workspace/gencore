@@ -3,8 +3,8 @@
 import type { IChatGenerationSettings } from "../../chat/chat-generation-settings.js";
 
 export type AiSessionType = "chat";
-export type AiSessionTurnStatus = "running" | "completed" | "failed";
-export type AiGenerationRunStatus = "running" | "completed" | "failed";
+export type AiSessionTurnStatus = "running" | "completed" | "failed" | "aborted";
+export type AiGenerationRunStatus = "running" | "completed" | "failed" | "aborted";
 export type AiSessionTimelineTurnSource =
   | "original"
   | "branch_copy"

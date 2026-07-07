@@ -65,6 +65,7 @@ export interface IGenerateAiSessionTurnInput {
   sessionId: string;
   timelineId: string;
   content: unknown;
+  signal?: AbortSignal;
   provider?: string;
   model?: string;
   systemPrompt?: string;
@@ -79,6 +80,7 @@ export interface IRegenerateAiAssistantMessageInput {
   sessionId: string;
   timelineId: string;
   sourceTurnId: string;
+  signal?: AbortSignal;
   provider?: string;
   model?: string;
   systemPrompt?: string;
@@ -93,6 +95,7 @@ export interface IEditAiUserMessageAndRegenerateInput {
   timelineId: string;
   sourceTurnId: string;
   content: unknown;
+  signal?: AbortSignal;
   provider?: string;
   model?: string;
   systemPrompt?: string;

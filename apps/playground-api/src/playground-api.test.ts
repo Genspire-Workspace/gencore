@@ -816,6 +816,27 @@ Review {{item}}.`,
       expect(sessionRequest?.messages.map((message) => `${message.role}:${getMessageText(message.content)}`)).toEqual([
         "user:Continue the request.",
       ]);
+
+      const secondSessionGenerateResponse = await server.handle(
+        new Request(`http://localhost/api/v1/ai/sessions/${session.id}/timelines/${session.defaultTimeline.id}/generate`, {
+          method: "POST",
+          headers: authHeaders(owner.accessToken),
+          body: JSON.stringify({
+            content: "And now continue again.",
+            provider: "ollama",
+            model: "gemma4:12b",
+          }),
+        }),
+      );
+      expect(secondSessionGenerateResponse.status).toBe(200);
+      await secondSessionGenerateResponse.text();
+
+      const secondSessionRequest = capturedRequests[2];
+      expect(secondSessionRequest?.messages.map((message) => `${message.role}:${getMessageText(message.content)}`)).toEqual([
+        "user:Continue the request.",
+        "assistant:runtime ok",
+        "user:And now continue again.",
+      ]);
     } finally {
       generationService.generateChat = originalGenerateChat;
       generationService.streamChat = originalStreamChat;
@@ -940,6 +961,108 @@ Review {{item}}.`,
 
       generationService.streamChat = originalStreamChatCompletion;
     } finally {
+      await app.stop();
+    }
+  });
+
+  test("workspace session generation persists partial assistant output when the request is aborted", async () => {
+    const app = await createPlaygroundApp({
+      port: 0,
+      env: createTestEnv(dbPath),
+    });
+    const generationService = app.get(AiGenerationService);
+    const originalStreamChat = generationService.streamChat.bind(generationService);
+
+    await app.start();
+
+    try {
+      const server = app.get(Server);
+      const { accessToken } = await registerAndGetToken(server);
+
+      generationService.streamChat = (async function* (request: IChatGenerationRequest) {
+        yield {
+          id: crypto.randomUUID(),
+          provider: request.provider ?? "ollama",
+          model: request.model ?? "gemma4:12b",
+          type: "delta",
+          delta: "partial answer",
+        };
+
+        await new Promise<void>((resolve, reject) => {
+          if (request.signal?.aborted) {
+            reject(new DOMException("Aborted", "AbortError"));
+            return;
+          }
+
+          request.signal?.addEventListener(
+            "abort",
+            () => reject(new DOMException("Aborted", "AbortError")),
+            { once: true },
+          );
+        });
+      }) as typeof generationService.streamChat;
+
+      const sessionResponse = await server.handle(
+        new Request("http://localhost/api/v1/ai/sessions", {
+          method: "POST",
+          headers: authHeaders(accessToken),
+          body: JSON.stringify({
+            title: "Aborted Stream Session",
+          }),
+        }),
+      );
+
+      expect(sessionResponse.status).toBe(201);
+      const session = await sessionResponse.json() as {
+        id: string;
+        defaultTimeline: { id: string };
+      };
+
+      const requestController = new AbortController();
+      const streamResponse = await server.handle(
+        new Request(`http://localhost/api/v1/ai/sessions/${session.id}/timelines/${session.defaultTimeline.id}/generate`, {
+          method: "POST",
+          headers: authHeaders(accessToken),
+          body: JSON.stringify({
+            content: "Start a long answer.",
+            provider: "ollama",
+            model: "gemma4:12b",
+          }),
+          signal: requestController.signal,
+        }),
+      );
+
+      expect(streamResponse.status).toBe(200);
+      requestController.abort();
+      await streamResponse.text();
+
+      const turnsResponse = await server.handle(
+        new Request(`http://localhost/api/v1/ai/sessions/${session.id}/timelines/${session.defaultTimeline.id}/turns`, {
+          headers: { authorization: `Bearer ${accessToken}` },
+        }),
+      );
+
+      expect(turnsResponse.status).toBe(200);
+      const turns = await turnsResponse.json() as {
+        items: Array<{
+          turn: { status: string; finishReason?: string };
+          generationRuns: Array<{ status: string; finishReason?: string }>;
+          messages: Array<{ role: string; content: unknown }>;
+        }>;
+      };
+
+      expect(turns.items).toHaveLength(1);
+      expect(turns.items[0]?.turn.status).toBe("aborted");
+      expect(turns.items[0]?.turn.finishReason).toBe("aborted");
+      expect(turns.items[0]?.generationRuns[0]?.status).toBe("aborted");
+      expect(turns.items[0]?.generationRuns[0]?.finishReason).toBe("aborted");
+      expect(turns.items[0]?.messages.map((message) => `${message.role}:${getMessageText(message.content)}`)).toEqual([
+        "user:Start a long answer.",
+        "assistant:partial answer",
+      ]);
+
+    } finally {
+      generationService.streamChat = originalStreamChat;
       await app.stop();
     }
   });
