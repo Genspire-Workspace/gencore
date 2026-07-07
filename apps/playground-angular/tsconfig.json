@@ -12,6 +12,7 @@
     "experimentalDecorators": true,
     "importHelpers": true,
     "paths": {
+      "@genspire/ai/domain/messages": ["../../packages/ai/src/domain/messages/index.ts"],
       "@genspire/ai/server/contracts": ["../../packages/ai/src/server/contracts.ts"],
       "@genspire/auth/server/contracts": ["../../packages/auth/src/server/contracts.ts"],
       "@genspire/storage/server/contracts": ["../../packages/storage/src/server/contracts.ts"]

@@ -1,11 +1,12 @@
 // file: apps\playground-angular\src\app\features\ai\sessions\ai-session-stream.ts
 
+import type { AiMessageContent } from '@genspire/ai/domain/messages';
 import type { IAiSessionStreamChunk } from './ai-session-types';
 import { readAiContentText } from '../shared/ai-content';
 
 export interface IAiSessionStreamAssembly {
   assistantText: string;
-  finalContent: unknown | null;
+  finalContent: AiMessageContent | null;
   finished: boolean;
   error: string | null;
 }

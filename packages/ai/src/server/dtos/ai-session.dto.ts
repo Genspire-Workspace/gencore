@@ -1,6 +1,7 @@
 // file: packages/ai/src/server/dtos/ai-session.dto.ts
 
 import { ApiDto, ApiField, defineApiType } from "@genspire/server";
+import type { AiMessageContent } from "../../domain/messages/ai-content-part.js";
 import { AiChatSettingsDto, AiChatToolDto } from "./ai-generation.dto.js";
 import type {
   IAiRegenerationBootstrapResponseDto,
@@ -223,8 +224,12 @@ export class AiSessionMessageResponseDto implements IAiSessionMessageResponseDto
   @ApiField({ type: "string" })
   role!: IAiSessionMessageResponseDto["role"];
 
-  @ApiField({ type: "object" })
-  content!: unknown;
+  @ApiField({
+    type: "object",
+    description:
+      "Message content. Either a plain string or an array of typed content parts (text, image, file, tool_call, tool_result, thinking). See AiTextPartDto, AiImagePartDto, AiFilePartDto, AiToolCallPartDto, AiToolResultPartDto, AiThinkingPartDto.",
+  })
+  content!: AiMessageContent;
 
   @ApiField({ type: "string", required: false })
   name?: string;
@@ -469,8 +474,12 @@ export class AiSessionGraphDto implements IAiSessionGraphDto {
 
 @ApiDto({ description: "Generate session turn request" })
 export class GenerateAiSessionTurnRequestDto implements IGenerateAiSessionTurnRequestDto {
-  @ApiField({ type: "object" })
-  content!: unknown;
+  @ApiField({
+    type: "object",
+    description:
+      "Message content. Either a plain string or an array of typed content parts (text, image, file, tool_call, tool_result, thinking). See AiTextPartDto, AiImagePartDto, AiFilePartDto, AiToolCallPartDto, AiToolResultPartDto, AiThinkingPartDto.",
+  })
+  content!: AiMessageContent;
 
   @ApiField({ type: "string", required: false })
   provider?: string;
@@ -520,8 +529,12 @@ export class EditAiUserAndRegenerateRequestDto implements IEditAiUserAndRegenera
   @ApiField({ type: "string" })
   sourceTurnId!: string;
 
-  @ApiField({ type: "object" })
-  content!: unknown;
+  @ApiField({
+    type: "object",
+    description:
+      "Message content. Either a plain string or an array of typed content parts (text, image, file, tool_call, tool_result, thinking). See AiTextPartDto, AiImagePartDto, AiFilePartDto, AiToolCallPartDto, AiToolResultPartDto, AiThinkingPartDto.",
+  })
+  content!: AiMessageContent;
 
   @ApiField({ type: "string", required: false })
   provider?: string;

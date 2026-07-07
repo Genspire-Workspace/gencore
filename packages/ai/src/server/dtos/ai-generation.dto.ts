@@ -1,6 +1,7 @@
 // file: packages/ai/src/server/dtos/ai-generation.dto.ts
 
 import { ApiDto, ApiField, defineApiType } from "@genspire/server";
+import type { AiMessageContent } from "../../domain/messages/ai-content-part.js";
 import type {
   IAiChatGenerateRequestDto,
   IAiChatGenerateResponseDto,
@@ -18,8 +19,12 @@ export class AiChatMessageDto implements IAiChatMessageDto {
   @ApiField({ type: "string" })
   role!: "system" | "user" | "assistant" | "tool";
 
-  @ApiField({ type: "object" })
-  content!: unknown;
+  @ApiField({
+    type: "object",
+    description:
+      "Message content. Either a plain string or an array of typed content parts (text, image, file, tool_call, tool_result, thinking). See AiTextPartDto, AiImagePartDto, AiFilePartDto, AiToolCallPartDto, AiToolResultPartDto, AiThinkingPartDto.",
+  })
+  content!: AiMessageContent;
 
   @ApiField({ type: "string", required: false })
   name?: string;

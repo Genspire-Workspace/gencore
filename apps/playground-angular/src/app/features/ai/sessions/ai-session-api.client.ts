@@ -16,6 +16,7 @@ import type {
   IAiSessionMessageRequest,
   IAiSessionResponse,
   IAiSessionStreamChunk,
+  IAiSessionStreamOptions,
   IAiSessionTimelineDto,
   IAiSessionTimelineTurnListResponse,
   IAiSessionUpdateRequest,
@@ -157,11 +158,13 @@ export class AiSessionApiClient {
     timelineId: string,
     input: IAiSessionMessageRequest,
     onChunk: (chunk: IAiSessionStreamChunk) => void,
+    options?: IAiSessionStreamOptions,
   ): Promise<void> {
     await this.streamSessionEvent(
       `${appEnv.apiBaseUrl}${AI_SESSION_API_PATH}/${sessionId}/timelines/${timelineId}/generate`,
       input,
       onChunk,
+      options,
     );
   }
 
@@ -195,6 +198,7 @@ export class AiSessionApiClient {
     url: string,
     body: unknown,
     onChunk: (chunk: IAiSessionStreamChunk) => void,
+    options?: IAiSessionStreamOptions,
   ): Promise<void> {
     const accessToken = await this.authService.ensureValidAccessToken();
     if (!accessToken) {
@@ -206,6 +210,7 @@ export class AiSessionApiClient {
         url,
         accessToken,
         body,
+        signal: options?.signal,
       },
       onChunk,
     );

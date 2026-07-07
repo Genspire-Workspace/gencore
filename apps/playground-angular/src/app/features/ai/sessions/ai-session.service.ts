@@ -8,6 +8,7 @@ import type {
   IAiSessionMessageRequest,
   IAiSessionResponse,
   IAiSessionStreamChunk,
+  IAiSessionStreamOptions,
   IAiSessionTimelineTurnSnapshotDto,
   IAiSessionUpdateRequest,
 } from './ai-session-types';
@@ -131,12 +132,14 @@ export class AiSessionService {
     timelineId: string,
     input: IAiSessionMessageRequest,
     onChunk: (chunk: IAiSessionStreamChunk) => void,
+    options?: IAiSessionStreamOptions,
   ): Promise<void> {
     await this.aiSessionApiClient.streamGenerate(
       sessionId,
       timelineId,
       input,
       onChunk,
+      options,
     );
   }
 }

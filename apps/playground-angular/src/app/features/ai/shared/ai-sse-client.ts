@@ -7,6 +7,7 @@ export async function streamSseJson<TChunk>(
     url: string;
     accessToken: string;
     body: unknown;
+    signal?: AbortSignal;
   },
   onChunk: (chunk: TChunk) => void,
 ): Promise<void> {
@@ -18,6 +19,7 @@ export async function streamSseJson<TChunk>(
       authorization: `Bearer ${input.accessToken}`,
     },
     body: JSON.stringify(input.body),
+    signal: input.signal,
   });
 
   if (!response.ok) {

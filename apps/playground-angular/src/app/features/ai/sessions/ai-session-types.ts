@@ -39,3 +39,7 @@ export type IAiSessionCreateRequest = ICreateAiSessionRequestDto;
 export type IAiSessionUpdateRequest = IUpdateAiSessionRequestDto;
 export type IAiSessionMessageRequest = IGenerateAiSessionTurnRequestDto;
 export type IAiSessionStreamChunk = IAiSseEventDto;
+
+export interface IAiSessionStreamOptions {
+  signal?: AbortSignal;
+}

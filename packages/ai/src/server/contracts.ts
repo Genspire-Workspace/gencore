@@ -1,8 +1,10 @@
+import type { AiMessageContent } from "../domain/messages/ai-content-part.js";
+
 export type AiSessionMessageRole = 'system' | 'user' | 'assistant' | 'tool';
 
 export interface IAiChatMessageDto {
   role: AiSessionMessageRole;
-  content: unknown;
+  content: AiMessageContent;
   name?: string;
   metadata?: Record<string, unknown>;
 }
@@ -274,7 +276,7 @@ export interface IAiSessionMessageResponseDto {
   turnId: string;
   index: number;
   role: AiSessionMessageRole;
-  content: unknown;
+  content: AiMessageContent;
   name?: string;
   provider?: string;
   model?: string;
@@ -370,7 +372,7 @@ export interface IAiSessionGraphDto {
 }
 
 export interface IGenerateAiSessionTurnRequestDto {
-  content: unknown;
+  content: AiMessageContent;
   provider?: string;
   model?: string;
   systemPrompt?: string;
@@ -417,7 +419,7 @@ export interface IRegenerateAiAssistantRequestDto {
 
 export interface IEditAiUserAndRegenerateRequestDto {
   sourceTurnId: string;
-  content: unknown;
+  content: AiMessageContent;
   provider?: string;
   model?: string;
   systemPrompt?: string;
