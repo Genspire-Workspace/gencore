@@ -154,7 +154,7 @@ Use this for:
 - provider/model/API-key CRUD under `/api/v1/ai/providers`
 - runtime provider discovery under `/api/v1/ai/providers/discover`
 - session generation under `/api/v1/ai/sessions`
-- raw admin generation under `/api/v1/ai/admin`
+- raw generation under `/api/v1/ai/generation`
 
 The AI package owns provider seeding and runtime provider definitions. App code should supply environment configuration and mount the extension, not maintain a separate provider catalogue.
 

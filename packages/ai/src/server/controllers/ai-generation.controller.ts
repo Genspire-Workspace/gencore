@@ -1,4 +1,4 @@
-// file: packages/ai/src/server/controllers/ai-admin-generation.controller.ts
+// file: packages/ai/src/server/controllers/ai-generation.controller.ts
 
 import {
   Authorize,
@@ -6,20 +6,20 @@ import {
   Post,
   RequestContext,
 } from "@genspire/server";
-import { AiAdminGenerationService } from "../../application/services/index.js";
+import { AiGenerationService } from "../../application/services/index.js";
 import type { IAiTool } from "../../domain/tools/ai-tool.js";
 import {
-  AiAdminChatGenerateRequestDto,
-  AiAdminChatGenerateResponseDto,
+  AiChatGenerateRequestDto,
+  AiChatGenerateResponseDto,
   AiEmbeddingGenerateRequestDto,
   AiEmbeddingGenerateResponseDto,
   AiSseEventDto,
-} from "../dtos/ai-admin.dto.js";
+} from "../dtos/ai-generation.dto.js";
 import type { IChatGenerationRequest } from "../../domain/chat/chat-generation-request.js";
 import type { IChatGenerationSettings } from "../../domain/chat/chat-generation-settings.js";
 import type { IChatMessage } from "../../domain/chat/chat-message.js";
 
-function toTools(tools: AiAdminChatGenerateRequestDto["tools"]): IAiTool[] | undefined {
+function toTools(tools: AiChatGenerateRequestDto["tools"]): IAiTool[] | undefined {
   return tools?.map((tool) => ({
     name: tool.name,
     description: tool.description,
@@ -30,7 +30,7 @@ function toTools(tools: AiAdminChatGenerateRequestDto["tools"]): IAiTool[] | und
 }
 
 function toSettings(
-  settings: AiAdminChatGenerateRequestDto["settings"],
+  settings: AiChatGenerateRequestDto["settings"],
 ): (IChatGenerationSettings & { stream?: boolean }) | undefined {
   if (!settings) {
     return undefined;
@@ -49,7 +49,7 @@ function toSettings(
   };
 }
 
-function toMessages(body: AiAdminChatGenerateRequestDto): IChatMessage[] {
+function toMessages(body: AiChatGenerateRequestDto): IChatMessage[] {
   return [
     ...(body.systemPrompt
       ? [{ role: "system" as const, content: body.systemPrompt }]
@@ -92,19 +92,19 @@ function toSseResponse(events: AsyncIterable<unknown>): Response {
 }
 
 @Authorize({ roles: ["admin"] })
-@Controller("/ai/admin", {
-  tag: "AI Admin",
+@Controller("/ai/generation", {
+  tag: "AI Generation",
   description: "Admin-only raw AI generation endpoints",
 })
-export class AiAdminGenerationController {
-  static inject = [AiAdminGenerationService];
+export class AiGenerationController {
+  static inject = [AiGenerationService];
 
-  constructor(private readonly service: AiAdminGenerationService) {}
+  constructor(private readonly service: AiGenerationService) {}
 
   @Post("/chat/generate", {
     summary: "Generate a raw chat completion",
-    request: AiAdminChatGenerateRequestDto,
-    response: AiAdminChatGenerateResponseDto,
+    request: AiChatGenerateRequestDto,
+    response: AiChatGenerateResponseDto,
     responses: {
       200: {
         description: "JSON or SSE stream response",
@@ -113,7 +113,7 @@ export class AiAdminGenerationController {
     },
   })
   async generateChat(ctx: RequestContext) {
-    const body = await ctx.json<AiAdminChatGenerateRequestDto>();
+    const body = await ctx.json<AiChatGenerateRequestDto>();
     const request: IChatGenerationRequest = {
       provider: body.provider,
       model: body.model,
@@ -124,7 +124,7 @@ export class AiAdminGenerationController {
     };
 
     if (body.settings?.stream === true) {
-      return toSseResponse(this.service.streamChat(request));
+      return toSseResponse(this.service.streamChatEvents(request));
     }
 
     const response = await this.service.generateChat(request);

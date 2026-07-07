@@ -1,9 +1,9 @@
-// file: packages/ai/src/server/dtos/ai-admin.dto.ts
+// file: packages/ai/src/server/dtos/ai-generation.dto.ts
 
 import { ApiDto, ApiField, defineApiType } from "@genspire/server";
 import type {
-  IAiAdminChatGenerateRequestDto,
-  IAiAdminChatGenerateResponseDto,
+  IAiChatGenerateRequestDto,
+  IAiChatGenerateResponseDto,
   IAiChatMessageDto,
   IAiChatSettingsDto,
   IAiChatToolDto,
@@ -79,8 +79,8 @@ export class AiChatSettingsDto implements IAiChatSettingsDto {
   metadata?: Record<string, unknown>;
 }
 
-@ApiDto({ description: "Admin AI chat generation request" })
-export class AiAdminChatGenerateRequestDto implements IAiAdminChatGenerateRequestDto {
+@ApiDto({ description: "AI chat generation request" })
+export class AiChatGenerateRequestDto implements IAiChatGenerateRequestDto {
   @ApiField({ type: "string", required: false })
   provider?: string;
 
@@ -103,8 +103,8 @@ export class AiAdminChatGenerateRequestDto implements IAiAdminChatGenerateReques
   metadata?: Record<string, unknown>;
 }
 
-@ApiDto({ description: "Admin AI chat generation response" })
-export class AiAdminChatGenerateResponseDto implements IAiAdminChatGenerateResponseDto {
+@ApiDto({ description: "AI chat generation response" })
+export class AiChatGenerateResponseDto implements IAiChatGenerateResponseDto {
   @ApiField({ type: "string", required: false })
   id?: string;
 

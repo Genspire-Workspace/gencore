@@ -23,7 +23,7 @@ import {
   AiSessionService,
   AiSessionTimelineService,
 } from "../../application/services/index.js";
-import { AiSseEventDto } from "../dtos/ai-admin.dto.js";
+import { AiSseEventDto } from "../dtos/ai-generation.dto.js";
 import {
   CreateAiBranchResponseDto,
   AiSessionBranchListResponseDto,

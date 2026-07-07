@@ -1,7 +1,7 @@
 // file: packages/ai/src/server/dtos/ai-session.dto.ts
 
 import { ApiDto, ApiField, defineApiType } from "@genspire/server";
-import { AiChatSettingsDto, AiChatToolDto } from "./ai-admin.dto.js";
+import { AiChatSettingsDto, AiChatToolDto } from "./ai-generation.dto.js";
 import type {
   IAiRegenerationBootstrapResponseDto,
   IAiSessionBranchListResponseDto,

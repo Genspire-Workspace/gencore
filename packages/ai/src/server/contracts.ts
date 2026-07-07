@@ -27,7 +27,7 @@ export interface IAiChatSettingsDto {
   metadata?: Record<string, unknown>;
 }
 
-export interface IAiAdminChatGenerateRequestDto {
+export interface IAiChatGenerateRequestDto {
   provider?: string;
   model?: string;
   systemPrompt?: string;
@@ -37,7 +37,7 @@ export interface IAiAdminChatGenerateRequestDto {
   metadata?: Record<string, unknown>;
 }
 
-export interface IAiAdminChatGenerateResponseDto {
+export interface IAiChatGenerateResponseDto {
   id?: string;
   provider: string;
   model: string;

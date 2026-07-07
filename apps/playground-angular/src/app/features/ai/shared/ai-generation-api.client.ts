@@ -14,7 +14,7 @@ import type {
   IAiGenerationStreamChunk,
 } from './ai-generation-types';
 
-const AI_ADMIN_API_PATH = '/api/v1/ai/admin';
+const AI_GENERATION_API_PATH = '/api/v1/ai/generation';
 
 @Injectable({ providedIn: 'root' })
 export class AiGenerationApiClient {
@@ -24,7 +24,7 @@ export class AiGenerationApiClient {
   async generateChat(input: IAiGenerationRequest): Promise<IAiGenerationResponse> {
     return await firstValueFrom(
       this.http.post<IAiGenerationResponse>(
-        `${appEnv.apiBaseUrl}${AI_ADMIN_API_PATH}/chat/generate`,
+        `${appEnv.apiBaseUrl}${AI_GENERATION_API_PATH}/chat/generate`,
         input,
       ),
     );
@@ -41,7 +41,7 @@ export class AiGenerationApiClient {
 
     await streamSseJson<IAiGenerationStreamChunk>(
       {
-        url: `${appEnv.apiBaseUrl}${AI_ADMIN_API_PATH}/chat/generate`,
+        url: `${appEnv.apiBaseUrl}${AI_GENERATION_API_PATH}/chat/generate`,
         accessToken,
         body: {
           ...input,
@@ -60,7 +60,7 @@ export class AiGenerationApiClient {
   ): Promise<IAiEmbeddingResponse> {
     return await firstValueFrom(
       this.http.post<IAiEmbeddingResponse>(
-        `${appEnv.apiBaseUrl}${AI_ADMIN_API_PATH}/embeddings/generate`,
+        `${appEnv.apiBaseUrl}${AI_GENERATION_API_PATH}/embeddings/generate`,
         input,
       ),
     );

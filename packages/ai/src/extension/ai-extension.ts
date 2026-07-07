@@ -6,7 +6,6 @@ import { AiProviderClientRegistry } from "../providers/ai-provider-client-regist
 import { AiSessionDbContext } from "../infrastructure/persistence/ai-session-db-context.js";
 import { AiProviderDbContext } from "../infrastructure/persistence/ai-provider-db-context.js";
 import {
-  AiAdminGenerationService,
   AiGenerationService,
   AiSessionBranchService,
   AiSessionFeedbackService,
@@ -72,7 +71,6 @@ export function aiExtension(options: IAiExtensionOptions): GenExtension {
       app.provide(AiProviderRuntimeCatalogue, providerCatalogue);
       app.provide(AiGenerationService, service);
       app.registerScoped(AiSessionDbContext);
-      app.registerScoped(AiAdminGenerationService);
       app.registerScoped(AiSessionService);
       app.registerScoped(AiSessionTimelineService);
       app.registerScoped(AiSessionGraphService);

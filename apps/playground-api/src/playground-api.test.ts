@@ -7,7 +7,6 @@ import path from "node:path";
 import { Server } from "@genspire/server";
 import { AuthRoleService } from "@genspire/auth";
 import { createPlaygroundApp } from "./playground-app.js";
-import { aiPlaygroundRuntime } from "./ai/runtime/ai-service-factory.js";
 import { AiGenerationService, AiProviderRuntimeCatalogue } from "@genspire/ai/application";
 import type { IChatGenerationRequest } from "@genspire/ai/domain";
 import type { IChatGenerationResponse } from "@genspire/ai/domain";
@@ -22,7 +21,7 @@ async function registerAndGetToken(
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ email, password }),
-    }),
+    }), 
   );
   const body = await res.json() as Record<string, unknown>;
   return {
@@ -349,8 +348,8 @@ describe("playground api", () => {
       };
 
       expect(swaggerDocument.paths["/api/v1/ai/providers/discover"]).toBeDefined();
-      expect(swaggerDocument.paths["/api/v1/ai/admin/chat/generate"]).toBeDefined();
-      expect(swaggerDocument.paths["/api/v1/ai/admin/embeddings/generate"]).toBeDefined();
+      expect(swaggerDocument.paths["/api/v1/ai/generation/chat/generate"]).toBeDefined();
+      expect(swaggerDocument.paths["/api/v1/ai/generation/embeddings/generate"]).toBeDefined();
       expect(swaggerDocument.paths["/api/v1/ai/sessions"]).toBeDefined();
       expect(swaggerDocument.paths["/api/v1/ai/sessions/{sessionId}"]).toBeDefined();
       expect(swaggerDocument.paths["/api/v1/ai/sessions/{sessionId}/graph"]).toBeDefined();
@@ -752,7 +751,7 @@ Review {{item}}.`,
       await assignAdminRole(app, owner.userId);
 
       const chatResponse = await server.handle(
-        new Request("http://localhost/api/v1/ai/admin/chat/generate", {
+        new Request("http://localhost/api/v1/ai/generation/chat/generate", {
           method: "POST",
           headers: authHeaders(owner.accessToken),
           body: JSON.stringify({
@@ -837,7 +836,7 @@ Review {{item}}.`,
       const owner = await registerAndGetToken(server);
       await assignAdminRole(app, owner.userId);
       const response = await server.handle(
-        new Request("http://localhost/api/v1/ai/admin/chat/generate", {
+        new Request("http://localhost/api/v1/ai/generation/chat/generate", {
           method: "POST",
           headers: authHeaders(owner.accessToken),
           body: JSON.stringify({

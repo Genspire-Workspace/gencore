@@ -5,6 +5,7 @@ import type { IChatGenerationResponse } from "../../../domain/chat/chat-generati
 import type { IChatGenerationChunk } from "../../../domain/chat/chat-generation-chunk.js";
 import type { IEmbeddingGenerationRequest } from "../../../domain/embeddings/embedding-generation-request.js";
 import type { IEmbeddingGenerationResponse } from "../../../domain/embeddings/embedding-generation-response.js";
+import type { IAiSessionSseEvent } from "../../../domain/session/types/ai-session-types.js";
 import type {
   IAiDefaults,
   IAiProviderResolver,
@@ -49,6 +50,88 @@ export class AiGenerationService {
     return client.chat.streamChat(
       resolvedRequest,
     );
+  }
+
+  async *streamChatEvents(
+    request: IChatGenerationRequest,
+  ): AsyncIterable<IAiSessionSseEvent> {
+    yield {
+      type: "started",
+      provider: request.provider,
+      model: request.model,
+    };
+
+    let terminalChunk: IChatGenerationChunk | null = null;
+
+    for await (const chunk of this.streamChat(request)) {
+      terminalChunk = chunk;
+
+      if (chunk.delta) {
+        yield {
+          type: "delta",
+          id: chunk.id,
+          provider: chunk.provider,
+          model: chunk.model,
+          delta: chunk.delta,
+          metadata: chunk.metadata,
+        };
+      }
+
+      if (chunk.reasoningDelta) {
+        yield {
+          type: "reasoning_delta",
+          id: chunk.id,
+          provider: chunk.provider,
+          model: chunk.model,
+          reasoningDelta: chunk.reasoningDelta,
+          metadata: chunk.metadata,
+        };
+      }
+
+      if (chunk.toolCall) {
+        yield {
+          type: "tool_call",
+          id: chunk.id,
+          provider: chunk.provider,
+          model: chunk.model,
+          toolCall: chunk.toolCall,
+          metadata: chunk.metadata,
+        };
+      }
+
+      if (chunk.toolResult) {
+        yield {
+          type: "tool_result",
+          id: chunk.id,
+          provider: chunk.provider,
+          model: chunk.model,
+          toolResult: chunk.toolResult,
+          metadata: chunk.metadata,
+        };
+      }
+
+      if (chunk.message) {
+        yield {
+          type: "message",
+          id: chunk.id,
+          provider: chunk.provider,
+          model: chunk.model,
+          message: chunk.message,
+          finishReason: chunk.finishReason,
+          usage: chunk.usage as Record<string, unknown> | undefined,
+          metadata: chunk.metadata,
+        };
+      }
+    }
+
+    yield {
+      type: "completed",
+      provider: terminalChunk?.provider ?? request.provider,
+      model: terminalChunk?.model ?? request.model,
+      finishReason: terminalChunk?.finishReason,
+      usage: terminalChunk?.usage as Record<string, unknown> | undefined,
+      metadata: terminalChunk?.metadata,
+    };
   }
 
   async generateEmbedding(

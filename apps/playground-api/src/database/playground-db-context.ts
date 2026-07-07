@@ -11,8 +11,7 @@ import { AiSkillEntity } from "../ai/skills/ai-skill.entity.js";
 @Scoped()
 export class PlaygroundDbContext extends StorageDbContext {
   readonly todos = this.set<TodoEntity, string>(TodoEntity);
-
-
+  
   readonly aiPrompts = this.set<AiPromptEntity, string>(AiPromptEntity);
   readonly aiSkills = this.set<AiSkillEntity, string>(AiSkillEntity);
 }
