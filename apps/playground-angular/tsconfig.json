@@ -16,6 +16,8 @@
       "@genspire/ai/domain/messages": ["../../packages/ai/src/domain/messages/index.ts"],
       "@genspire/ai/server/contracts": ["../../packages/ai/src/server/contracts.ts"],
       "@genspire/sdk-ai": ["../../packages/sdk/ai/src/index.ts"],
+      "@genspire/sdk-auth": ["../../packages/sdk/auth/src/index.ts"],
+      "@genspire/sdk-storage": ["../../packages/sdk/storage/src/index.ts"],
       "@genspire/auth/server/contracts": ["../../packages/auth/src/server/contracts.ts"],
       "@genspire/storage/server/contracts": ["../../packages/storage/src/server/contracts.ts"]
     },

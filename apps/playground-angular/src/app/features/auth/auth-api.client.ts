@@ -1,40 +1,35 @@
 // file: apps\playground-angular\src\app\features\auth\auth-api.client.ts
 
-import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { firstValueFrom } from 'rxjs';
+import { Injectable } from '@angular/core';
 import { appEnv } from '../../core/app-env';
 import type {
-  IAuthResponseDto,
-  ILoginRequestDto,
-  ILogoutRequestDto,
-  IRefreshRequestDto,
-  IRegisterRequestDto,
-} from '@genspire/auth/server/contracts';
+  IAuthLoginRequest,
+  IAuthLogoutRequest,
+  IAuthRefreshRequest,
+  IAuthRegisterRequest,
+  IAuthResponse,
+} from '@genspire/sdk-auth';
+import { FetchAuthClient } from '@genspire/sdk-auth';
 
 @Injectable({ providedIn: 'root' })
 export class AuthApiClient {
-  private readonly http = inject(HttpClient);
+  private readonly client = new FetchAuthClient({
+    baseUrl: appEnv.apiBaseUrl,
+  });
 
-  async login(input: ILoginRequestDto): Promise<IAuthResponseDto> {
-    return await firstValueFrom(
-      this.http.post<IAuthResponseDto>(`${appEnv.apiBaseUrl}/login`, input),
-    );
+  async login(input: IAuthLoginRequest): Promise<IAuthResponse> {
+    return await this.client.login(input);
   }
 
-  async register(input: IRegisterRequestDto): Promise<IAuthResponseDto> {
-    return await firstValueFrom(
-      this.http.post<IAuthResponseDto>(`${appEnv.apiBaseUrl}/register`, input),
-    );
+  async register(input: IAuthRegisterRequest): Promise<IAuthResponse> {
+    return await this.client.register(input);
   }
 
-  async refresh(input: IRefreshRequestDto): Promise<IAuthResponseDto> {
-    return await firstValueFrom(
-      this.http.post<IAuthResponseDto>(`${appEnv.apiBaseUrl}/refresh`, input),
-    );
+  async refresh(input: IAuthRefreshRequest): Promise<IAuthResponse> {
+    return await this.client.refresh(input);
   }
 
-  async logout(input: ILogoutRequestDto): Promise<void> {
-    await firstValueFrom(this.http.post(`${appEnv.apiBaseUrl}/logout`, input));
+  async logout(input: IAuthLogoutRequest): Promise<void> {
+    await this.client.logout(input);
   }
 }

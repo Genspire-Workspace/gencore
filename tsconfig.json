@@ -62,6 +62,14 @@
       "@genspire/sdk-ai/domain": ["./packages/sdk/ai/src/domain.ts"],
       "@genspire/sdk-ai/application": ["./packages/sdk/ai/src/application.ts"],
       "@genspire/sdk-ai/infrastructure": ["./packages/sdk/ai/src/infrastructure.ts"],
+      "@genspire/sdk-auth": ["./packages/sdk/auth/src/index.ts"],
+      "@genspire/sdk-auth/domain": ["./packages/sdk/auth/src/domain.ts"],
+      "@genspire/sdk-auth/application": ["./packages/sdk/auth/src/application.ts"],
+      "@genspire/sdk-auth/infrastructure": ["./packages/sdk/auth/src/infrastructure.ts"],
+      "@genspire/sdk-storage": ["./packages/sdk/storage/src/index.ts"],
+      "@genspire/sdk-storage/domain": ["./packages/sdk/storage/src/domain.ts"],
+      "@genspire/sdk-storage/application": ["./packages/sdk/storage/src/application.ts"],
+      "@genspire/sdk-storage/infrastructure": ["./packages/sdk/storage/src/infrastructure.ts"],
       "@mikro-orm/decorators": ["./apps/playground-api/node_modules/@mikro-orm/decorators/es/index.d.ts"],
       "@mikro-orm/decorators/es": ["./apps/playground-api/node_modules/@mikro-orm/decorators/es/index.d.ts"]
     }
