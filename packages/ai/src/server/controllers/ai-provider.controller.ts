@@ -16,7 +16,10 @@ import {
 import { requireCurrentUser } from "@genspire/auth";
 import { GenError } from "@genspire/core";
 import type { AiApiKeySource } from "../../domain/models/ai-api-key.js";
-import type { AiProviderClientKind } from "../../providers/ai-provider-client-kind.js";
+import {
+  DEFAULT_AI_PROVIDER_CLIENT_KINDS,
+  type AiProviderClientKind,
+} from "../../providers/ai-provider-client-kind.js";
 import type { AiProviderKind } from "../../domain/models/ai-provider.js";
 import type { IAiModelCapabilities } from "../../domain/models/ai-model-capabilities.js";
 import {
@@ -30,6 +33,7 @@ import {
   AiApiKeyResponseDto,
   AiModelListResponseDto,
   AiModelResponseDto,
+  AiProviderClientKindListResponseDto,
   AiProviderListResponseDto,
   AiProviderResponseDto,
   CreateAiApiKeyRequestDto,
@@ -100,6 +104,17 @@ export class AiProviderController {
   })
   getDiscovery() {
     return this.providerCatalogue.toDiscoveryResponse();
+  }
+
+  @AllowAnonymous()
+  @Get("/client-kinds", {
+    summary: "List supported AI provider client kinds",
+    response: AiProviderClientKindListResponseDto,
+  })
+  getClientKinds() {
+    return {
+      items: DEFAULT_AI_PROVIDER_CLIENT_KINDS.map((id) => ({ id })),
+    };
   }
 
   @Get("/", {

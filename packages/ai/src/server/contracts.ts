@@ -90,6 +90,14 @@ export interface IAiProviderListResponseDto {
   items: IAiProviderResponseDto[];
 }
 
+export interface IAiProviderClientKindResponseDto {
+  id: string;
+}
+
+export interface IAiProviderClientKindListResponseDto {
+  items: IAiProviderClientKindResponseDto[];
+}
+
 export interface IAiProviderDiscoveryResponseDto {
   id: string;
   name: string;

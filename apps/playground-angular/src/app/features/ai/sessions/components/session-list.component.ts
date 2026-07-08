@@ -74,14 +74,14 @@ import type { IAiSessionResponse } from '../ai-session-types';
     <ng-template #optionsMenu let-overlay let-data="data">
       <div class="min-w-44 rounded-2xl border border-base-300 bg-base-100 p-2 shadow-xl">
         <button
-          class="flex w-full items-center rounded-xl px-3 py-2 text-left text-sm text-base-content transition hover:bg-base-200"
+          class="flex w-full items-center rounded-xl px-3 py-2 text-left text-sm text-base-content transition hover:bg-base-300"
           type="button"
           (click)="openRenameModal(data.session, overlay)"
         >
           Rename
         </button>
         <button
-          class="flex w-full items-center rounded-xl px-3 py-2 text-left text-sm text-base-content transition hover:bg-base-200"
+          class="flex w-full items-center rounded-xl px-3 py-2 text-left text-sm text-base-content transition hover:bg-base-300"
           type="button"
           (click)="openSettings(data.session.id, overlay)"
         >

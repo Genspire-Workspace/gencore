@@ -6,4 +6,6 @@ export interface IAiModelCapabilities {
   embeddings?: boolean;
   vision?: boolean;
   functionCalling?: boolean;
+  inputKinds?: string[];
+  outputKinds?: string[];
 }

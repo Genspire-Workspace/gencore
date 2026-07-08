@@ -1,8 +1,29 @@
-// file: apps\playground-angular\src\app\features\ai\sessions\components\session-config-form.component.ts
+// file: apps/playground-angular/src/app/features/ai/sessions/components/session-config-form.component.ts
 
 import { CommonModule } from '@angular/common';
-import { Component, effect, input, model, output } from '@angular/core';
+import {
+  Component,
+  TemplateRef,
+  ViewChild,
+  ViewContainerRef,
+  computed,
+  effect,
+  inject,
+  input,
+  model,
+  output,
+  signal,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import type { IAiModelResponseDto, IAiProviderResponseDto } from '@genspire/sdk-ai';
+import { IconComponent } from '../../../../icons/icon.component';
+import { OverlayService } from '../../../../shared/overlay';
+import type { AppOverlayHandle } from '../../../../shared/overlay';
+import { AiProviderClient } from '../../providers/ai-provider.client';
+import {
+  ProviderModelPathDropdownComponent,
+  type IAiProviderModelPathOption,
+} from '../../providers/components/provider-model-path-dropdown.component';
 import type {
   IAiSessionConfigDraft,
   IAiSessionResponse,
@@ -14,7 +35,12 @@ import type {
   host: {
     class: 'block',
   },
-  imports: [CommonModule, FormsModule],
+  imports: [
+    CommonModule,
+    FormsModule,
+    IconComponent,
+    ProviderModelPathDropdownComponent,
+  ],
   template: `
     <div class="space-y-5">
       <div>
@@ -36,23 +62,29 @@ import type {
         </label>
 
         <label class="block space-y-2">
-          <span class="text-sm font-medium text-base-content/80">Provider</span>
-          <input
-            class="w-full rounded-2xl border border-base-300 bg-base px-4 py-3 text-base-content outline-none transition focus:border-primary"
-            type="text"
-            [ngModel]="provider()"
-            (ngModelChange)="provider.set($event)"
-          />
-        </label>
-
-        <label class="block space-y-2">
-          <span class="text-sm font-medium text-base-content/80">Model</span>
-          <input
-            class="w-full rounded-2xl border border-base-300 bg-base px-4 py-3 text-base-content outline-none transition focus:border-primary"
-            type="text"
-            [ngModel]="model()"
-            (ngModelChange)="model.set($event)"
-          />
+          <span class="text-sm font-medium text-base-content/80">Provider:Model Path</span>
+          <div class="flex gap-2">
+            <input
+              class="min-w-0 flex-1 rounded-2xl border border-base-300 bg-base px-4 py-3 text-base-content outline-none transition focus:border-primary"
+              type="text"
+              [ngModel]="selectedModelPath()"
+              (ngModelChange)="updateModelPathValue($event)"
+              placeholder="provider:model"
+            />
+            <button
+              #modelPathTrigger
+              class="inline-flex h-[3.125rem] w-[3.125rem] shrink-0 items-center justify-center rounded-2xl border border-base-300 bg-base text-base-content/70 transition hover:bg-base-200 hover:text-base-content disabled:cursor-not-allowed disabled:opacity-50"
+              type="button"
+              (click)="openModelPathDropdown(modelPathTrigger)"
+              [disabled]="modelPathOptions().length === 0"
+              aria-label="Select provider:model path"
+            >
+              <app-icon iconName="travel_explore" size="sm" aria-hidden="true" />
+            </button>
+          </div>
+          <p class="text-xs text-base-content/55">
+            Quick selector across every available provider and model.
+          </p>
         </label>
 
         <label class="block space-y-2">
@@ -123,6 +155,14 @@ import type {
         </button>
       </div>
     </div>
+
+    <ng-template #modelPathDropdown let-overlay>
+      <app-ai-provider-model-path-dropdown
+        [options]="modelPathOptions()"
+        [selectedPath]="selectedModelPath()"
+        (select)="selectModelPathFromDropdown($event, overlay)"
+      />
+    </ng-template>
   `,
 })
 export class SessionConfigFormComponent {
@@ -131,6 +171,13 @@ export class SessionConfigFormComponent {
   readonly save = output<IAiSessionConfigDraft>();
   readonly cancel = output<void>();
 
+  @ViewChild('modelPathDropdown', { static: true })
+  private readonly modelPathDropdownTemplate!: TemplateRef<unknown>;
+
+  private readonly providerClient = inject(AiProviderClient);
+  private readonly overlayService = inject(OverlayService);
+  private readonly viewContainerRef = inject(ViewContainerRef);
+
   readonly title = model('');
   readonly provider = model('');
   readonly model = model('');
@@ -138,6 +185,35 @@ export class SessionConfigFormComponent {
   readonly temperature = model('');
   readonly topP = model('');
   readonly maxTokens = model('');
+
+  protected readonly providers = signal<IAiProviderResponseDto[]>([]);
+  protected readonly modelsByProvider = signal<Record<string, IAiModelResponseDto[]>>({});
+
+  protected readonly modelPathOptions = computed<IAiProviderModelPathOption[]>(() =>
+    this.providers().flatMap((provider) =>
+      (this.modelsByProvider()[provider.id] ?? []).map((model) => ({
+        providerId: provider.id,
+        providerName: provider.name,
+        modelId: model.id,
+        modelName: model.name,
+        label: `${provider.id}:${model.name}`,
+        family: model.family || undefined,
+      })),
+    ),
+  );
+
+  protected readonly selectedModelPath = computed(() => {
+    const providerId = this.provider().trim();
+    const modelName = this.model().trim();
+
+    if (!providerId || !modelName) {
+      return '';
+    }
+
+    return `${providerId}:${modelName}`;
+  });
+
+  private activeDropdownHandle: AppOverlayHandle | null = null;
 
   constructor() {
     effect(() => {
@@ -151,7 +227,13 @@ export class SessionConfigFormComponent {
       this.temperature.set(settings.temperature?.toString() || '');
       this.topP.set(settings.topP?.toString() || '');
       this.maxTokens.set(settings.maxTokens?.toString() || '');
+
+      if (settings.provider) {
+        void this.ensureProviderModels(settings.provider);
+      }
     });
+
+    void this.loadProviderCatalogue();
   }
 
   protected readDraft(): IAiSessionConfigDraft {
@@ -164,6 +246,98 @@ export class SessionConfigFormComponent {
       topP: this.topP(),
       maxTokens: this.maxTokens(),
     };
+  }
+
+  protected openModelPathDropdown(origin: HTMLElement): void {
+    this.openDropdown(this.modelPathDropdownTemplate, origin, '18rem');
+  }
+
+  protected updateModelPathValue(value: string): void {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      this.provider.set('');
+      this.model.set('');
+      return;
+    }
+
+    const separatorIndex = trimmed.indexOf(':');
+    if (separatorIndex < 0) {
+      this.provider.set(trimmed);
+      this.model.set('');
+      return;
+    }
+
+    const providerId = trimmed.slice(0, separatorIndex).trim();
+    const modelName = trimmed.slice(separatorIndex + 1).trim();
+    this.provider.set(providerId);
+    this.model.set(modelName);
+
+    if (providerId) {
+      void this.ensureProviderModels(providerId);
+    }
+  }
+
+  protected async selectModelPathFromDropdown(
+    option: IAiProviderModelPathOption,
+    overlay: AppOverlayHandle,
+  ): Promise<void> {
+    this.provider.set(option.providerId);
+    await this.ensureProviderModels(option.providerId);
+    this.model.set(option.modelName);
+    overlay.close();
+  }
+
+  private async loadProviderCatalogue(): Promise<void> {
+    const providers = await this.providerClient.listProviders();
+    this.providers.set(providers);
+
+    const providerIds = providers.map((provider) => provider.id);
+    await Promise.all(providerIds.map((providerId) => this.ensureProviderModels(providerId)));
+  }
+
+  private async ensureProviderModels(providerId: string): Promise<void> {
+    const normalizedProviderId = providerId.trim();
+    if (!normalizedProviderId) {
+      return;
+    }
+
+    if (this.modelsByProvider()[normalizedProviderId]) {
+      return;
+    }
+
+    const models = await this.providerClient.listModels(normalizedProviderId);
+    this.modelsByProvider.update((current) => ({
+      ...current,
+      [normalizedProviderId]: models,
+    }));
+  }
+
+  private openDropdown(
+    templateRef: TemplateRef<unknown>,
+    origin: HTMLElement,
+    minWidth = '16rem',
+  ): void {
+    this.activeDropdownHandle?.close();
+
+    const handle = this.overlayService.createDropdownTemplate(
+      {
+        templateRef,
+        viewContainerRef: this.viewContainerRef,
+      },
+      {
+        origin,
+        hasBackdrop: true,
+        minWidth,
+        panelClass: 'app-session-config-dropdown-overlay',
+      },
+    );
+
+    this.activeDropdownHandle = handle;
+    handle.afterClosed$.subscribe(() => {
+      if (this.activeDropdownHandle?.id === handle.id) {
+        this.activeDropdownHandle = null;
+      }
+    });
   }
 
   private readSettings(session: IAiSessionResponse): IAiSessionSettings {

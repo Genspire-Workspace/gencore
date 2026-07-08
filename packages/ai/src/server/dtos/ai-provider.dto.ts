@@ -6,6 +6,8 @@ import type {
   IAiApiKeyResponseDto,
   IAiModelListResponseDto,
   IAiModelResponseDto,
+  IAiProviderClientKindListResponseDto,
+  IAiProviderClientKindResponseDto,
   IAiProviderListResponseDto,
   IAiProviderResponseDto,
   ICreateAiApiKeyRequestDto,
@@ -57,6 +59,18 @@ export class AiProviderResponseDto implements IAiProviderResponseDto {
 export class AiProviderListResponseDto implements IAiProviderListResponseDto {
   @ApiField({ arrayOf: AiProviderResponseDto })
   items!: AiProviderResponseDto[];
+}
+
+@ApiDto({ description: "AI provider client kind response" })
+export class AiProviderClientKindResponseDto implements IAiProviderClientKindResponseDto {
+  @ApiField({ type: "string" })
+  id!: string;
+}
+
+@ApiDto({ description: "AI provider client kind list response" })
+export class AiProviderClientKindListResponseDto implements IAiProviderClientKindListResponseDto {
+  @ApiField({ arrayOf: AiProviderClientKindResponseDto })
+  items!: AiProviderClientKindResponseDto[];
 }
 
 @ApiDto({ description: "Create AI provider request" })

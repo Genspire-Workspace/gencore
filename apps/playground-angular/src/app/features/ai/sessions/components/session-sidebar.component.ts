@@ -1,9 +1,16 @@
-// file: apps\playground-angular\src\app\features\ai\sessions\components\session-sidebar.component.ts
+// file: apps/playground-angular/src/app/features/ai/sessions/components/session-sidebar.component.ts
 
 import { CommonModule } from '@angular/common';
-import { Component, computed, input, model, output } from '@angular/core';
+import {
+  Component,
+  computed,
+  input,
+  model,
+  output,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { IconComponent } from '../../../../icons/icon.component';
+import { ProviderManagerTriggerComponent } from '../../providers/components/provider-manager-trigger.component';
 import { SessionListComponent } from './session-list.component';
 import type { IAiSessionResponse } from '../ai-session-types';
 
@@ -13,7 +20,13 @@ import type { IAiSessionResponse } from '../ai-session-types';
     class:
       'flex h-full min-h-0 flex-col gap-2 overflow-hidden rounded-3xl border border-base-300 bg-base-100 p-4',
   },
-  imports: [CommonModule, FormsModule, IconComponent, SessionListComponent],
+  imports: [
+    CommonModule,
+    FormsModule,
+    IconComponent,
+    SessionListComponent,
+    ProviderManagerTriggerComponent,
+  ],
   template: `
     <div class="flex items-center gap-2">
       <label class="relative min-w-0 flex-1">
@@ -62,6 +75,12 @@ import type { IAiSessionResponse } from '../ai-session-types';
       (rename)="renameSession.emit($event)"
       (delete)="deleteSession.emit($event)"
     />
+
+    <div class="mt-auto border-t border-base-300 pt-3">
+      <app-ai-provider-manager-trigger
+        [disabled]="loading() || sending()"
+      />
+    </div>
   `,
 })
 export class SessionSidebarComponent {
