@@ -1,9 +1,15 @@
 import type {
+  ICreateAiBranchRequestDto,
+  ICreateAiBranchResponseDto,
+  ICreateAiMessageFeedbackRequestDto,
+  IAiSessionMessageFeedbackResponseDto,
   IAiSessionGraphDto,
   IAiSessionResponseDto,
-  IAiSseEventDto,
+  IAiSessionStreamEvent,
   ICreateAiSessionRequestDto,
+  IEditAiUserAndRegenerateRequestDto,
   IGenerateAiSessionTurnRequestDto,
+  IRegenerateAiAssistantRequestDto,
   IUpdateAiSessionRequestDto,
 } from "../../domain/types/ai-session-sdk-types.js";
 import type {
@@ -68,15 +74,70 @@ export class FetchAiSessionClient implements IAiSessionTransport {
     );
   }
 
+  async createFeedback(
+    sessionId: string,
+    messageId: string,
+    input: ICreateAiMessageFeedbackRequestDto,
+  ): Promise<IAiSessionMessageFeedbackResponseDto> {
+    return await this.transport.post<IAiSessionMessageFeedbackResponseDto>(
+      `${AI_SESSION_API_PATH}/${sessionId}/messages/${messageId}/feedback`,
+      input,
+    );
+  }
+
+  async createBranch(
+    sessionId: string,
+    input: ICreateAiBranchRequestDto,
+  ): Promise<ICreateAiBranchResponseDto> {
+    return await this.transport.post<ICreateAiBranchResponseDto>(
+      `${AI_SESSION_API_PATH}/${sessionId}/branches`,
+      input,
+    );
+  }
+
   async streamMessage(
     sessionId: string,
     timelineId: string,
     input: IGenerateAiSessionTurnRequestDto,
-    onChunk: (chunk: IAiSseEventDto) => void,
+    onChunk: (chunk: IAiSessionStreamEvent) => void,
     options?: IAiSessionStreamOptions,
   ): Promise<void> {
-    await this.transport.postSse<IAiSseEventDto>(
+    await this.transport.postSse<IAiSessionStreamEvent>(
       `${AI_SESSION_API_PATH}/${sessionId}/timelines/${timelineId}/generate`,
+      input,
+      onChunk,
+      {
+        signal: options?.signal,
+      },
+    );
+  }
+
+  async regenerateAssistant(
+    sessionId: string,
+    timelineId: string,
+    input: IRegenerateAiAssistantRequestDto,
+    onChunk: (chunk: IAiSessionStreamEvent) => void,
+    options?: IAiSessionStreamOptions,
+  ): Promise<void> {
+    await this.transport.postSse<IAiSessionStreamEvent>(
+      `${AI_SESSION_API_PATH}/${sessionId}/timelines/${timelineId}/regenerate-assistant`,
+      input,
+      onChunk,
+      {
+        signal: options?.signal,
+      },
+    );
+  }
+
+  async editUserAndRegenerate(
+    sessionId: string,
+    timelineId: string,
+    input: IEditAiUserAndRegenerateRequestDto,
+    onChunk: (chunk: IAiSessionStreamEvent) => void,
+    options?: IAiSessionStreamOptions,
+  ): Promise<void> {
+    await this.transport.postSse<IAiSessionStreamEvent>(
+      `${AI_SESSION_API_PATH}/${sessionId}/timelines/${timelineId}/edit-user-and-regenerate`,
       input,
       onChunk,
       {

@@ -1,9 +1,15 @@
 import type {
+  ICreateAiBranchRequestDto,
+  ICreateAiBranchResponseDto,
+  ICreateAiMessageFeedbackRequestDto,
+  IAiSessionMessageFeedbackResponseDto,
   IAiSessionGraphDto,
   IAiSessionResponseDto,
-  IAiSseEventDto,
+  IAiSessionStreamEvent,
   ICreateAiSessionRequestDto,
+  IEditAiUserAndRegenerateRequestDto,
   IGenerateAiSessionTurnRequestDto,
+  IRegenerateAiAssistantRequestDto,
   IUpdateAiSessionRequestDto,
 } from "../../domain/types/ai-session-sdk-types.js";
 
@@ -23,11 +29,34 @@ export interface IAiSessionTransport {
     sessionId: string,
     timelineId?: string,
   ): Promise<IAiSessionGraphDto>;
+  createFeedback(
+    sessionId: string,
+    messageId: string,
+    input: ICreateAiMessageFeedbackRequestDto,
+  ): Promise<IAiSessionMessageFeedbackResponseDto>;
+  createBranch(
+    sessionId: string,
+    input: ICreateAiBranchRequestDto,
+  ): Promise<ICreateAiBranchResponseDto>;
   streamMessage(
     sessionId: string,
     timelineId: string,
     input: IGenerateAiSessionTurnRequestDto,
-    onChunk: (chunk: IAiSseEventDto) => void,
+    onChunk: (chunk: IAiSessionStreamEvent) => void,
+    options?: IAiSessionStreamOptions,
+  ): Promise<void>;
+  regenerateAssistant(
+    sessionId: string,
+    timelineId: string,
+    input: IRegenerateAiAssistantRequestDto,
+    onChunk: (chunk: IAiSessionStreamEvent) => void,
+    options?: IAiSessionStreamOptions,
+  ): Promise<void>;
+  editUserAndRegenerate(
+    sessionId: string,
+    timelineId: string,
+    input: IEditAiUserAndRegenerateRequestDto,
+    onChunk: (chunk: IAiSessionStreamEvent) => void,
     options?: IAiSessionStreamOptions,
   ): Promise<void>;
 }

@@ -3,10 +3,15 @@
 import { DestroyRef, Injectable, computed, inject, signal } from '@angular/core';
 import { appEnv } from '../../../core/app-env';
 import { AiSessionService } from './ai-session.service';
-import type { IChatComposerAttachment } from '../chat/chat-message.types';
+import type {
+  IChatComposerAttachment,
+  IUiChatMessage,
+  IUiChatMessageFeedbackValue,
+} from '../chat/chat-message.types';
 import type {
   IAiSessionClientState,
   IAiSessionResponse,
+  IAiSessionUiMessage,
   IAiSessionUiAttachment,
 } from './ai-session-types';
 
@@ -114,5 +119,28 @@ export class AiSessionStore {
 
   setCurrentModel(value: string): void {
     this.workspace.setCurrentModel(value);
+  }
+
+  beginEditMessage(message: IUiChatMessage): void {
+    this.workspace.beginEditMessage(message as IAiSessionUiMessage);
+  }
+
+  cancelEditMessage(): void {
+    this.workspace.cancelEditMessage();
+  }
+
+  async submitFeedback(
+    message: IUiChatMessage,
+    rating: IUiChatMessageFeedbackValue,
+  ): Promise<void> {
+    await this.workspace.submitFeedback(message as IAiSessionUiMessage, rating);
+  }
+
+  async branchFromMessage(message: IUiChatMessage): Promise<void> {
+    await this.workspace.branchFromMessage(message as IAiSessionUiMessage);
+  }
+
+  async regenerateAssistantMessage(message: IUiChatMessage): Promise<void> {
+    await this.workspace.regenerateAssistantMessage(message as IAiSessionUiMessage);
   }
 }

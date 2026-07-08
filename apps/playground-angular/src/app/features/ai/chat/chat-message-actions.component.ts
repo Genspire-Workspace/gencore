@@ -7,13 +7,14 @@ import type {
   IUiChatMessageFeedbackValue,
 } from './chat-message.types';
 import { toUiChatContentParts } from './chat-content-parts';
+import { IconComponent } from '../../../icons/icon.component';
 
 @Component({
   selector: 'app-ai-chat-message-actions',
   host: {
     class: 'block',
   },
-  imports: [CommonModule],
+  imports: [CommonModule, IconComponent],
   template: `
     @if (visibleActions().length > 0) {
       <div
@@ -22,27 +23,31 @@ import { toUiChatContentParts } from './chat-content-parts';
       >
         @if (canCopy()) {
           <button
-            class="rounded-full border border-base-300 px-3 py-1 text-[11px] font-medium text-base-content/70 transition hover:border-base-content/30 hover:bg-base-200 hover:text-base-content"
+            class="inline-flex items-center gap-1 rounded-full border border-base-300 px-3 py-1 text-[11px] font-medium text-base-content/70 transition hover:border-base-content/30 hover:bg-base-200 hover:text-base-content"
             type="button"
             (click)="copyMessage()"
           >
-            {{ copied() ? 'Copied' : 'Copy' }}
+            <app-icon
+              [iconName]="copied() ? 'check' : 'content_copy'"
+              size="sm"
+              aria-hidden="true"
+            />
           </button>
         }
 
         @if (canEdit()) {
           <button
-            class="rounded-full border border-base-300 px-3 py-1 text-[11px] font-medium text-base-content/70 transition hover:border-base-content/30 hover:bg-base-200 hover:text-base-content"
+            class="inline-flex items-center gap-1 rounded-full border border-base-300 px-3 py-1 text-[11px] font-medium text-base-content/70 transition hover:border-base-content/30 hover:bg-base-200 hover:text-base-content"
             type="button"
             (click)="edit.emit({ message: message() })"
           >
-            Edit
+            <app-icon iconName="edit" size="sm" aria-hidden="true" />
           </button>
         }
 
         @if (canFeedback()) {
           <button
-            class="rounded-full border px-3 py-1 text-[11px] font-medium transition"
+            class="inline-flex items-center gap-1 rounded-full border px-3 py-1 text-[11px] font-medium transition"
             type="button"
             [ngClass]="{
               'border-success bg-success/10 text-success': feedbackValue() === 'good',
@@ -50,39 +55,39 @@ import { toUiChatContentParts } from './chat-content-parts';
             }"
             (click)="emitFeedback('good')"
           >
-            Like
+            <app-icon iconName="thumb_up" size="sm" aria-hidden="true" />
           </button>
 
           <button
-            class="rounded-full border px-3 py-1 text-[11px] font-medium transition"
+            class="inline-flex items-center gap-1 rounded-full border px-3 py-1 text-[11px] font-medium transition"
             type="button"
             [ngClass]="{
-              'border-error bg-error/10 text-error': feedbackValue() === 'bad',
+              'border-danger bg-danger/10 text-danger': feedbackValue() === 'bad',
               'border-base-300 text-base-content/70': feedbackValue() !== 'bad',
             }"
             (click)="emitFeedback('bad')"
           >
-            Dislike
+            <app-icon iconName="thumb_down" size="sm" aria-hidden="true" />
           </button>
         }
 
         @if (canRegenerate()) {
           <button
-            class="rounded-full border border-base-300 px-3 py-1 text-[11px] font-medium text-base-content/70 transition hover:border-base-content/30 hover:bg-base-200 hover:text-base-content"
+            class="inline-flex items-center gap-1 rounded-full border border-base-300 px-3 py-1 text-[11px] font-medium text-base-content/70 transition hover:border-base-content/30 hover:bg-base-200 hover:text-base-content"
             type="button"
             (click)="regenerate.emit({ message: message() })"
           >
-            Regenerate
+            <app-icon iconName="refresh" size="sm" aria-hidden="true" />
           </button>
         }
 
         @if (canBranch()) {
           <button
-            class="rounded-full border border-base-300 px-3 py-1 text-[11px] font-medium text-base-content/70 transition hover:border-base-content/30 hover:bg-base-200 hover:text-base-content"
+            class="inline-flex items-center gap-1 rounded-full border border-base-300 px-3 py-1 text-[11px] font-medium text-base-content/70 transition hover:border-base-content/30 hover:bg-base-200 hover:text-base-content"
             type="button"
             (click)="branch.emit({ message: message() })"
           >
-            Branch
+            <app-icon iconName="account_tree" size="sm" aria-hidden="true" />
           </button>
         }
       </div>

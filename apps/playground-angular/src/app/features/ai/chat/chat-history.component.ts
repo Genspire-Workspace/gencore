@@ -1,9 +1,13 @@
 // file: apps\playground-angular\src\app\features\ai\chat\chat-history.component.ts
 
-import { Component, input } from '@angular/core';
+import { Component, input, output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ChatMessageBubbleComponent } from './chat-message-bubble.component';
-import type { IUiChatMessage } from './chat-message.types';
+import type {
+  IUiChatMessage,
+  IUiChatMessageActionEvent,
+  IUiChatMessageFeedbackEvent,
+} from './chat-message.types';
 
 @Component({
   selector: 'app-ai-chat-history',
@@ -22,7 +26,13 @@ import type { IUiChatMessage } from './chat-message.types';
       <div class="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto pr-2">
         @for (message of messages(); track message.id) {
           <div class="flex w-full">
-            <app-ai-chat-message-bubble [message]="message" />
+            <app-ai-chat-message-bubble
+              [message]="message"
+              (edit)="edit.emit($event)"
+              (feedback)="feedback.emit($event)"
+              (regenerate)="regenerate.emit($event)"
+              (branch)="branch.emit($event)"
+            />
           </div>
         }
       </div>
@@ -32,4 +42,8 @@ import type { IUiChatMessage } from './chat-message.types';
 export class ChatHistoryComponent {
   readonly messages = input.required<IUiChatMessage[]>();
   readonly loading = input(false);
+  readonly edit = output<IUiChatMessageActionEvent>();
+  readonly feedback = output<IUiChatMessageFeedbackEvent>();
+  readonly regenerate = output<IUiChatMessageActionEvent>();
+  readonly branch = output<IUiChatMessageActionEvent>();
 }

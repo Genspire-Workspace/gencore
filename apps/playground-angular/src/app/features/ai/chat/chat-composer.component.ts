@@ -4,6 +4,7 @@ import { Component, effect, ElementRef, input, model, output, viewChild } from '
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import type { IChatComposerAttachment } from './chat-message.types';
+import { IconComponent } from '../../../icons/icon.component';
 
 const CHAT_COMPOSER_ACCEPT =
   'image/*,.txt,.md,.markdown,.json,.jsonc,.csv,.ts,.tsx,.js,.jsx,.mjs,.cjs,.html,.css,.scss,.less,.py,.java,.cs,.go,.rs,.sh,.bash,.zsh,.ps1,.sql,.yml,.yaml,.xml,.svg';
@@ -13,7 +14,7 @@ const CHAT_COMPOSER_ACCEPT =
   host: {
     class: 'block',
   },
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, IconComponent],
   template: `
     <form class="flex flex-col gap-3 rounded-3xl border border-base-300 bg-base-100 p-3" (ngSubmit)="onSubmit()">
       <textarea
@@ -41,7 +42,7 @@ const CHAT_COMPOSER_ACCEPT =
                 (click)="removeAttachment(attachment.id)"
                 aria-label="Remove attachment"
               >
-                x
+                <app-icon iconName="close" size="sm" aria-hidden="true" />
               </button>
             </div>
           }
@@ -60,25 +61,29 @@ const CHAT_COMPOSER_ACCEPT =
 
       <div class="flex items-center justify-between gap-3 px-2 pt-3">
         <button
-          class="inline-flex h-12 w-12 items-center justify-center rounded-2xl border border-base-300 bg-base-100 text-xl leading-none text-base-content transition hover:border-base-content/30 hover:bg-base-200 disabled:cursor-not-allowed disabled:opacity-50"
+          class="inline-flex h-12 w-12 items-center justify-center rounded-2xl border border-base-300 bg-base-100 leading-none text-base-content transition hover:border-base-content/30 hover:bg-base-200 disabled:cursor-not-allowed disabled:opacity-50"
           type="button"
           [disabled]="sending()"
           (click)="fileInput.click()"
           aria-label="Attach files"
         >
-          📎
+          <app-icon iconName="attach_file" size="md" aria-hidden="true" />
         </button>
 
         <button
           [class]="
             sending()
-              ? 'inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-error text-xl leading-none text-error-content transition hover:bg-error/80 disabled:cursor-not-allowed'
-              : 'inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-primary text-xl leading-none text-primary-content transition hover:bg-primary/80 disabled:cursor-not-allowed disabled:bg-base-300'
+              ? 'inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-danger leading-none text-danger-content transition hover:bg-danger/80 disabled:cursor-not-allowed'
+              : 'inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-primary leading-none text-primary-content transition hover:bg-primary/80 disabled:cursor-not-allowed disabled:bg-base-300'
           "
           type="submit"
           [disabled]="!sending() && !canSubmit()"
         >
-          {{ sending() ? '🛑' : '📤' }}
+          <app-icon
+            [iconName]="sending() ? 'stop' : 'send'"
+            size="md"
+            aria-hidden="true"
+          />
         </button>
       </div>
     </form>

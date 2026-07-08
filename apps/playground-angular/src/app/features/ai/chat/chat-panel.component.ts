@@ -4,7 +4,12 @@ import { Component, input, model, output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ChatHistoryComponent } from './chat-history.component';
 import { ChatComposerComponent } from './chat-composer.component';
-import type { IChatComposerAttachment, IUiChatMessage } from './chat-message.types';
+import type {
+  IChatComposerAttachment,
+  IUiChatMessage,
+  IUiChatMessageActionEvent,
+  IUiChatMessageFeedbackEvent,
+} from './chat-message.types';
 
 @Component({
   selector: 'app-ai-chat-panel',
@@ -26,7 +31,14 @@ import type { IChatComposerAttachment, IUiChatMessage } from './chat-message.typ
     </div>
 
     <div class="mt-6 flex min-h-0 flex-1 flex-col overflow-hidden">
-      <app-ai-chat-history [messages]="messages()" [loading]="loading()" />
+      <app-ai-chat-history
+        [messages]="messages()"
+        [loading]="loading()"
+        (edit)="edit.emit($event)"
+        (feedback)="feedback.emit($event)"
+        (regenerate)="regenerate.emit($event)"
+        (branch)="branch.emit($event)"
+      />
 
       <div class="mt-6">
         <app-ai-chat-composer
@@ -51,4 +63,8 @@ export class ChatPanelComponent {
 
   readonly send = output<void>();
   readonly cancel = output<void>();
+  readonly edit = output<IUiChatMessageActionEvent>();
+  readonly feedback = output<IUiChatMessageFeedbackEvent>();
+  readonly regenerate = output<IUiChatMessageActionEvent>();
+  readonly branch = output<IUiChatMessageActionEvent>();
 }

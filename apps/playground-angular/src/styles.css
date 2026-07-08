@@ -44,8 +44,8 @@
       - base-300: borders/inputs
       - base-content: foreground
     */
-    --color-base: #fafafa;
-    --color-base-100: #ffffff;
+    --color-base: #ffffff;
+    --color-base-100: #fafafa;
     --color-base-200: #f4f4f5;
     --color-base-300: #e4e4e7;
     --color-base-content: #09090b;
@@ -178,4 +178,29 @@
     background-color: color-mix(in oklab, var(--color-primary) 25%, transparent);
     color: var(--color-base-content);
   }
+}
+
+/*
+  Material Symbols (Google Icons) variable font configuration.
+  Loaded via <link> in index.html. These axes tune the default look.
+*/
+.material-symbols-rounded {
+  font-family: 'Material Symbols Rounded';
+  font-weight: normal;
+  font-style: normal;
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-feature-settings: 'liga';
+  -webkit-font-smoothing: antialiased;
+  font-variation-settings:
+    'FILL' 0,
+    'wght' 400,
+    'GRAD' 0,
+    'opsz' 24;
 }

@@ -1,11 +1,13 @@
 // file: apps/playground-angular/src/app/features/theme/theme-toggle.component.ts
 
 import { Component, computed, inject } from '@angular/core';
+import { IconComponent } from '../icons/icon.component';
 import { ThemeService } from './theme.service';
 
 @Component({
   selector: 'app-theme-toggle',
   standalone: true,
+  imports: [IconComponent],
   template: `
     <button
       type="button"
@@ -14,9 +16,11 @@ import { ThemeService } from './theme.service';
       [attr.aria-label]="ariaLabel()"
       [attr.title]="ariaLabel()"
     >
-      <span aria-hidden="true">
-        {{ icon() }}
-      </span>
+      <app-icon
+        [iconName]="iconName()"
+        size="sm"
+        aria-hidden="true"
+      />
 
       <span>
         {{ label() }}
@@ -31,8 +35,8 @@ export class ThemeToggleComponent {
     this.themeService.theme() === 'dark' ? 'Light theme' : 'Dark theme',
   );
 
-  protected readonly icon = computed(() =>
-    this.themeService.theme() === 'dark' ? '☀️' : '🌙',
+  protected readonly iconName = computed(() =>
+    this.themeService.theme() === 'dark' ? 'light_mode' : 'dark_mode',
   );
 
   protected readonly ariaLabel = computed(() =>

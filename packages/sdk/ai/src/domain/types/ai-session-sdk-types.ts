@@ -5,15 +5,23 @@ import type {
 import type {
   IAiChatGenerateRequestDto,
   IAiChatGenerateResponseDto,
+  ICreateAiBranchRequestDto,
+  ICreateAiBranchResponseDto,
+  ICreateAiMessageFeedbackRequestDto,
   IAiEmbeddingGenerateRequestDto,
   IAiEmbeddingGenerateResponseDto,
   IAiSseEventDto,
+  IAiSessionBranchResponseDto,
   IAiSessionGraphDto,
   IAiSessionListResponseDto,
+  IAiSessionMessageFeedbackResponseDto,
+  IAiSessionMessageResponseDto,
   IAiSessionResponseDto,
   IAiSessionTimelineResponseDto,
+  IEditAiUserAndRegenerateRequestDto,
   ICreateAiSessionRequestDto,
   IGenerateAiSessionTurnRequestDto,
+  IRegenerateAiAssistantRequestDto,
   IUpdateAiSessionRequestDto,
 } from "@genspire/ai/server/contracts";
 
@@ -22,15 +30,23 @@ export type {
   AiMessageContent,
   IAiChatGenerateRequestDto,
   IAiChatGenerateResponseDto,
+  ICreateAiBranchRequestDto,
+  ICreateAiBranchResponseDto,
+  ICreateAiMessageFeedbackRequestDto,
   IAiEmbeddingGenerateRequestDto,
   IAiEmbeddingGenerateResponseDto,
   IAiSseEventDto,
+  IAiSessionBranchResponseDto,
   IAiSessionGraphDto,
   IAiSessionListResponseDto,
+  IAiSessionMessageFeedbackResponseDto,
+  IAiSessionMessageResponseDto,
   IAiSessionResponseDto,
   IAiSessionTimelineResponseDto,
+  IEditAiUserAndRegenerateRequestDto,
   ICreateAiSessionRequestDto,
   IGenerateAiSessionTurnRequestDto,
+  IRegenerateAiAssistantRequestDto,
   IUpdateAiSessionRequestDto,
 };
 
@@ -39,6 +55,12 @@ export type IAiGenerateResponse = IAiChatGenerateResponseDto;
 export type IAiGenerateStreamChunk = IAiSseEventDto;
 export type IAiEmbeddingRequest = IAiEmbeddingGenerateRequestDto;
 export type IAiEmbeddingResponse = IAiEmbeddingGenerateResponseDto;
+export type IAiSessionMessageFeedbackValue = "good" | "bad";
+
+export interface IAiSessionStreamEvent extends IAiSseEventDto {
+  timeline?: IAiSessionTimelineResponseDto;
+  branch?: IAiSessionBranchResponseDto;
+}
 
 export interface IAiSessionAttachment {
   id: string;
@@ -50,10 +72,34 @@ export interface IAiSessionAttachment {
 
 export interface IAiSessionViewMessage {
   id: string;
+  messageId: string;
+  sessionId: string;
+  timelineId: string;
+  turnId: string;
+  index: number;
   role: "system" | "user" | "assistant" | "tool";
   content: AiMessageContent;
   name?: string;
   pending?: boolean;
+  feedback?: IAiSessionMessageFeedbackValue | null;
+  actions?: IAiSessionViewMessageActions;
+  metadata?: Record<string, unknown>;
+}
+
+export interface IAiSessionViewMessageActions {
+  copy?: boolean;
+  edit?: boolean;
+  feedback?: boolean;
+  regenerate?: boolean;
+  branch?: boolean;
+}
+
+export interface IAiSessionEditingDraft {
+  messageId: string;
+  turnId: string;
+  sessionId: string;
+  timelineId: string;
+  originalContent: AiMessageContent;
 }
 
 export interface IAiSessionClientState {
@@ -63,6 +109,7 @@ export interface IAiSessionClientState {
   messages: IAiSessionViewMessage[];
   prompt: string;
   attachments: IAiSessionAttachment[];
+  editingDraft: IAiSessionEditingDraft | null;
   provider: string;
   model: string;
   loading: boolean;

@@ -3,9 +3,13 @@ import type {
   IAiSessionActiveSessionStore,
   IAiSessionAttachment,
   IAiSessionClientState,
+  IAiSessionEditingDraft,
   IAiSessionGraphDto,
+  IAiSessionMessageFeedbackValue,
   IAiSessionResponseDto,
+  IAiSessionStreamEvent,
   IAiSessionViewMessage,
+  IAiSessionViewMessageActions,
   IAiSessionWorkspaceOptions,
   IAiSessionWorkspaceSnapshot,
 } from "../../domain/types/ai-session-sdk-types.js";
@@ -292,23 +296,45 @@ export class AiSessionWorkspaceManager {
     }
 
     const content = this.buildUserMessageContent(prompt, attachments);
+    const editingDraft = state.editingDraft;
     const userMessage: IAiSessionViewMessage = {
       id: `local-user-${Date.now()}`,
+      messageId: `local-user-${Date.now()}`,
+      sessionId: session.id,
+      timelineId,
+      turnId: editingDraft?.turnId ?? `local-user-turn-${Date.now()}`,
+      index: editingDraft ? -2 : -1,
       role: "user",
       content,
+      actions: this.defaultActionsForRole("user"),
     };
     const assistantMessage: IAiSessionViewMessage = {
       id: `local-assistant-${Date.now()}`,
+      messageId: `local-assistant-${Date.now()}`,
+      sessionId: session.id,
+      timelineId,
+      turnId: `local-assistant-turn-${Date.now()}`,
+      index: -1,
       role: "assistant",
       content: "",
       pending: true,
+      actions: this.defaultActionsForRole("assistant"),
     };
 
     this.patchSessionState(targetId, (current) => ({
       ...(current ?? this.createSessionState(targetId)),
-      messages: [...(current?.messages ?? []), userMessage, assistantMessage],
+      messages: editingDraft
+        ? [
+            ...(current?.messages ?? []).filter(
+              (message) => message.turnId !== editingDraft.turnId,
+            ),
+            userMessage,
+            assistantMessage,
+          ]
+        : [...(current?.messages ?? []), userMessage, assistantMessage],
       prompt: "",
       attachments: [],
+      editingDraft: null,
     }));
 
     let assembly = createAiSessionStreamAssembly();
@@ -318,61 +344,86 @@ export class AiSessionWorkspaceManager {
       activeStreamController: streamController,
     }));
     const expectedMessageCount = state.messages.length + 2;
+    let streamedTimelineId = timelineId;
 
     try {
-      await this.transport.streamMessage(
-        session.id,
-        timelineId,
-        {
-          content,
-          provider: state.provider.trim() || undefined,
-          model: state.model.trim() || undefined,
-          settings: {
-            reasoningEffort: "none",
-          },
-          metadata: {
-            source: this.source,
-          },
+      const streamInput = {
+        provider: state.provider.trim() || undefined,
+        model: state.model.trim() || undefined,
+        settings: {
+          reasoningEffort: "none" as const,
         },
-        (chunk) => {
-          assembly = applyAiSessionStreamChunk(assembly, chunk);
+        metadata: {
+          source: this.source,
+        },
+      };
 
-          let streamStatus = "Streaming assistant reply...";
-          if (chunk.type === "heartbeat") {
-            streamStatus = `Streaming... ${
-              this.readHeartbeatToolName(chunk.metadata) ?? "waiting for provider"
-            } (${Math.floor((chunk.elapsedMs ?? 0) / 1000)}s)`;
-          } else if (chunk.type === "completed") {
-            streamStatus = "Stream finished. Reloading saved history...";
-          } else if (chunk.type === "error") {
-            streamStatus = "Stream returned an error.";
-          }
+      const onChunk = (chunk: IAiSessionStreamEvent) => {
+        assembly = applyAiSessionStreamChunk(assembly, chunk);
+        streamedTimelineId = this.readStartedTimelineId(chunk) ?? streamedTimelineId;
 
-          const assistantText = resolveAiSessionAssistantText(assembly);
-          this.patchSessionState(targetId, (current) => ({
-            ...(current ?? this.createSessionState(targetId)),
-            streamStatus,
-            messages: (current?.messages ?? []).map((message) =>
-              message.id === assistantMessage.id
-                ? {
-                    ...message,
-                    content: assistantText,
-                    pending: !assembly.finished,
-                  }
-                : message,
-            ),
-          }));
-        },
-        {
-          signal: streamController.signal,
-        },
-      );
+        let streamStatus = "Streaming assistant reply...";
+        if (chunk.type === "heartbeat") {
+          streamStatus = `Streaming... ${
+            this.readHeartbeatToolName(chunk.metadata) ?? "waiting for provider"
+          } (${Math.floor((chunk.elapsedMs ?? 0) / 1000)}s)`;
+        } else if (chunk.type === "completed") {
+          streamStatus = "Stream finished. Reloading saved history...";
+        } else if (chunk.type === "error") {
+          streamStatus = "Stream returned an error.";
+        }
+
+        this.patchSessionState(targetId, (current) => ({
+          ...(current ?? this.createSessionState(targetId)),
+          activeTimelineId: streamedTimelineId,
+          streamStatus,
+          messages: (current?.messages ?? []).map((message) =>
+            message.id === assistantMessage.id
+              ? {
+                  ...message,
+                  timelineId: streamedTimelineId,
+                  content: resolveAiSessionAssistantText(assembly),
+                  pending: !assembly.finished,
+                }
+              : message,
+          ),
+        }));
+      };
+
+      if (editingDraft) {
+        await this.transport.editUserAndRegenerate(
+          session.id,
+          timelineId,
+          {
+            sourceTurnId: editingDraft.turnId,
+            content,
+            ...streamInput,
+          },
+          onChunk,
+          {
+            signal: streamController.signal,
+          },
+        );
+      } else {
+        await this.transport.streamMessage(
+          session.id,
+          timelineId,
+          {
+            content,
+            ...streamInput,
+          },
+          onChunk,
+          {
+            signal: streamController.signal,
+          },
+        );
+      }
 
       if (assembly.error) {
         throw new Error(assembly.error);
       }
 
-      await this.refreshSessionGraph(targetId, timelineId);
+      await this.refreshSessionGraph(targetId, streamedTimelineId);
       await this.reloadSessionListInternal();
       this.patchSessionState(targetId, (current) => ({
         ...(current ?? this.createSessionState(targetId)),
@@ -402,7 +453,7 @@ export class AiSessionWorkspaceManager {
       if (stopped) {
         await this.refreshSessionGraphUntil(
           targetId,
-          timelineId,
+          streamedTimelineId,
           expectedMessageCount,
         );
         await this.reloadSessionListInternal();
@@ -479,6 +530,190 @@ export class AiSessionWorkspaceManager {
       ...(current ?? this.createSessionState(targetSessionId)),
       model: value,
     }));
+  }
+
+  beginEditMessage(message: IAiSessionViewMessage, sessionId?: string): void {
+    const targetSessionId = sessionId ?? this.snapshot.selectedSessionId;
+    if (!targetSessionId || message.role !== "user") {
+      return;
+    }
+
+    this.patchSessionState(targetSessionId, (current) => ({
+      ...(current ?? this.createSessionState(targetSessionId)),
+      prompt: this.readContentText(message.content),
+      attachments: [],
+      editingDraft: {
+        messageId: message.messageId,
+        turnId: message.turnId,
+        sessionId: message.sessionId,
+        timelineId: message.timelineId,
+        originalContent: message.content,
+      },
+    }));
+  }
+
+  cancelEditMessage(sessionId?: string): void {
+    const targetSessionId = sessionId ?? this.snapshot.selectedSessionId;
+    if (!targetSessionId) {
+      return;
+    }
+
+    this.patchSessionState(targetSessionId, (current) => ({
+      ...(current ?? this.createSessionState(targetSessionId)),
+      editingDraft: null,
+    }));
+  }
+
+  async submitFeedback(
+    message: IAiSessionViewMessage,
+    rating: IAiSessionMessageFeedbackValue,
+    sessionId?: string,
+  ): Promise<void> {
+    const targetSessionId = sessionId ?? this.snapshot.selectedSessionId ?? message.sessionId;
+    if (!targetSessionId || message.role !== "assistant") {
+      return;
+    }
+
+    await this.transport.createFeedback(targetSessionId, message.messageId, {
+      rating,
+      metadata: {
+        source: this.source,
+      },
+    });
+    await this.refreshSessionGraph(targetSessionId, message.timelineId);
+  }
+
+  async branchFromMessage(
+    message: IAiSessionViewMessage,
+    sessionId?: string,
+  ): Promise<void> {
+    const targetSessionId = sessionId ?? this.snapshot.selectedSessionId ?? message.sessionId;
+    if (!targetSessionId) {
+      return;
+    }
+
+    const result = await this.transport.createBranch(targetSessionId, {
+      sourceTimelineId: message.timelineId,
+      sourceTurnId: message.turnId,
+      reason: "manual_branch",
+      metadata: {
+        source: this.source,
+      },
+    });
+
+    this.patchSessionState(targetSessionId, (current) => ({
+      ...(current ?? this.createSessionState(targetSessionId)),
+      activeTimelineId: result.timeline.id,
+    }));
+    await this.refreshSessionGraph(targetSessionId, result.timeline.id);
+    await this.reloadSessionListInternal();
+  }
+
+  async regenerateAssistantMessage(
+    message: IAiSessionViewMessage,
+    sessionId?: string,
+  ): Promise<void> {
+    const targetSessionId = sessionId ?? this.snapshot.selectedSessionId ?? message.sessionId;
+    if (!targetSessionId || message.role !== "assistant") {
+      return;
+    }
+
+    const state = this.getSessionState(targetSessionId);
+    if (!state?.graph || state.sending) {
+      return;
+    }
+
+    const session = state.graph.session;
+    const timelineId = message.timelineId;
+    let assembly = createAiSessionStreamAssembly();
+    let streamedTimelineId = timelineId;
+    const streamController = new AbortController();
+
+    const assistantMessage: IAiSessionViewMessage = {
+      id: `local-regenerated-assistant-${Date.now()}`,
+      messageId: `local-regenerated-assistant-${Date.now()}`,
+      sessionId: targetSessionId,
+      timelineId,
+      turnId: `local-regenerated-turn-${Date.now()}`,
+      index: -1,
+      role: "assistant",
+      content: "",
+      pending: true,
+      actions: this.defaultActionsForRole("assistant"),
+    };
+
+    this.patchSessionState(targetSessionId, (current) => ({
+      ...(current ?? this.createSessionState(targetSessionId)),
+      sending: true,
+      error: "",
+      streamStatus: "Waiting for regeneration stream...",
+      activeStreamController: streamController,
+      messages: [...(current?.messages ?? []), assistantMessage],
+    }));
+
+    try {
+      await this.transport.regenerateAssistant(
+        session.id,
+        timelineId,
+        {
+          sourceTurnId: message.turnId,
+          provider: state.provider.trim() || undefined,
+          model: state.model.trim() || undefined,
+          settings: {
+            reasoningEffort: "none",
+          },
+          metadata: {
+            source: this.source,
+          },
+        },
+        (chunk) => {
+          assembly = applyAiSessionStreamChunk(assembly, chunk);
+          streamedTimelineId = this.readStartedTimelineId(chunk) ?? streamedTimelineId;
+
+          let streamStatus = "Streaming assistant regeneration...";
+          if (chunk.type === "completed") {
+            streamStatus = "Regeneration finished. Reloading saved history...";
+          } else if (chunk.type === "error") {
+            streamStatus = "Regeneration returned an error.";
+          }
+
+          this.patchSessionState(targetSessionId, (current) => ({
+            ...(current ?? this.createSessionState(targetSessionId)),
+            activeTimelineId: streamedTimelineId,
+            streamStatus,
+            messages: (current?.messages ?? []).map((item) =>
+              item.id === assistantMessage.id
+                ? {
+                    ...item,
+                    timelineId: streamedTimelineId,
+                    content: resolveAiSessionAssistantText(assembly),
+                    pending: !assembly.finished,
+                  }
+                : item,
+            ),
+          }));
+        },
+        {
+          signal: streamController.signal,
+        },
+      );
+
+      if (assembly.error) {
+        throw new Error(assembly.error);
+      }
+
+      await this.refreshSessionGraph(targetSessionId, streamedTimelineId);
+      await this.reloadSessionListInternal();
+    } finally {
+      this.patchSessionState(targetSessionId, (current) => ({
+        ...(current ?? this.createSessionState(targetSessionId)),
+        sending: false,
+        activeStreamController:
+          current?.activeStreamController === streamController
+            ? null
+            : current?.activeStreamController ?? null,
+      }));
+    }
   }
 
   private notify(): void {
@@ -558,6 +793,7 @@ export class AiSessionWorkspaceManager {
       messages: [],
       prompt: "",
       attachments: [],
+      editingDraft: null,
       provider: this.defaultProvider,
       model: this.defaultModel,
       loading: false,
@@ -641,11 +877,81 @@ export class AiSessionWorkspaceManager {
         .sort((left, right) => left.index - right.index)
         .map((message) => ({
           id: message.id,
+          messageId: message.id,
+          sessionId: graph.session.id,
+          timelineId,
+          turnId: message.turnId,
+          index: message.index,
           role: message.role,
           content: message.content,
           name: message.name,
+          feedback: this.findFeedbackRating(graph, message.id),
+          actions: this.defaultActionsForRole(message.role),
+          metadata: message.metadata,
         })),
     );
+  }
+
+  private findFeedbackRating(
+    graph: IAiSessionGraphDto,
+    messageId: string,
+  ): IAiSessionMessageFeedbackValue | null {
+    const feedback = graph.feedback.find((item) => item.messageId === messageId);
+    if (!feedback) {
+      return null;
+    }
+
+    return feedback.rating;
+  }
+
+  private defaultActionsForRole(
+    role: IAiSessionViewMessage["role"],
+  ): IAiSessionViewMessageActions {
+    if (role === "assistant") {
+      return {
+        copy: true,
+        feedback: true,
+        regenerate: true,
+        branch: true,
+      };
+    }
+
+    if (role === "user") {
+      return {
+        copy: true,
+        edit: true,
+        branch: true,
+      };
+    }
+
+    return {
+      copy: true,
+    };
+  }
+
+  private readStartedTimelineId(chunk: IAiSessionStreamEvent): string | null {
+    const timelineId = chunk.timeline?.id;
+    return typeof timelineId === "string" ? timelineId : null;
+  }
+
+  private readContentText(content: IAiSessionEditingDraft["originalContent"]): string {
+    if (typeof content === "string") {
+      return content;
+    }
+
+    if (Array.isArray(content)) {
+      return content
+        .map((part) => {
+          if (part && typeof part === "object" && "type" in part && part.type === "text" && "text" in part) {
+            return typeof part.text === "string" ? part.text : "";
+          }
+          return "";
+        })
+        .filter(Boolean)
+        .join("");
+    }
+
+    return "";
   }
 
   private syncSessionListEntry(session: IAiSessionResponseDto): void {

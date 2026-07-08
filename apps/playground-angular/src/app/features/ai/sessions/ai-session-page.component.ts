@@ -44,6 +44,10 @@ import { ChatPanelComponent } from '../chat/chat-panel.component';
           (attachmentsChange)="store.setCurrentAttachments($event)"
           (send)="store.sendMessage()"
           (cancel)="store.stopStreaming()"
+          (edit)="store.beginEditMessage($event.message)"
+          (feedback)="store.submitFeedback($event.message, $event.value)"
+          (regenerate)="store.regenerateAssistantMessage($event.message)"
+          (branch)="store.branchFromMessage($event.message)"
         />
       </div>
     </section>
