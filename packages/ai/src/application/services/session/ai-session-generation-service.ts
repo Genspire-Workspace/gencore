@@ -7,7 +7,9 @@ import type {
   IRegenerateAiAssistantMessageInput,
 } from "../../contracts/ai-session-contracts.js";
 import type { IChatGenerationChunk } from "../../../domain/chat/chat-generation-chunk.js";
+import type { IChatMessage } from "../../../domain/chat/chat-message.js";
 import type { IChatGenerationRequest } from "../../../domain/chat/chat-generation-request.js";
+import type { AiContentPart, AiMessageContent } from "../../../domain/messages/ai-content-part.js";
 import type {
   IAiSessionSettings,
   IAiSessionSseEvent,
@@ -20,6 +22,8 @@ import {
   AiSessionTimelineTurnEntity,
   AiSessionTurnEntity,
 } from "../../../domain/session/index.js";
+import { AiTokenizerService } from "../tokenizer/tokenizer-service.js";
+import { AiProviderDbContext } from "../../../infrastructure/persistence/ai-provider-db-context.js";
 import { AiSessionDbContext } from "../../../infrastructure/persistence/ai-session-db-context.js";
 import { AiGenerationService } from "../generation/ai-generation-service.js";
 import {
@@ -36,11 +40,8 @@ import {
   resolveModel,
   resolveProvider,
   resolveSystemPrompt,
-  toChatMessages,
-  toGenerationRunResponse,
   toMessageResponse,
   toTimelineResponse,
-  toTimelineTurnResponse,
   toToolDefinitions,
   validateSessionContent,
 } from "./shared.js";
@@ -65,10 +66,13 @@ type ReadNextChunkResult =
 
 @Scoped()
 export class AiSessionGenerationService {
-  static inject = [AiSessionDbContext, AiGenerationService];
+  static inject = [AiSessionDbContext, AiProviderDbContext, AiGenerationService];
+
+  private readonly tokenizer = new AiTokenizerService();
 
   constructor(
     private readonly db: AiSessionDbContext,
+    private readonly providerDb: AiProviderDbContext,
     private readonly generationService: AiGenerationService,
   ) {}
 
@@ -339,21 +343,34 @@ export class AiSessionGenerationService {
     await this.db.generationRuns.add(run);
     await this.db.saveChanges();
 
+    const provider = resolveProvider(session.settings ?? undefined, input.provider);
+    const model = resolveModel(session.settings ?? undefined, input.model);
+    const settings = resolveGenerationSettings(
+      session.settings ?? undefined,
+      input.settings,
+    );
+    const systemPrompt = resolveSystemPrompt(session.settings ?? undefined, input.systemPrompt);
+    const historyRequestMessages = await this.buildHistoryRequestMessages({
+      provider,
+      model,
+      settings,
+      systemPrompt,
+      historyMessages,
+      requestContent: input.content as IChatGenerationRequest["messages"][number]["content"],
+    });
+
     const request: IChatGenerationRequest = {
-      provider: resolveProvider(session.settings ?? undefined, input.provider),
-      model: resolveModel(session.settings ?? undefined, input.model),
-      settings: resolveGenerationSettings(
-        session.settings ?? undefined,
-        input.settings,
-      ),
+      provider,
+      model,
+      settings,
       messages: [
-        ...(resolveSystemPrompt(session.settings ?? undefined, input.systemPrompt)
+        ...(systemPrompt
           ? [{
             role: "system" as const,
-            content: resolveSystemPrompt(session.settings ?? undefined, input.systemPrompt)!,
+            content: systemPrompt,
           }]
           : []),
-        ...toChatMessages(historyMessages),
+        ...historyRequestMessages,
         {
           role: "user",
           content: input.content as IChatGenerationRequest["messages"][number]["content"],
@@ -373,6 +390,173 @@ export class AiSessionGenerationService {
       request,
       userMessage,
     };
+  }
+
+  private async buildHistoryRequestMessages(input: {
+    provider?: string;
+    model?: string;
+    settings?: IPreparedTurnContext["request"]["settings"];
+    systemPrompt?: string;
+    historyMessages: AiSessionMessageEntity[];
+    requestContent: IChatGenerationRequest["messages"][number]["content"];
+  }): Promise<IChatMessage[]> {
+    const textOnlyHistory = input.historyMessages
+      .map((message) => this.toTextOnlyHistoryMessage(message))
+      .filter((message): message is IChatMessage => message !== null);
+
+    const maxContextTokens = await this.resolveMaxContextTokens(input.provider, input.model, input.settings?.maxTokens);
+    if (!maxContextTokens) {
+      return textOnlyHistory;
+    }
+
+    const reservedTokens =
+      this.countMessageTokens(
+        { role: "user", content: input.requestContent },
+        input.model,
+        input.provider,
+      ) + (
+        input.systemPrompt
+          ? this.countMessageTokens(
+            { role: "system", content: input.systemPrompt },
+            input.model,
+            input.provider,
+          )
+          : 0
+      );
+
+    const remainingHistoryBudget = maxContextTokens - reservedTokens;
+    if (remainingHistoryBudget <= 0) {
+      return [];
+    }
+
+    const selected: IChatMessage[] = [];
+    let consumedTokens = 0;
+
+    for (let index = textOnlyHistory.length - 1; index >= 0; index -= 1) {
+      const message = textOnlyHistory[index]!;
+      const messageTokens = this.countMessageTokens(message, input.model, input.provider);
+      if (messageTokens <= 0) {
+        continue;
+      }
+
+      if (consumedTokens + messageTokens > remainingHistoryBudget) {
+        break;
+      }
+
+      consumedTokens += messageTokens;
+      selected.push(message);
+    }
+
+    return selected.reverse();
+  }
+
+  private async resolveMaxContextTokens(
+    providerId: string | undefined,
+    modelName: string | undefined,
+    sessionMaxTokens: number | undefined,
+  ): Promise<number | undefined> {
+    const modelMaxTokens = await this.resolveModelMaxInputTokens(providerId, modelName);
+    const candidates = [sessionMaxTokens, modelMaxTokens].filter(
+      (value): value is number => typeof value === "number" && Number.isFinite(value) && value > 0,
+    );
+
+    return candidates.length > 0 ? Math.max(...candidates) : undefined;
+  }
+
+  private async resolveModelMaxInputTokens(
+    providerId: string | undefined,
+    modelName: string | undefined,
+  ): Promise<number | undefined> {
+    const normalizedProviderId = providerId?.trim();
+    const normalizedModelName = modelName?.trim().toLowerCase();
+    if (!normalizedProviderId || !normalizedModelName) {
+      return undefined;
+    }
+
+    const models = await this.providerDb.models.list({
+      where: { providerId: normalizedProviderId },
+    });
+    const model = models.find((candidate) => candidate.name.trim().toLowerCase() === normalizedModelName);
+    const maxTokens = model?.capabilities?.maxTextInputTokens;
+
+    return typeof maxTokens === "number" && Number.isFinite(maxTokens) && maxTokens > 0
+      ? Math.floor(maxTokens)
+      : undefined;
+  }
+
+  private toTextOnlyHistoryMessage(message: AiSessionMessageEntity): IChatMessage | null {
+    const content = this.toTextOnlyHistoryContent(message.content as AiMessageContent);
+    if (!content) {
+      return null;
+    }
+
+    return {
+      role: message.role,
+      content,
+      ...(message.name ? { name: message.name } : {}),
+      ...(message.metadata ? { metadata: message.metadata } : {}),
+    };
+  }
+
+  private toTextOnlyHistoryContent(content: AiMessageContent): string | null {
+    if (typeof content === "string") {
+      const normalized = content.trim();
+      return normalized.length > 0 ? normalized : null;
+    }
+
+    const text = content
+      .flatMap((part) => this.collectTextParts(part))
+      .join("\n")
+      .trim();
+
+    return text.length > 0 ? text : null;
+  }
+
+  private collectTextParts(part: AiContentPart): string[] {
+    return part.type === "text" && part.text.trim().length > 0
+      ? [part.text]
+      : [];
+  }
+
+  private countMessageTokens(
+    message: IChatMessage,
+    model: string | undefined,
+    provider: string | undefined,
+  ): number {
+    return this.tokenizer.countTokens(this.serializeContentForTokenCount(message.content), {
+      model,
+      providerSelection: provider && model ? `${provider}:${model}` : undefined,
+    }).tokenCount;
+  }
+
+  private serializeContentForTokenCount(content: AiMessageContent): string {
+    if (typeof content === "string") {
+      return content;
+    }
+
+    return content
+      .map((part) => this.serializePartForTokenCount(part))
+      .filter((value) => value.length > 0)
+      .join(" ");
+  }
+
+  private serializePartForTokenCount(part: AiContentPart): string {
+    switch (part.type) {
+      case "text":
+        return part.text;
+      case "thinking":
+        return part.redacted ? "[redacted thinking]" : part.text;
+      case "tool_call":
+        return `${part.name}(${JSON.stringify(part.arguments ?? {})})`;
+      case "tool_result":
+        return this.serializeContentForTokenCount(part.content);
+      case "image":
+        return "[image]";
+      case "file":
+        return "[file]";
+      default:
+        return "";
+    }
   }
 
   private async *streamPreparedTurn(

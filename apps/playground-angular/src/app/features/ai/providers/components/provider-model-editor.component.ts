@@ -21,6 +21,8 @@ interface IAiModelCapabilitiesDraft {
   embeddings?: boolean;
   vision?: boolean;
   functionCalling?: boolean;
+  maxTextInputTokens?: number;
+  maxTextOutputTokens?: number;
   inputKinds?: string[];
   outputKinds?: string[];
 }
@@ -175,6 +177,21 @@ const KIND_META: Record<string, { icon: string; tooltip: string }> = {
                       </div>
                     }
                   </div>
+
+                  @if (hasTextInput()) {
+                    <label class="block space-y-2 border-t border-base-300 pt-3">
+                      <span class="text-xs font-medium text-base-content/60">Max Text Input Tokens</span>
+                      <input
+                        class="w-full rounded-2xl border border-base-300 bg-base px-4 py-2.5 text-sm text-base-content outline-none transition focus:border-primary"
+                        type="number"
+                        min="1"
+                        step="1"
+                        [ngModel]="maxTextInputTokens()"
+                        (ngModelChange)="maxTextInputTokens.set(normalizeTokenLimitValue($event))"
+                        placeholder="e.g. 131072"
+                      />
+                    </label>
+                  }
                 </div>
 
                 <div class="space-y-3 rounded-2xl border border-base-300 bg-base px-4 py-4">
@@ -238,6 +255,21 @@ const KIND_META: Record<string, { icon: string; tooltip: string }> = {
                       </div>
                     }
                   </div>
+
+                  @if (hasTextOutput()) {
+                    <label class="block space-y-2 border-t border-base-300 pt-3">
+                      <span class="text-xs font-medium text-base-content/60">Max Text Output Tokens</span>
+                      <input
+                        class="w-full rounded-2xl border border-base-300 bg-base px-4 py-2.5 text-sm text-base-content outline-none transition focus:border-primary"
+                        type="number"
+                        min="1"
+                        step="1"
+                        [ngModel]="maxTextOutputTokens()"
+                        (ngModelChange)="maxTextOutputTokens.set(normalizeTokenLimitValue($event))"
+                        placeholder="e.g. 8192"
+                      />
+                    </label>
+                  }
                 </div>
               </div>
 
@@ -300,6 +332,8 @@ export class ProviderModelEditorComponent {
   readonly modelFamily = model('');
   readonly modelInputKinds = signal<string[]>([]);
   readonly modelOutputKinds = signal<string[]>([]);
+  readonly maxTextInputTokens = model('');
+  readonly maxTextOutputTokens = model('');
   readonly newInputKind = model('');
   readonly newOutputKind = model('');
 
@@ -314,6 +348,8 @@ export class ProviderModelEditorComponent {
   protected readonly selectedModel = computed<IAiModelResponseDto | null>(() =>
     this.models().find((model) => model.id === this.selectedModelId()) ?? null,
   );
+  protected readonly hasTextInput = computed(() => this.modelInputKinds().includes('text'));
+  protected readonly hasTextOutput = computed(() => this.modelOutputKinds().includes('text'));
 
   protected readonly inputKindSuggestions = computed(() =>
     this.mergeSuggestions(
@@ -332,10 +368,13 @@ export class ProviderModelEditorComponent {
   );
 
   hydrate(model: IAiModelResponseDto | null): void {
+    const capabilities = this.readCapabilitiesFromModel(model);
     this.modelName.set(model?.name || '');
     this.modelFamily.set(model?.family || '');
     this.modelInputKinds.set(this.readModelKinds(model, 'inputKinds'));
     this.modelOutputKinds.set(this.readModelKinds(model, 'outputKinds'));
+    this.maxTextInputTokens.set(this.readOptionalIntegerString(capabilities?.maxTextInputTokens));
+    this.maxTextOutputTokens.set(this.readOptionalIntegerString(capabilities?.maxTextOutputTokens));
     this.newInputKind.set('');
     this.newOutputKind.set('');
     this.confirmDelete.set(false);
@@ -368,6 +407,12 @@ export class ProviderModelEditorComponent {
       embeddings: capabilities?.embeddings,
       vision: capabilities?.vision,
       functionCalling: capabilities?.functionCalling,
+      maxTextInputTokens: inputKinds.includes('text')
+        ? this.readPositiveInteger(this.maxTextInputTokens())
+        : undefined,
+      maxTextOutputTokens: outputKinds.includes('text')
+        ? this.readPositiveInteger(this.maxTextOutputTokens())
+        : undefined,
       inputKinds: inputKinds.length > 0 ? inputKinds : undefined,
       outputKinds: outputKinds.length > 0 ? outputKinds : undefined,
     };
@@ -396,6 +441,9 @@ export class ProviderModelEditorComponent {
 
   protected removeInputKind(kind: string): void {
     this.modelInputKinds.update((current) => current.filter((item) => item !== kind));
+    if (kind === 'text') {
+      this.maxTextInputTokens.set('');
+    }
   }
 
   protected toggleOutputKind(kind: string): void {
@@ -419,6 +467,9 @@ export class ProviderModelEditorComponent {
 
   protected removeOutputKind(kind: string): void {
     this.modelOutputKinds.update((current) => current.filter((item) => item !== kind));
+    if (kind === 'text') {
+      this.maxTextOutputTokens.set('');
+    }
   }
 
   protected requestDeleteModel(modelId: string): void {
@@ -445,6 +496,11 @@ export class ProviderModelEditorComponent {
     return capabilities as IAiModelCapabilitiesDraft;
   }
 
+  protected normalizeTokenLimitValue(value: string | number): string {
+    const parsed = this.readPositiveInteger(value);
+    return parsed !== undefined ? String(parsed) : '';
+  }
+
   private readModelKinds(
     model: IAiModelResponseDto | null,
     key: 'inputKinds' | 'outputKinds',
@@ -466,6 +522,21 @@ export class ProviderModelEditorComponent {
       [],
       value.filter((item): item is string => typeof item === 'string' && item.trim().length > 0),
     );
+  }
+
+  private readPositiveInteger(value: unknown): number | undefined {
+    const raw = typeof value === 'number' ? value : typeof value === 'string' ? Number(value.trim()) : Number.NaN;
+    if (!Number.isFinite(raw)) {
+      return undefined;
+    }
+
+    const normalized = Math.floor(raw);
+    return normalized > 0 ? normalized : undefined;
+  }
+
+  private readOptionalIntegerString(value: unknown): string {
+    const parsed = this.readPositiveInteger(value);
+    return parsed !== undefined ? String(parsed) : '';
   }
 
   private mergeSuggestions(...sources: readonly string[][]): string[] {

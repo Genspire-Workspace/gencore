@@ -32,6 +32,11 @@ import type {
 
 const MAX_TOKEN_OPTIONS = [1024, 2048, 4096, 8192, 16384, 32768, 65536, 131072] as const;
 
+interface IAiModelCapabilitiesView {
+  maxTextInputTokens?: number;
+  maxTextOutputTokens?: number;
+}
+
 @Component({
   selector: 'app-ai-session-config-form',
   host: {
@@ -88,6 +93,11 @@ const MAX_TOKEN_OPTIONS = [1024, 2048, 4096, 8192, 16384, 32768, 65536, 131072] 
           <p class="text-xs text-base-content/55">
             Quick selector across every available provider and model.
           </p>
+          @if (selectedModelTextLimitSummary()) {
+            <p class="text-xs text-base-content/55">
+              Text limits: {{ selectedModelTextLimitSummary() }}
+            </p>
+          }
         </label>
 
         <label class="block space-y-2">
@@ -281,6 +291,35 @@ export class SessionConfigFormComponent {
   protected readonly maxTokenSliderValue = computed(() => this.resolveMaxTokenIndex(this.maxTokens()));
   protected readonly temperatureDisplay = computed(() => this.temperatureSliderValue().toFixed(1));
   protected readonly topPDisplay = computed(() => this.topPSliderValue().toFixed(2));
+  protected readonly selectedModelCapabilities = computed<IAiModelCapabilitiesView | null>(() => {
+    const providerId = this.provider().trim();
+    const modelName = this.model().trim().toLowerCase();
+    if (!providerId || !modelName) {
+      return null;
+    }
+
+    const selectedModel = (this.modelsByProvider()[providerId] ?? []).find(
+      (candidate) => candidate.name.trim().toLowerCase() === modelName,
+    );
+
+    return this.readModelCapabilities(selectedModel ?? null);
+  });
+  protected readonly selectedModelTextLimitSummary = computed(() => {
+    const capabilities = this.selectedModelCapabilities();
+    if (!capabilities) {
+      return '';
+    }
+
+    const limits: string[] = [];
+    if (capabilities.maxTextInputTokens) {
+      limits.push(`Input ${this.formatTokenCount(capabilities.maxTextInputTokens)}`);
+    }
+    if (capabilities.maxTextOutputTokens) {
+      limits.push(`Output ${this.formatTokenCount(capabilities.maxTextOutputTokens)}`);
+    }
+
+    return limits.join(' | ');
+  });
   protected readonly maxTokensDisplay = computed(() =>
     new Intl.NumberFormat('en-US').format(MAX_TOKEN_OPTIONS[this.maxTokenSliderValue()]),
   );
@@ -497,6 +536,32 @@ export class SessionConfigFormComponent {
     }
 
     return closestIndex;
+  }
+
+  private readModelCapabilities(model: IAiModelResponseDto | null): IAiModelCapabilitiesView | null {
+    const capabilities = model?.capabilities;
+    if (!capabilities || typeof capabilities !== 'object') {
+      return null;
+    }
+
+    return {
+      maxTextInputTokens: this.readPositiveInteger(capabilities['maxTextInputTokens']),
+      maxTextOutputTokens: this.readPositiveInteger(capabilities['maxTextOutputTokens']),
+    };
+  }
+
+  private readPositiveInteger(value: unknown): number | undefined {
+    const parsed = typeof value === 'number' ? value : typeof value === 'string' ? Number(value.trim()) : Number.NaN;
+    if (!Number.isFinite(parsed)) {
+      return undefined;
+    }
+
+    const normalized = Math.floor(parsed);
+    return normalized > 0 ? normalized : undefined;
+  }
+
+  private formatTokenCount(value: number): string {
+    return new Intl.NumberFormat('en-US').format(value);
   }
 
   private readSettings(session: IAiSessionResponse): IAiSessionSettings {
