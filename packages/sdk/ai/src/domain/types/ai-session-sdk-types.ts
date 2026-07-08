@@ -1,7 +1,7 @@
 import type {
   AiContentPart,
   AiMessageContent,
-} from "@genspire/ai/domain";
+} from "@genspire/ai/domain/messages";
 import type {
   IAiChatGenerateRequestDto,
   IAiChatGenerateResponseDto,

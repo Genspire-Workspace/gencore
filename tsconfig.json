@@ -48,6 +48,7 @@
       "@genspire/storage/server/contracts": ["./packages/storage/src/server/contracts.ts"],
       "@genspire/ai": ["./packages/ai/src/index.ts"],
       "@genspire/ai/domain": ["./packages/ai/src/domain.ts"],
+      "@genspire/ai/domain/messages": ["./packages/ai/src/domain/messages/index.ts"],
       "@genspire/ai/application": ["./packages/ai/src/application.ts"],
       "@genspire/ai/providers": ["./packages/ai/src/providers.ts"],
       "@genspire/ai/server": ["./packages/ai/src/server.ts"],

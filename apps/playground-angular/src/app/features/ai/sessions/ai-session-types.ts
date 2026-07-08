@@ -1,14 +1,20 @@
 // file: apps\playground-angular\src\app\features\ai\sessions\ai-session-types.ts
 
 import type {
+  IAiSessionAttachment as IAiSdkSessionAttachment,
+  IAiSessionClientState as IAiSdkSessionClientState,
+  IAiSessionGraphDto,
+  IAiSessionResponseDto,
+  IAiSessionStreamOptions,
+  IAiSessionViewMessage as IAiSdkSessionViewMessage,
+} from '@genspire/sdk-ai';
+import type {
   IAiSessionBranchListResponseDto as IAiSessionBranchListContractDto,
   IAiSessionBranchResponseDto as IAiSessionBranchContractDto,
   IAiSessionMessageFeedbackResponseDto as IAiSessionMessageFeedbackContractDto,
   IAiSseEventDto,
-  IAiSessionGraphDto,
   IAiSessionListResponseDto,
   IAiSessionMessageResponseDto,
-  IAiSessionResponseDto,
   IAiSessionTimelineResponseDto,
   IAiSessionTimelineTurnItemDto,
   IAiSessionTimelineTurnListResponseDto,
@@ -40,23 +46,11 @@ export type IAiSessionCreateRequest = ICreateAiSessionRequestDto;
 export type IAiSessionUpdateRequest = IUpdateAiSessionRequestDto;
 export type IAiSessionMessageRequest = IGenerateAiSessionTurnRequestDto;
 export type IAiSessionStreamChunk = IAiSseEventDto;
-
-export interface IAiSessionStreamOptions {
-  signal?: AbortSignal;
+export type IAiSessionUiMessage = IAiSdkSessionViewMessage & IUiChatMessage;
+export type IAiSessionUiAttachment = IAiSdkSessionAttachment & IChatComposerAttachment;
+export interface IAiSessionClientState
+  extends Omit<IAiSdkSessionClientState, 'messages' | 'attachments'> {
+  messages: IAiSessionUiMessage[];
+  attachments: IAiSessionUiAttachment[];
 }
-
-export interface IAiSessionClientState {
-  sessionId: string;
-  graph: IAiSessionGraphResponse | null;
-  activeTimelineId: string | null;
-  messages: IUiChatMessage[];
-  prompt: string;
-  attachments: IChatComposerAttachment[];
-  provider: string;
-  model: string;
-  loading: boolean;
-  sending: boolean;
-  streamStatus: string;
-  error: string;
-  activeStreamController: AbortController | null;
-}
+export type { IAiSessionStreamOptions };

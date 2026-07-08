@@ -1,4 +1,4 @@
-import type { AiContentPart } from "@genspire/ai/domain";
+import type { AiContentPart } from "@genspire/ai/domain/messages";
 import type {
   IAiSessionActiveSessionStore,
   IAiSessionAttachment,
