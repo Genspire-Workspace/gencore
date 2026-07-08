@@ -3,6 +3,10 @@ import type {
   AiMessageContent,
 } from "@genspire/ai/domain";
 import type {
+  IAiChatGenerateRequestDto,
+  IAiChatGenerateResponseDto,
+  IAiEmbeddingGenerateRequestDto,
+  IAiEmbeddingGenerateResponseDto,
   IAiSseEventDto,
   IAiSessionGraphDto,
   IAiSessionListResponseDto,
@@ -16,6 +20,10 @@ import type {
 export type {
   AiContentPart,
   AiMessageContent,
+  IAiChatGenerateRequestDto,
+  IAiChatGenerateResponseDto,
+  IAiEmbeddingGenerateRequestDto,
+  IAiEmbeddingGenerateResponseDto,
   IAiSseEventDto,
   IAiSessionGraphDto,
   IAiSessionListResponseDto,
@@ -25,6 +33,12 @@ export type {
   IGenerateAiSessionTurnRequestDto,
   IUpdateAiSessionRequestDto,
 };
+
+export type IAiGenerateRequest = IAiChatGenerateRequestDto;
+export type IAiGenerateResponse = IAiChatGenerateResponseDto;
+export type IAiGenerateStreamChunk = IAiSseEventDto;
+export type IAiEmbeddingRequest = IAiEmbeddingGenerateRequestDto;
+export type IAiEmbeddingResponse = IAiEmbeddingGenerateResponseDto;
 
 export interface IAiSessionAttachment {
   id: string;
