@@ -39,6 +39,12 @@ export class FetchAiHttpTransport {
     });
   }
 
+  async delete<TResponse>(path: string): Promise<TResponse> {
+    return await this.request<TResponse>(path, {
+      method: "DELETE",
+    });
+  }
+
   async getNullable<TResponse>(path: string): Promise<TResponse | null> {
     const response = await this.fetchImpl(this.resolveUrl(path), {
       method: "GET",

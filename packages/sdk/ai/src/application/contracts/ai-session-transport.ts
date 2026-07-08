@@ -2,6 +2,7 @@ import type {
   ICreateAiBranchRequestDto,
   ICreateAiBranchResponseDto,
   ICreateAiMessageFeedbackRequestDto,
+  IDeleteAiSessionResponseDto,
   IAiSessionMessageFeedbackResponseDto,
   IAiSessionGraphDto,
   IAiSessionResponseDto,
@@ -21,6 +22,7 @@ export interface IAiSessionTransport {
   listSessions(): Promise<IAiSessionResponseDto[]>;
   createSession(input?: ICreateAiSessionRequestDto): Promise<IAiSessionResponseDto>;
   getSession(sessionId: string): Promise<IAiSessionResponseDto | null>;
+  deleteSession(sessionId: string): Promise<IDeleteAiSessionResponseDto>;
   updateSession(
     sessionId: string,
     input: IUpdateAiSessionRequestDto,

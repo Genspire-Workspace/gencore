@@ -3,6 +3,7 @@
 import {
   Authorize,
   Controller,
+  Delete,
   Get,
   Patch,
   Post,
@@ -199,6 +200,20 @@ export class AiSessionController {
         currentUser: requireCurrentUser(ctx),
         sessionId: ctx.params.sessionId!,
         ...(await ctx.json<UpdateAiSessionRequestDto>()),
+      });
+    } catch (error) {
+      return mapSessionError(error) ?? problem({ status: 500, title: "Internal Server Error" });
+    }
+  }
+
+  @Delete("/:sessionId", {
+    summary: "Delete AI session",
+  })
+  async delete(ctx: RequestContext) {
+    try {
+      return await this.sessionService.delete({
+        currentUser: requireCurrentUser(ctx),
+        sessionId: ctx.params.sessionId!,
       });
     } catch (error) {
       return mapSessionError(error) ?? problem({ status: 500, title: "Internal Server Error" });

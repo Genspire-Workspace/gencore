@@ -28,6 +28,11 @@ export interface IUpdateAiSessionInput {
   metadata?: Record<string, unknown> | null;
 }
 
+export interface IDeleteAiSessionInput {
+  currentUser: ICurrentUser;
+  sessionId: string;
+}
+
 export interface IGetAiSessionGraphInput {
   currentUser: ICurrentUser;
   sessionId: string;

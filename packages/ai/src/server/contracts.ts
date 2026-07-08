@@ -254,6 +254,11 @@ export interface IUpdateAiSessionRequestDto {
   metadata?: Record<string, unknown> | null;
 }
 
+export interface IDeleteAiSessionResponseDto {
+  deleted: boolean;
+  id: string;
+}
+
 export interface IAiSessionTurnResponseDto {
   id: string;
   sessionId: string;

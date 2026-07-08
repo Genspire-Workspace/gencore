@@ -217,6 +217,34 @@ export class AiSessionWorkspaceManager {
     return session;
   }
 
+  async deleteSession(sessionId: string): Promise<void> {
+    await this.transport.deleteSession(sessionId);
+
+    const nextSessions = this.snapshot.sessions.filter((session) => session.id !== sessionId);
+    const nextSelectedSessionId =
+      this.snapshot.selectedSessionId === sessionId
+        ? (nextSessions[0]?.id ?? null)
+        : this.snapshot.selectedSessionId;
+
+    const {
+      [sessionId]: _deletedState,
+      ...remainingStates
+    } = this.snapshot.sessionStatesById;
+
+    this.snapshot = {
+      ...this.snapshot,
+      sessions: nextSessions,
+      selectedSessionId: nextSelectedSessionId,
+      sessionStatesById: remainingStates,
+    };
+    this.activeSessionStore?.setActiveSessionId(nextSelectedSessionId);
+    this.notify();
+
+    if (nextSelectedSessionId && !this.getSessionState(nextSelectedSessionId)?.graph) {
+      await this.openSession(nextSelectedSessionId);
+    }
+  }
+
   selectSession(sessionId: string | null): void {
     this.patchSnapshot({
       selectedSessionId: sessionId,

@@ -2,6 +2,7 @@ import type {
   ICreateAiBranchRequestDto,
   ICreateAiBranchResponseDto,
   ICreateAiMessageFeedbackRequestDto,
+  IDeleteAiSessionResponseDto,
   IAiSessionMessageFeedbackResponseDto,
   IAiSessionGraphDto,
   IAiSessionResponseDto,
@@ -50,6 +51,12 @@ export class FetchAiSessionClient implements IAiSessionTransport {
 
   async getSession(sessionId: string): Promise<IAiSessionResponseDto | null> {
     return await this.transport.getNullable<IAiSessionResponseDto>(
+      `${AI_SESSION_API_PATH}/${sessionId}`,
+    );
+  }
+
+  async deleteSession(sessionId: string): Promise<IDeleteAiSessionResponseDto> {
+    return await this.transport.delete<IDeleteAiSessionResponseDto>(
       `${AI_SESSION_API_PATH}/${sessionId}`,
     );
   }

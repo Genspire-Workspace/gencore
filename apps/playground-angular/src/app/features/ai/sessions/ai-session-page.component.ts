@@ -33,6 +33,8 @@ import { StatusBannerComponent } from './components/status-banner.component';
           (refreshList)="store.reloadSessionList()"
           (openSession)="store.openSession($event)"
           (configureSession)="toggleSettings($event)"
+          (renameSession)="renameSession($event.sessionId, $event.title)"
+          (deleteSession)="deleteSession($event)"
         />
 
         <app-ai-chat-panel
@@ -117,5 +119,17 @@ export class AiSessionPageComponent {
     }
 
     await this.store.updateSessionConfig(sessionId, draft);
+  }
+
+  protected async renameSession(sessionId: string, title: string): Promise<void> {
+    await this.store.renameSession(sessionId, title);
+  }
+
+  protected async deleteSession(sessionId: string): Promise<void> {
+    await this.store.deleteSession(sessionId);
+
+    if (this.configuredSessionId() === sessionId) {
+      this.closeSettings();
+    }
   }
 }

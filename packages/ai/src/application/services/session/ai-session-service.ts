@@ -3,6 +3,7 @@
 import { Scoped } from "@genspire/core";
 import type {
   ICreateAiSessionInput,
+  IDeleteAiSessionInput,
   IUpdateAiSessionInput,
 } from "../../contracts/ai-session-contracts.js";
 import { AiSessionEntity, AiSessionTimelineEntity } from "../../../domain/session/index.js";
@@ -95,5 +96,50 @@ export class AiSessionService {
     await this.db.sessions.update(session);
     await this.db.saveChanges();
     return toSessionResponse(session);
+  }
+
+  async delete(input: IDeleteAiSessionInput) {
+    const session = await requireAccessibleSession(
+      this.db,
+      input.currentUser,
+      input.sessionId,
+    );
+
+    const [feedback, messages, generationRuns, timelineTurns, branches, turns, timelines] = await Promise.all([
+      this.db.messageFeedback.list({ where: { sessionId: session.id } }),
+      this.db.messages.list({ where: { sessionId: session.id } }),
+      this.db.generationRuns.list({ where: { sessionId: session.id } }),
+      this.db.timelineTurns.list({ where: { sessionId: session.id } }),
+      this.db.branches.list({ where: { sessionId: session.id } }),
+      this.db.turns.list({ where: { sessionId: session.id } }),
+      this.db.timelines.list({ where: { sessionId: session.id } }),
+    ]);
+
+    for (const entity of feedback) {
+      await this.db.messageFeedback.remove(entity);
+    }
+    for (const entity of messages) {
+      await this.db.messages.remove(entity);
+    }
+    for (const entity of generationRuns) {
+      await this.db.generationRuns.remove(entity);
+    }
+    for (const entity of timelineTurns) {
+      await this.db.timelineTurns.remove(entity);
+    }
+    for (const entity of branches) {
+      await this.db.branches.remove(entity);
+    }
+    for (const entity of turns) {
+      await this.db.turns.remove(entity);
+    }
+    for (const entity of timelines) {
+      await this.db.timelines.remove(entity);
+    }
+
+    await this.db.sessions.remove(session);
+    await this.db.saveChanges();
+
+    return { deleted: true, id: session.id };
   }
 }

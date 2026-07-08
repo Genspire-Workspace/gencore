@@ -142,6 +142,16 @@ export class AiSessionStore {
     await this.workspace.updateSession(sessionId, update);
   }
 
+  async renameSession(sessionId: string, title: string): Promise<void> {
+    await this.workspace.updateSession(sessionId, {
+      title: title.trim() || undefined,
+    });
+  }
+
+  async deleteSession(sessionId: string): Promise<void> {
+    await this.workspace.deleteSession(sessionId);
+  }
+
   beginEditMessage(message: IUiChatMessage): void {
     this.workspace.beginEditMessage(message as IAiSessionUiMessage);
   }
