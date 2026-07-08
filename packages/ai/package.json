@@ -27,7 +27,7 @@
     "@genspire/data-mikroorm": "workspace:*",
     "@genspire/server": "workspace:*",
     "ai": "^7.0.0",
-    "@mikro-orm/decorators": "^6.5.9",
+    "@mikro-orm/decorators": "^7.1.4",
     "ollama": "^0.6.3",
     "js-tiktoken": "^1.0.0"
   }

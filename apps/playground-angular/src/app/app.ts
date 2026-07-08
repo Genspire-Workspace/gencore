@@ -8,7 +8,7 @@ import {
   RouterOutlet,
 } from '@angular/router';
 import { AuthService } from './features/auth/auth.service';
-import { ThemeToggleComponent } from "./theme";
+import { ThemeToggleComponent } from './shared/theme';
 
 @Component({
   selector: 'app-root',
@@ -17,8 +17,8 @@ import { ThemeToggleComponent } from "./theme";
     RouterLink,
     RouterLinkActive,
     RouterOutlet,
-    ThemeToggleComponent
-],
+    ThemeToggleComponent,
+  ],
   template: `
     <div class="flex h-screen overflow-hidden bg-base text-base-content">
       <div class="flex min-h-0 flex-1 flex-col overflow-hidden">

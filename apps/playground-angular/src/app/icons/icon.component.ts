@@ -20,6 +20,7 @@ const SIZE_CLASSES: Record<IconSize, string> = {
     <span
       class="material-symbols-rounded inline-flex select-none leading-none align-middle"
       [class]="sizeClass()"
+      [style.font-variation-settings]="fillClass()"
       [attr.aria-label]="icon()?.label"
       [attr.aria-hidden]="icon()?.label ? null : 'true'"
       [attr.role]="icon()?.label ? 'img' : 'presentation'"
@@ -40,7 +41,14 @@ export class IconComponent {
 
   readonly size = input<IconSize>('md');
 
+  readonly filled = input<boolean>(false);
+
   protected readonly sizeClass = () => SIZE_CLASSES[this.size()];
+
+  protected readonly fillClass = () =>
+    this.filled()
+      ? "'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24"
+      : "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24";
 
   protected readonly icon = (): IconEntry | undefined =>
     findIcon(this.iconName());

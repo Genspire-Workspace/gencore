@@ -18,7 +18,7 @@ import { ChatMessageActionsComponent } from './chat-message-actions.component';
   imports: [CommonModule, ChatMessageActionsComponent],
   template: `
     <div
-      class="text-sm"
+      class="text-sm flex flex-col gap-2"
       [ngClass]="{
         'ml-auto w-fit max-w-[80%]': message().role === 'user',
         'w-full': message().role === 'assistant',

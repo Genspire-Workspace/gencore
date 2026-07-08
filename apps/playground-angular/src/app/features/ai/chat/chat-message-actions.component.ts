@@ -8,13 +8,14 @@ import type {
 } from './chat-message.types';
 import { toUiChatContentParts } from './chat-content-parts';
 import { IconComponent } from '../../../icons/icon.component';
+import { TooltipDirective } from '../../../shared/tooltip';
 
 @Component({
   selector: 'app-ai-chat-message-actions',
   host: {
     class: 'block',
   },
-  imports: [CommonModule, IconComponent],
+  imports: [CommonModule, IconComponent, TooltipDirective],
   template: `
     @if (shouldRenderActions()) {
       <div
@@ -23,9 +24,11 @@ import { IconComponent } from '../../../icons/icon.component';
       >
         @if (canCopy()) {
           <button
-            class="inline-flex items-center gap-1 rounded-full border border-base-300 px-3 py-1 text-[11px] font-medium text-base-content/70 transition hover:border-base-content/30 hover:bg-base-200 hover:text-base-content"
+            class="inline-flex items-center justify-center rounded-md p-1 text-neutral transition hover:bg-base-200"
             type="button"
             (click)="copyMessage()"
+            [appTooltip]="copied() ? 'Copied' : 'Copy message'"
+            tooltipPosition="bottom"
           >
             <app-icon
               [iconName]="copied() ? 'check' : 'content_copy'"
@@ -37,9 +40,11 @@ import { IconComponent } from '../../../icons/icon.component';
 
         @if (canEdit()) {
           <button
-            class="inline-flex items-center gap-1 rounded-full border border-base-300 px-3 py-1 text-[11px] font-medium text-base-content/70 transition hover:border-base-content/30 hover:bg-base-200 hover:text-base-content"
+            class="inline-flex items-center justify-center rounded-md p-1 text-neutral transition hover:bg-base-200"
             type="button"
             (click)="edit.emit({ message: message() })"
+            appTooltip="Edit message"
+            tooltipPosition="bottom"
           >
             <app-icon iconName="edit" size="sm" aria-hidden="true" />
           </button>
@@ -47,35 +52,43 @@ import { IconComponent } from '../../../icons/icon.component';
 
         @if (canFeedback()) {
           <button
-            class="inline-flex items-center gap-1 rounded-full border px-3 py-1 text-[11px] font-medium transition"
+            class="inline-flex items-center justify-center rounded-md p-1 text-neutral transition hover:bg-base-200"
             type="button"
-            [ngClass]="{
-              'border-success bg-success/10 text-success': feedbackValue() === 'good',
-              'border-base-300 text-base-content/70': feedbackValue() !== 'good',
-            }"
             (click)="emitFeedback('good')"
+            appTooltip="Mark response helpful"
+            tooltipPosition="bottom"
           >
-            <app-icon iconName="thumb_up" size="sm" aria-hidden="true" />
+            <app-icon
+              iconName="thumb_up"
+              size="sm"
+              [filled]="feedbackValue() === 'good'"
+              aria-hidden="true"
+            />
           </button>
 
           <button
-            class="inline-flex items-center gap-1 rounded-full border px-3 py-1 text-[11px] font-medium transition"
+            class="inline-flex items-center justify-center rounded-md p-1 text-neutral transition hover:bg-base-200"
             type="button"
-            [ngClass]="{
-              'border-danger bg-danger/10 text-danger': feedbackValue() === 'bad',
-              'border-base-300 text-base-content/70': feedbackValue() !== 'bad',
-            }"
             (click)="emitFeedback('bad')"
+            appTooltip="Mark response unhelpful"
+            tooltipPosition="bottom"
           >
-            <app-icon iconName="thumb_down" size="sm" aria-hidden="true" />
+            <app-icon
+              iconName="thumb_down"
+              size="sm"
+              [filled]="feedbackValue() === 'bad'"
+              aria-hidden="true"
+            />
           </button>
         }
 
         @if (canRegenerate()) {
           <button
-            class="inline-flex items-center gap-1 rounded-full border border-base-300 px-3 py-1 text-[11px] font-medium text-base-content/70 transition hover:border-base-content/30 hover:bg-base-200 hover:text-base-content"
+            class="inline-flex items-center justify-center rounded-md p-1 text-neutral transition hover:bg-base-200"
             type="button"
             (click)="regenerate.emit({ message: message() })"
+            appTooltip="Regenerate response"
+            tooltipPosition="bottom"
           >
             <app-icon iconName="refresh" size="sm" aria-hidden="true" />
           </button>
@@ -83,9 +96,11 @@ import { IconComponent } from '../../../icons/icon.component';
 
         @if (canBranch()) {
           <button
-            class="inline-flex items-center gap-1 rounded-full border border-base-300 px-3 py-1 text-[11px] font-medium text-base-content/70 transition hover:border-base-content/30 hover:bg-base-200 hover:text-base-content"
+            class="inline-flex items-center justify-center rounded-md p-1 text-neutral transition hover:bg-base-200"
             type="button"
             (click)="branch.emit({ message: message() })"
+            appTooltip="Branch from message"
+            tooltipPosition="bottom"
           >
             <app-icon iconName="arrow_split" size="sm" aria-hidden="true" />
           </button>

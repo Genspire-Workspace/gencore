@@ -1,20 +1,18 @@
-// file: apps/playground-angular/src/app/features/theme/theme-toggle.component.ts
-
 import { Component, computed, inject } from '@angular/core';
-import { IconComponent } from '../icons/icon.component';
+import { IconComponent } from '../../icons/icon.component';
+import { TooltipDirective } from '../tooltip';
 import { ThemeService } from './theme.service';
 
 @Component({
   selector: 'app-theme-toggle',
-  standalone: true,
-  imports: [IconComponent],
+  imports: [IconComponent, TooltipDirective],
   template: `
     <button
       type="button"
       class="inline-flex items-center gap-2 rounded-2xl border border-base-300 bg-base-100 px-4 py-2 text-sm font-medium text-base-content transition hover:bg-base-200"
       (click)="themeService.toggleTheme()"
       [attr.aria-label]="ariaLabel()"
-      [attr.title]="ariaLabel()"
+      [appTooltip]="ariaLabel()"
     >
       <app-icon
         [iconName]="iconName()"

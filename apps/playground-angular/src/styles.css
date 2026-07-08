@@ -1,6 +1,7 @@
 /* file: apps/playground-angular/src/styles.css */
 
 @import 'tailwindcss';
+@import '@angular/cdk/overlay-prebuilt.css';
 
 @theme {
   --color-base: #ffffff;
@@ -17,6 +18,9 @@
 
   --color-accent: #18181b;
   --color-accent-content: #fafafa;
+
+  --color-neutral: #525252;
+  --color-neutral-content: #fafafa;
 
   --color-info: #3f3f46;
   --color-info-content: #ffffff;
@@ -70,6 +74,13 @@
     --color-accent: #18181b;
     --color-accent-content: #fafafa;
 
+    /*
+      Neutral tokens for muted/quiet UI elements
+      such as icon buttons and tooltips.
+    */
+    --color-neutral: #525252;
+    --color-neutral-content: #fafafa;
+
     --color-info: #3f3f46;
     --color-info-content: #ffffff;
 
@@ -112,6 +123,12 @@
     */
     --color-accent: #fafafa;
     --color-accent-content: #09090b;
+
+    /*
+      Restrained neutral tokens for muted UI in dark mode.
+    */
+    --color-neutral: #3f3f46;
+    --color-neutral-content: #a1a1aa;
 
     /*
       Restrained status tokens for dark mode.

@@ -1,5 +1,3 @@
-// file: apps/playground-angular/src/app/features/theme/theme.service.ts
-
 import { DOCUMENT, isPlatformBrowser } from '@angular/common';
 import {
   effect,
@@ -21,7 +19,6 @@ export class ThemeService {
   private readonly platformId = inject(PLATFORM_ID);
 
   readonly theme = signal<ThemeMode>(this.getInitialTheme());
-
   readonly isDark = signal(this.theme() === 'dark');
 
   constructor() {

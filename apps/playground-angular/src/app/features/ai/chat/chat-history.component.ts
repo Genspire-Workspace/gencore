@@ -1,6 +1,6 @@
 // file: apps\playground-angular\src\app\features\ai\chat\chat-history.component.ts
 
-import { Component, input, output } from '@angular/core';
+import { Component, effect, ElementRef, inject, input, output, viewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ChatMessageBubbleComponent } from './chat-message-bubble.component';
 import type {
@@ -8,6 +8,7 @@ import type {
   IUiChatMessageActionEvent,
   IUiChatMessageFeedbackEvent,
 } from './chat-message.types';
+import { ScrollService } from '../../../shared/scroll';
 
 @Component({
   selector: 'app-ai-chat-history',
@@ -23,7 +24,7 @@ import type {
         Start a session and send a message to see streamed responses.
       </div>
     } @else {
-      <div class="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto pr-2">
+      <div #scrollContainer class="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto pr-2">
         @for (message of messages(); track message.id) {
           <div class="flex w-full">
             <app-ai-chat-message-bubble
@@ -46,4 +47,33 @@ export class ChatHistoryComponent {
   readonly feedback = output<IUiChatMessageFeedbackEvent>();
   readonly regenerate = output<IUiChatMessageActionEvent>();
   readonly branch = output<IUiChatMessageActionEvent>();
+
+  private readonly scrollService = inject(ScrollService);
+  private readonly scrollContainerRef = viewChild<ElementRef<HTMLDivElement>>('scrollContainer');
+  private previousMessageCount = 0;
+
+  constructor() {
+    effect(() => {
+      const container = this.scrollContainerRef()?.nativeElement;
+      const messageCount = this.messages().length;
+      const loading = this.loading();
+
+      if (!container || messageCount === 0) {
+        this.previousMessageCount = messageCount;
+        return;
+      }
+
+      queueMicrotask(() => {
+        const behavior: ScrollBehavior =
+          this.previousMessageCount > 0 || loading ? 'smooth' : 'auto';
+
+        this.scrollService.scrollDown({
+          container,
+          behavior,
+        });
+
+        this.previousMessageCount = messageCount;
+      });
+    });
+  }
 }

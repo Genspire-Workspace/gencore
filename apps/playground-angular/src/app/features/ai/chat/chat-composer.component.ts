@@ -5,6 +5,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import type { IChatComposerAttachment } from './chat-message.types';
 import { IconComponent } from '../../../icons/icon.component';
+import { TooltipDirective } from '../../../shared/tooltip';
 
 const CHAT_COMPOSER_ACCEPT =
   'image/*,.txt,.md,.markdown,.json,.jsonc,.csv,.ts,.tsx,.js,.jsx,.mjs,.cjs,.html,.css,.scss,.less,.py,.java,.cs,.go,.rs,.sh,.bash,.zsh,.ps1,.sql,.yml,.yaml,.xml,.svg';
@@ -14,12 +15,12 @@ const CHAT_COMPOSER_ACCEPT =
   host: {
     class: 'block',
   },
-  imports: [CommonModule, FormsModule, IconComponent],
+  imports: [CommonModule, FormsModule, IconComponent, TooltipDirective],
   template: `
-    <form class="flex flex-col gap-3 rounded-3xl border border-base-300 bg-base-100 p-3" (ngSubmit)="onSubmit()">
+    <form class="flex flex-col gap-3 rounded-3xl border border-base-300 bg-base p-2" (ngSubmit)="onSubmit()">
       <textarea
         #promptTextarea
-        class="w-full resize-none overflow-y-hidden border-0 bg-transparent px-2 py-2 text-base-content outline-none transition placeholder:text-base-content/40"
+        class="w-full resize-none overflow-y-hidden border-0 bg-transparent p-2 text-base-content outline-none transition placeholder:text-base-content/40"
         [ngModel]="prompt()"
         (ngModelChange)="onPromptChange($event, promptTextarea)"
         (keydown)="onPromptKeydown($event)"
@@ -59,13 +60,14 @@ const CHAT_COMPOSER_ACCEPT =
         (change)="onFilesSelected($event)"
       />
 
-      <div class="flex items-center justify-between gap-3 px-2 pt-3">
+      <div class="flex items-center justify-between gap-3 p-2">
         <button
           class="inline-flex h-12 w-12 items-center justify-center rounded-2xl border border-base-300 bg-base-100 leading-none text-base-content transition hover:border-base-content/30 hover:bg-base-200 disabled:cursor-not-allowed disabled:opacity-50"
           type="button"
           [disabled]="sending()"
           (click)="fileInput.click()"
           aria-label="Attach files"
+          appTooltip="Attach files"
         >
           <app-icon iconName="attach_file" size="md" aria-hidden="true" />
         </button>
@@ -74,10 +76,11 @@ const CHAT_COMPOSER_ACCEPT =
           [class]="
             sending()
               ? 'inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-danger leading-none text-danger-content transition hover:bg-danger/80 disabled:cursor-not-allowed'
-              : 'inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-primary leading-none text-primary-content transition hover:bg-primary/80 disabled:cursor-not-allowed disabled:bg-base-300'
+              : 'inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-primary leading-none text-base-content transition hover:bg-primary/80 disabled:cursor-not-allowed disabled:bg-base-300'
           "
           type="submit"
           [disabled]="!sending() && !canSubmit()"
+          [appTooltip]="sending() ? 'Stop generation' : 'Send message'"
         >
           <app-icon
             [iconName]="sending() ? 'stop' : 'send'"
