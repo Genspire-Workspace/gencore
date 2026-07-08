@@ -57,6 +57,10 @@
       "@genspire/ai/catalogue": ["./packages/ai/src/catalogue.ts"],
       "@genspire/ai/providers/ollama": ["./packages/ai/src/providers/ollama/index.ts"],
       "@genspire/ai/providers/openai-compatible": ["./packages/ai/src/providers/openai-compatible/index.ts"],
+      "@genspire/sdk-ai": ["./packages/sdk/ai/src/index.ts"],
+      "@genspire/sdk-ai/domain": ["./packages/sdk/ai/src/domain.ts"],
+      "@genspire/sdk-ai/application": ["./packages/sdk/ai/src/application.ts"],
+      "@genspire/sdk-ai/infrastructure": ["./packages/sdk/ai/src/infrastructure.ts"],
       "@mikro-orm/decorators": ["./apps/playground-api/node_modules/@mikro-orm/decorators/es/index.d.ts"],
       "@mikro-orm/decorators/es": ["./apps/playground-api/node_modules/@mikro-orm/decorators/es/index.d.ts"]
     }
