@@ -65,7 +65,7 @@ export interface IProviderDraft {
                 />
                 <button
                   #clientKindTrigger
-                  class="inline-flex h-[3.125rem] w-[3.125rem] shrink-0 items-center justify-center rounded-2xl border border-base-300 bg-base text-base-content/70 transition hover:bg-base-200 hover:text-base-content"
+                  class="inline-flex h-12.5 w-12.5 shrink-0 items-center justify-center rounded-2xl border border-base-300 bg-base text-base-content/70 transition hover:bg-base-200 hover:text-base-content"
                   type="button"
                   (click)="openClientKindDropdown(clientKindTrigger)"
                   aria-label="Select client kind"
