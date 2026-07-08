@@ -30,6 +30,8 @@ import type {
   IAiSessionSettings,
 } from '../ai-session-types';
 
+const MAX_TOKEN_OPTIONS = [1024, 2048, 4096, 8192, 16384, 32768, 65536, 131072] as const;
+
 @Component({
   selector: 'app-ai-session-config-form',
   host: {
@@ -63,7 +65,7 @@ import type {
         </label>
 
         <label class="block space-y-2">
-          <span class="text-sm font-medium text-base-content/80">Provider:Model Path</span>
+          <span class="text-sm font-medium text-base-content/80">AI Model</span>
           <div class="flex gap-2">
             <input
               class="min-w-0 flex-1 rounded-2xl border border-base-300 bg-base px-4 py-3 text-base-content outline-none transition focus:border-primary"
@@ -74,7 +76,7 @@ import type {
             />
             <button
               #modelPathTrigger
-              class="inline-flex h-[3.125rem] w-[3.125rem] shrink-0 items-center justify-center rounded-2xl border border-base-300 bg-base text-base-content/70 transition hover:bg-base-200 hover:text-base-content disabled:cursor-not-allowed disabled:opacity-50"
+              class="inline-flex h-12.5 w-12.5 shrink-0 items-center justify-center rounded-2xl border border-base-300 bg-base text-base-content/70 transition hover:bg-base-200 hover:text-base-content disabled:cursor-not-allowed disabled:opacity-50"
               type="button"
               (click)="openModelPathDropdown(modelPathTrigger)"
               [disabled]="modelPathOptions().length === 0"
@@ -97,42 +99,58 @@ import type {
           ></textarea>
         </label>
 
-        <div class="grid gap-4 sm:grid-cols-3">
+        <div class="space-y-4">
           <label class="block space-y-2">
-            <span class="text-sm font-medium text-base-content/80">Temperature</span>
+            <div class="flex items-center justify-between gap-4">
+              <span class="text-sm font-medium text-base-content/80">Temperature</span>
+              <span class="min-w-16 text-right text-sm font-medium text-base-content/70">
+                {{ temperatureDisplay() }}
+              </span>
+            </div>
             <input
-              class="w-full rounded-2xl border border-base-300 bg-base px-4 py-3 text-base-content outline-none transition focus:border-primary"
-              type="number"
-              step="0.1"
+              class="range range-primary w-full"
+              type="range"
               min="0"
               max="2"
-              [ngModel]="temperature()"
-              (ngModelChange)="temperature.set($event)"
+              step="0.1"
+              [ngModel]="temperatureSliderValue()"
+              (ngModelChange)="setTemperatureFromSlider($event)"
             />
           </label>
 
           <label class="block space-y-2">
-            <span class="text-sm font-medium text-base-content/80">Top P</span>
+            <div class="flex items-center justify-between gap-4">
+              <span class="text-sm font-medium text-base-content/80">Top P</span>
+              <span class="min-w-16 text-right text-sm font-medium text-base-content/70">
+                {{ topPDisplay() }}
+              </span>
+            </div>
             <input
-              class="w-full rounded-2xl border border-base-300 bg-base px-4 py-3 text-base-content outline-none transition focus:border-primary"
-              type="number"
-              step="0.1"
+              class="range range-primary w-full"
+              type="range"
               min="0"
               max="1"
-              [ngModel]="topP()"
-              (ngModelChange)="topP.set($event)"
+              step="0.05"
+              [ngModel]="topPSliderValue()"
+              (ngModelChange)="setTopPFromSlider($event)"
             />
           </label>
 
           <label class="block space-y-2">
-            <span class="text-sm font-medium text-base-content/80">Max Tokens</span>
+            <div class="flex items-center justify-between gap-4">
+              <span class="text-sm font-medium text-base-content/80">Max Tokens</span>
+              <span class="min-w-20 text-right text-sm font-medium text-base-content/70">
+                {{ maxTokensDisplay() }}
+              </span>
+            </div>
             <input
-              class="w-full rounded-2xl border border-base-300 bg-base px-4 py-3 text-base-content outline-none transition focus:border-primary"
-              type="number"
-              min="1"
+              class="range range-primary w-full"
+              type="range"
+              min="0"
+              [max]="maxTokenSliderMax"
               step="1"
-              [ngModel]="maxTokens()"
-              (ngModelChange)="maxTokens.set($event)"
+              [ngModel]="maxTokenSliderValue()"
+              (ngModelChange)="setMaxTokensFromSlider($event)"
             />
           </label>
         </div>
@@ -229,6 +247,8 @@ export class SessionConfigFormComponent {
   readonly topP = model('');
   readonly maxTokens = model('');
 
+  protected readonly maxTokenSliderMax = MAX_TOKEN_OPTIONS.length - 1;
+
   protected readonly providers = signal<IAiProviderResponseDto[]>([]);
   protected readonly modelsByProvider = signal<Record<string, IAiModelResponseDto[]>>({});
 
@@ -255,6 +275,15 @@ export class SessionConfigFormComponent {
 
     return `${providerId}:${modelName}`;
   });
+
+  protected readonly temperatureSliderValue = computed(() => this.readClampedNumber(this.temperature(), 0, 2, 1));
+  protected readonly topPSliderValue = computed(() => this.readClampedNumber(this.topP(), 0, 1, 1));
+  protected readonly maxTokenSliderValue = computed(() => this.resolveMaxTokenIndex(this.maxTokens()));
+  protected readonly temperatureDisplay = computed(() => this.temperatureSliderValue().toFixed(1));
+  protected readonly topPDisplay = computed(() => this.topPSliderValue().toFixed(2));
+  protected readonly maxTokensDisplay = computed(() =>
+    new Intl.NumberFormat('en-US').format(MAX_TOKEN_OPTIONS[this.maxTokenSliderValue()]),
+  );
 
   private activeDropdownHandle: AppOverlayHandle | null = null;
   private activeModalHandle: AppOverlayHandle | null = null;
@@ -360,6 +389,19 @@ export class SessionConfigFormComponent {
     overlay.close();
   }
 
+  protected setTemperatureFromSlider(value: string | number): void {
+    this.temperature.set(this.normalizeDecimalSliderValue(value, 1));
+  }
+
+  protected setTopPFromSlider(value: string | number): void {
+    this.topP.set(this.normalizeDecimalSliderValue(value, 2));
+  }
+
+  protected setMaxTokensFromSlider(value: string | number): void {
+    const index = this.readClampedInteger(value, 0, this.maxTokenSliderMax);
+    this.maxTokens.set(String(MAX_TOKEN_OPTIONS[index]));
+  }
+
   private async loadProviderCatalogue(): Promise<void> {
     const providers = await this.providerClient.listProviders();
     this.providers.set(providers);
@@ -411,6 +453,50 @@ export class SessionConfigFormComponent {
         this.activeDropdownHandle = null;
       }
     });
+  }
+
+  private readClampedNumber(value: string | number, min: number, max: number, fallback: number): number {
+    const parsed = typeof value === 'number' ? value : Number(value.trim());
+    if (!Number.isFinite(parsed)) {
+      return fallback;
+    }
+
+    return Math.min(max, Math.max(min, parsed));
+  }
+
+  private readClampedInteger(value: string | number, min: number, max: number): number {
+    const parsed = typeof value === 'number' ? value : Number(value.trim());
+    if (!Number.isFinite(parsed)) {
+      return min;
+    }
+
+    return Math.min(max, Math.max(min, Math.round(parsed)));
+  }
+
+  private normalizeDecimalSliderValue(value: string | number, digits: number): string {
+    const parsed = typeof value === 'number' ? value : Number(value.trim());
+    const safeValue = Number.isFinite(parsed) ? parsed : 0;
+    return safeValue.toFixed(digits);
+  }
+
+  private resolveMaxTokenIndex(value: string | number): number {
+    const parsed = typeof value === 'number' ? value : Number(value.trim());
+    if (!Number.isFinite(parsed)) {
+      return 0;
+    }
+
+    let closestIndex = 0;
+    let closestDistance = Number.POSITIVE_INFINITY;
+
+    for (let index = 0; index < MAX_TOKEN_OPTIONS.length; index += 1) {
+      const distance = Math.abs(MAX_TOKEN_OPTIONS[index] - parsed);
+      if (distance < closestDistance) {
+        closestDistance = distance;
+        closestIndex = index;
+      }
+    }
+
+    return closestIndex;
   }
 
   private readSettings(session: IAiSessionResponse): IAiSessionSettings {
