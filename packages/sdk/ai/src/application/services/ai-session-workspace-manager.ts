@@ -186,6 +186,37 @@ export class AiSessionWorkspaceManager {
     }
   }
 
+  async updateSession(
+    sessionId: string,
+    input: {
+      title?: string;
+      settings?: Record<string, unknown> | null;
+      metadata?: Record<string, unknown> | null;
+      type?: "chat";
+    },
+  ): Promise<IAiSessionResponseDto> {
+    const session = await this.transport.updateSession(sessionId, input);
+
+    this.syncSessionListEntry(session);
+    this.patchSessionState(sessionId, (current) => {
+      const next = current ?? this.createSessionState(sessionId);
+
+      return {
+        ...next,
+        graph: next.graph
+          ? {
+              ...next.graph,
+              session,
+            }
+          : next.graph,
+        provider: this.readSessionProvider(session) || next.provider,
+        model: this.readSessionModel(session) || next.model,
+      };
+    });
+
+    return session;
+  }
+
   selectSession(sessionId: string | null): void {
     this.patchSnapshot({
       selectedSessionId: sessionId,
@@ -296,6 +327,7 @@ export class AiSessionWorkspaceManager {
     }
 
     const content = this.buildUserMessageContent(prompt, attachments);
+    const sessionSettings = this.readSessionSettings(session);
     const editingDraft = state.editingDraft;
     const userMessage: IAiSessionViewMessage = {
       id: `local-user-${Date.now()}`,
@@ -350,7 +382,11 @@ export class AiSessionWorkspaceManager {
       const streamInput = {
         provider: state.provider.trim() || undefined,
         model: state.model.trim() || undefined,
+        systemPrompt: sessionSettings.systemPrompt,
         settings: {
+          temperature: sessionSettings.temperature,
+          topP: sessionSettings.topP,
+          maxTokens: sessionSettings.maxTokens,
           reasoningEffort: "none" as const,
         },
         metadata: {
@@ -624,6 +660,7 @@ export class AiSessionWorkspaceManager {
     }
 
     const session = state.graph.session;
+    const sessionSettings = this.readSessionSettings(session);
     const timelineId = message.timelineId;
     let assembly = createAiSessionStreamAssembly();
     let streamedTimelineId = timelineId;
@@ -659,7 +696,11 @@ export class AiSessionWorkspaceManager {
           sourceTurnId: message.turnId,
           provider: state.provider.trim() || undefined,
           model: state.model.trim() || undefined,
+          systemPrompt: sessionSettings.systemPrompt,
           settings: {
+            temperature: sessionSettings.temperature,
+            topP: sessionSettings.topP,
+            maxTokens: sessionSettings.maxTokens,
             reasoningEffort: "none",
           },
           metadata: {
@@ -1004,6 +1045,9 @@ export class AiSessionWorkspaceManager {
     provider?: string;
     model?: string;
     systemPrompt?: string;
+    temperature?: number;
+    topP?: number;
+    maxTokens?: number;
   } {
     const settings = session?.settings;
     if (!settings || typeof settings !== "object") {
@@ -1020,6 +1064,16 @@ export class AiSessionWorkspaceManager {
       systemPrompt:
         typeof settings["systemPrompt"] === "string"
           ? settings["systemPrompt"]
+          : undefined,
+      temperature:
+        typeof settings["temperature"] === "number"
+          ? settings["temperature"]
+          : undefined,
+      topP:
+        typeof settings["topP"] === "number" ? settings["topP"] : undefined,
+      maxTokens:
+        typeof settings["maxTokens"] === "number"
+          ? settings["maxTokens"]
           : undefined,
     };
   }
@@ -1040,7 +1094,10 @@ export class AiSessionWorkspaceManager {
     return (
       current.provider === nextSettings["provider"] &&
       current.model === nextSettings["model"] &&
-      current.systemPrompt === nextSettings["systemPrompt"]
+      current.systemPrompt === nextSettings["systemPrompt"] &&
+      current.temperature === nextSettings["temperature"] &&
+      current.topP === nextSettings["topP"] &&
+      current.maxTokens === nextSettings["maxTokens"]
     );
   }
 

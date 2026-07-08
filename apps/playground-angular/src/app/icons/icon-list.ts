@@ -10,6 +10,8 @@ export const icons_ui: readonly IconEntry[] = [
   { name: 'home', label: 'Home' },
   { name: 'search', label: 'Search' },
   { name: 'settings', label: 'Settings' },
+  { name: 'add', label: 'Add' },
+  { name: 'more_vert', label: 'More options' },
   { name: 'menu', label: 'Menu' },
   { name: 'close', label: 'Close' },
   { name: 'check', label: 'Check' },

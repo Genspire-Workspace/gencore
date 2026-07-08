@@ -48,6 +48,25 @@ export type IAiSessionMessageRequest = IGenerateAiSessionTurnRequestDto;
 export type IAiSessionStreamChunk = IAiSseEventDto;
 export type IAiSessionUiMessage = IAiSdkSessionViewMessage & IUiChatMessage;
 export type IAiSessionUiAttachment = IAiSdkSessionAttachment & IChatComposerAttachment;
+export interface IAiSessionSettings {
+  provider?: string;
+  model?: string;
+  systemPrompt?: string;
+  temperature?: number;
+  topP?: number;
+  maxTokens?: number;
+}
+
+export interface IAiSessionConfigDraft {
+  title: string;
+  provider: string;
+  model: string;
+  systemPrompt: string;
+  temperature: string;
+  topP: string;
+  maxTokens: string;
+}
+
 export interface IAiSessionClientState
   extends Omit<IAiSdkSessionClientState, 'messages' | 'attachments'> {
   messages: IAiSessionUiMessage[];

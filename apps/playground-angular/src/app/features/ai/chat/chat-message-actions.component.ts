@@ -19,12 +19,12 @@ import { TooltipDirective } from '../../../shared/tooltip';
   template: `
     @if (shouldRenderActions()) {
       <div
-        class="mt-2 flex flex-wrap items-center gap-2"
+        class="mt-2 flex flex-wrap items-center gap-2 opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100"
         [class.justify-end]="message().role === 'user'"
       >
         @if (canCopy()) {
           <button
-            class="inline-flex items-center justify-center rounded-md p-1 text-neutral transition hover:bg-base-200"
+            class="inline-flex items-center justify-center rounded-md p-1 text-neutral transition hover:bg-base-300"
             type="button"
             (click)="copyMessage()"
             [appTooltip]="copied() ? 'Copied' : 'Copy message'"
@@ -40,7 +40,7 @@ import { TooltipDirective } from '../../../shared/tooltip';
 
         @if (canEdit()) {
           <button
-            class="inline-flex items-center justify-center rounded-md p-1 text-neutral transition hover:bg-base-200"
+            class="inline-flex items-center justify-center rounded-md p-1 text-neutral transition hover:bg-base-300"
             type="button"
             (click)="edit.emit({ message: message() })"
             appTooltip="Edit message"
@@ -52,7 +52,7 @@ import { TooltipDirective } from '../../../shared/tooltip';
 
         @if (canFeedback()) {
           <button
-            class="inline-flex items-center justify-center rounded-md p-1 text-neutral transition hover:bg-base-200"
+            class="inline-flex items-center justify-center rounded-md p-1 text-neutral transition hover:bg-base-300"
             type="button"
             (click)="emitFeedback('good')"
             appTooltip="Mark response helpful"
@@ -67,7 +67,7 @@ import { TooltipDirective } from '../../../shared/tooltip';
           </button>
 
           <button
-            class="inline-flex items-center justify-center rounded-md p-1 text-neutral transition hover:bg-base-200"
+            class="inline-flex items-center justify-center rounded-md p-1 text-neutral transition hover:bg-base-300"
             type="button"
             (click)="emitFeedback('bad')"
             appTooltip="Mark response unhelpful"
@@ -84,7 +84,7 @@ import { TooltipDirective } from '../../../shared/tooltip';
 
         @if (canRegenerate()) {
           <button
-            class="inline-flex items-center justify-center rounded-md p-1 text-neutral transition hover:bg-base-200"
+            class="inline-flex items-center justify-center rounded-md p-1 text-neutral transition hover:bg-base-300"
             type="button"
             (click)="regenerate.emit({ message: message() })"
             appTooltip="Regenerate response"
@@ -96,7 +96,7 @@ import { TooltipDirective } from '../../../shared/tooltip';
 
         @if (canBranch()) {
           <button
-            class="inline-flex items-center justify-center rounded-md p-1 text-neutral transition hover:bg-base-200"
+            class="inline-flex items-center justify-center rounded-md p-1 text-neutral transition hover:bg-base-300"
             type="button"
             (click)="branch.emit({ message: message() })"
             appTooltip="Branch from message"

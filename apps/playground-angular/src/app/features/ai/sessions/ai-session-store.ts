@@ -9,8 +9,10 @@ import type {
   IUiChatMessageFeedbackValue,
 } from '../chat/chat-message.types';
 import type {
+  IAiSessionConfigDraft,
   IAiSessionClientState,
   IAiSessionResponse,
+  IAiSessionUpdateRequest,
   IAiSessionUiMessage,
   IAiSessionUiAttachment,
 } from './ai-session-types';
@@ -121,6 +123,25 @@ export class AiSessionStore {
     this.workspace.setCurrentModel(value);
   }
 
+  async updateSessionConfig(
+    sessionId: string,
+    draft: IAiSessionConfigDraft,
+  ): Promise<void> {
+    const update: IAiSessionUpdateRequest = {
+      title: draft.title.trim() || undefined,
+      settings: {
+        provider: draft.provider.trim() || undefined,
+        model: draft.model.trim() || undefined,
+        systemPrompt: draft.systemPrompt.trim() || undefined,
+        temperature: this.parseOptionalNumber(draft.temperature),
+        topP: this.parseOptionalNumber(draft.topP),
+        maxTokens: this.parseOptionalInteger(draft.maxTokens),
+      },
+    };
+
+    await this.workspace.updateSession(sessionId, update);
+  }
+
   beginEditMessage(message: IUiChatMessage): void {
     this.workspace.beginEditMessage(message as IAiSessionUiMessage);
   }
@@ -142,5 +163,20 @@ export class AiSessionStore {
 
   async regenerateAssistantMessage(message: IUiChatMessage): Promise<void> {
     await this.workspace.regenerateAssistantMessage(message as IAiSessionUiMessage);
+  }
+
+  private parseOptionalNumber(value: string): number | undefined {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return undefined;
+    }
+
+    const parsed = Number(trimmed);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  }
+
+  private parseOptionalInteger(value: string): number | undefined {
+    const parsed = this.parseOptionalNumber(value);
+    return parsed === undefined ? undefined : Math.trunc(parsed);
   }
 }

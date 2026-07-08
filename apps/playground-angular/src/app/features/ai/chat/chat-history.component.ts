@@ -13,7 +13,7 @@ import { ScrollService } from '../../../shared/scroll';
 @Component({
   selector: 'app-ai-chat-history',
   host: {
-    class: 'block flex min-h-0 flex-1 flex-col overflow-hidden rounded-3xl bg-base p-4',
+    class: 'block flex min-h-0 flex-1 flex-col overflow-hidden rounded-3xl bg-base border border-base-300 p-4',
   },
   imports: [CommonModule, ChatMessageBubbleComponent],
   template: `
@@ -24,9 +24,13 @@ import { ScrollService } from '../../../shared/scroll';
         Start a session and send a message to see streamed responses.
       </div>
     } @else {
-      <div #scrollContainer class="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto pr-2">
+      <div
+        #scrollContainer
+        class="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto pr-2"
+        (scroll)="onScroll()"
+      >
         @for (message of messages(); track message.id) {
-          <div class="flex w-full">
+          <div class="group flex w-full">
             <app-ai-chat-message-bubble
               [message]="message"
               (edit)="edit.emit($event)"
@@ -41,8 +45,10 @@ import { ScrollService } from '../../../shared/scroll';
   `,
 })
 export class ChatHistoryComponent {
+  readonly sessionId = input<string | null>(null);
   readonly messages = input.required<IUiChatMessage[]>();
   readonly loading = input(false);
+  readonly sending = input(false);
   readonly edit = output<IUiChatMessageActionEvent>();
   readonly feedback = output<IUiChatMessageFeedbackEvent>();
   readonly regenerate = output<IUiChatMessageActionEvent>();
@@ -50,30 +56,69 @@ export class ChatHistoryComponent {
 
   private readonly scrollService = inject(ScrollService);
   private readonly scrollContainerRef = viewChild<ElementRef<HTMLDivElement>>('scrollContainer');
-  private previousMessageCount = 0;
+
+  private previousSessionId: string | null = null;
+  private previousSending = false;
+  private shouldFollowStreaming = true;
+
+  onScroll(): void {
+    const container = this.scrollContainerRef()?.nativeElement;
+    if (!container) {
+      return;
+    }
+
+    this.shouldFollowStreaming = this.isNearBottom(container);
+  }
 
   constructor() {
     effect(() => {
       const container = this.scrollContainerRef()?.nativeElement;
-      const messageCount = this.messages().length;
-      const loading = this.loading();
+      const sessionId = this.sessionId();
+      const sending = this.sending();
 
-      if (!container || messageCount === 0) {
-        this.previousMessageCount = messageCount;
+      this.messages();
+      this.loading();
+
+      if (!container) {
+        this.previousSessionId = sessionId;
+        this.previousSending = sending;
         return;
       }
 
+      const sessionChanged = sessionId !== this.previousSessionId;
+      const startedSending = sending && !this.previousSending;
+      const shouldScrollWhileStreaming = sending && this.shouldFollowStreaming;
+
       queueMicrotask(() => {
-        const behavior: ScrollBehavior =
-          this.previousMessageCount > 0 || loading ? 'smooth' : 'auto';
+        if (sessionChanged) {
+          this.shouldFollowStreaming = true;
+          this.scrollService.scrollDown({
+            container,
+            behavior: 'auto',
+          });
+        } else if (startedSending) {
+          this.shouldFollowStreaming = true;
+          this.scrollService.scrollDown({
+            container,
+            behavior: 'smooth',
+          });
+        } else if (shouldScrollWhileStreaming) {
+          this.scrollService.scrollDown({
+            container,
+            behavior: 'smooth',
+          });
+        }
 
-        this.scrollService.scrollDown({
-          container,
-          behavior,
-        });
-
-        this.previousMessageCount = messageCount;
+        this.previousSessionId = sessionId;
+        this.previousSending = sending;
       });
     });
+  }
+
+  private isNearBottom(container: HTMLDivElement): boolean {
+    const distanceFromBottom =
+      container.scrollHeight - container.scrollTop - container.clientHeight;
+
+    return distanceFromBottom <= 100;
   }
 }

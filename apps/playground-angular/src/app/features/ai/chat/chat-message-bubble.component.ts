@@ -31,10 +31,6 @@ import { ChatMessageActionsComponent } from './chat-message-actions.component';
           'text-base-content': message().role === 'assistant',
         }"
       >
-        <div class="mb-1 text-[11px] font-semibold uppercase tracking-[0.2em] opacity-60">
-          {{ message().role }}
-        </div>
-
         @if (parts().length === 0) {
           <div class="whitespace-pre-wrap">
             {{ message().pending ? 'Streaming...' : '' }}

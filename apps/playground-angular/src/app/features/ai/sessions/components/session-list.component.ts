@@ -1,15 +1,16 @@
 // file: apps\playground-angular\src\app\features\ai\sessions\components\session-list.component.ts
 
-import { Component, input, output } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Component, input, output } from '@angular/core';
+import { IconComponent } from '../../../../icons/icon.component';
 import type { IAiSessionResponse } from '../ai-session-types';
 
 @Component({
   selector: 'app-ai-session-list',
   host: {
-    class: 'block mt-6 min-h-0 flex-1 overflow-hidden',
+    class: 'block min-h-0 flex-1 overflow-hidden',
   },
-  imports: [CommonModule],
+  imports: [CommonModule, IconComponent],
   template: `
     @if (sessions().length === 0 && !loading()) {
       <div
@@ -18,31 +19,41 @@ import type { IAiSessionResponse } from '../ai-session-types';
         No sessions yet.
       </div>
     } @else {
-      <div class="h-full space-y-3 overflow-y-auto pr-2">
+      <div class="h-full flex flex-col gap-2 overflow-y-auto">
         @for (item of sessions(); track item.id) {
-          <button
-            class="block w-full rounded-2xl border px-4 py-3 text-left transition"
-            [class.border-primary]="item.id === activeSessionId()"
-            [class.bg-base-200]="item.id === activeSessionId()"
-            [class.text-primary]="item.id === activeSessionId()"
-            [class.border-base-300]="item.id !== activeSessionId()"
-            [class.bg-base-100]="item.id !== activeSessionId()"
-            [class.text-base-content]="item.id !== activeSessionId()"
-            type="button"
-            (click)="open.emit(item.id)"
-            [disabled]="loading()"
-          >
-            <div class="text-sm font-semibold">
-              {{ item.title || 'Untitled session' }}
-            </div>
-            <div class="mt-1 text-xs text-base-content/60">
-              {{ readProvider(item) || 'provider?' }} /
-              {{ readModel(item) || 'model?' }}
-            </div>
-            <div class="mt-2 break-all text-[11px] text-base-content/40">
-              {{ item.id }}
-            </div>
-          </button>
+          <div class="group relative">
+            <button
+              class="block w-full rounded-2xl border px-4 py-3 pr-14 text-left transition"
+              [class.border-primary]="item.id === activeSessionId()"
+              [class.bg-base-200]="item.id === activeSessionId()"
+              [class.text-primary]="item.id === activeSessionId()"
+              [class.border-base-300]="item.id !== activeSessionId()"
+              [class.bg-base-100]="item.id !== activeSessionId()"
+              [class.text-base-content]="item.id !== activeSessionId()"
+              type="button"
+              (click)="open.emit(item.id)"
+              [disabled]="loading()"
+            >
+              <div class="text-sm font-semibold">
+                {{ item.title || 'Untitled session' }}
+              </div>
+              <div class="mt-1 text-xs text-base-content/60">
+                {{ readProvider(item) || 'provider?' }} /
+                {{ readModel(item) || 'model?' }}
+              </div>
+            </button>
+
+            <button
+              class="absolute right-3 top-3 inline-flex h-8 w-8 items-center justify-center rounded-lg text-neutral opacity-0 transition hover:bg-base-300 focus:opacity-100 focus:outline-none group-hover:opacity-100 group-focus-within:opacity-100"
+              type="button"
+              (click)="configure.emit(item.id)"
+              [disabled]="loading() || sending()"
+              aria-label="Configure session"
+              title="Configure session"
+            >
+              <app-icon iconName="more_vert" size="sm" aria-hidden="true" />
+            </button>
+          </div>
         }
       </div>
     }
@@ -55,6 +66,7 @@ export class SessionListComponent {
   readonly sending = input(false);
 
   readonly open = output<string>();
+  readonly configure = output<string>();
 
   readProvider(session: IAiSessionResponse): string {
     const settings = session.settings as { provider?: string } | undefined;
