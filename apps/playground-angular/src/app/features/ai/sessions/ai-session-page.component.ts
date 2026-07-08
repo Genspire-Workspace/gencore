@@ -23,7 +23,7 @@ import { StatusBannerComponent } from './components/status-banner.component';
   ],
   template: `
     <section class="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
-      <div class="mt-6 grid min-h-0 flex-1 gap-6 overflow-hidden" [class]="layoutClass()">
+      <div class="grid min-h-0 flex-1 gap-6 overflow-hidden" [class]="layoutClass()">
         <app-ai-session-sidebar
           [sessions]="store.sessions()"
           [activeSessionId]="store.selectedSessionId()"

@@ -97,7 +97,7 @@ export class LoginPageComponent {
 
     try {
       await this.authService.login(this.email().trim(), this.password());
-      await this.router.navigateByUrl('/files');
+      await this.router.navigateByUrl('/ai/sessions');
     } catch (error) {
       this.error.set(this.readErrorMessage(error));
     } finally {

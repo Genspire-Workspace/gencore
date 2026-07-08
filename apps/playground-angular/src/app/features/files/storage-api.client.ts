@@ -28,4 +28,24 @@ export class StorageApiClient {
   createDownloadUrl(fileId: string): string {
     return this.client.createDownloadUrl(fileId);
   }
+
+  async downloadFile(fileId: string): Promise<Blob> {
+    const accessToken = await this.authService.ensureValidAccessToken();
+    const headers = new Headers();
+
+    if (accessToken) {
+      headers.set('authorization', `Bearer ${accessToken}`);
+    }
+
+    const response = await fetch(this.client.createDownloadUrl(fileId), {
+      method: 'GET',
+      headers,
+    });
+
+    if (!response.ok) {
+      throw new Error(`Request failed with HTTP ${response.status}.`);
+    }
+
+    return await response.blob();
+  }
 }

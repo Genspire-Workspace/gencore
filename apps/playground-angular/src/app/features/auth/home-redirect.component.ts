@@ -14,7 +14,7 @@ export class HomeRedirectComponent {
 
   constructor() {
     void this.router.navigateByUrl(
-      this.authService.isAuthenticated() ? '/files' : '/login',
+      this.authService.isAuthenticated() ? '/ai/sessions' : '/login',
       { replaceUrl: true },
     );
   }

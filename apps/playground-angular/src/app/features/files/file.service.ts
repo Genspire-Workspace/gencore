@@ -19,4 +19,8 @@ export class FileService {
   createDownloadUrl(fileId: string): string {
     return this.storageApiClient.createDownloadUrl(fileId);
   }
+
+  async downloadFile(fileId: string): Promise<Blob> {
+    return await this.storageApiClient.downloadFile(fileId);
+  }
 }

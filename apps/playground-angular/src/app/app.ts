@@ -88,7 +88,7 @@ import { ThemeToggleComponent } from './shared/theme';
           </div>
         </header>
 
-        <main class="mx-auto flex min-h-0 w-full max-w-6xl flex-1 flex-col overflow-hidden px-4 py-8 sm:px-6">
+        <main class="mx-auto flex min-h-0 w-full max-w-6xl flex-1 flex-col overflow-hidden p-4">
           <router-outlet></router-outlet>
         </main>
       </div>

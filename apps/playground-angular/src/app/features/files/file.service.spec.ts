@@ -18,6 +18,7 @@ describe('FileService', () => {
           },
           uploadFile: async () => null,
           createDownloadUrl: () => '',
+          downloadFile: async () => new Blob(),
         },
       },
     ]);
@@ -54,6 +55,7 @@ describe('FileService', () => {
             };
           },
           createDownloadUrl: () => '',
+          downloadFile: async () => new Blob(),
         },
       },
     ]);
@@ -70,5 +72,27 @@ describe('FileService', () => {
     expect(requests[0]?.action).toBe('uploadFile');
     expect(requests[0]?.body instanceof File).toBe(true);
     expect((requests[0]?.body as File).name).toBe('hello.txt');
+  });
+
+  it('downloads a file blob from the API', async () => {
+    const fileBlob = new Blob(['hello'], { type: 'text/plain' });
+    const injector = createEnvironmentInjector([
+      {
+        provide: StorageApiClient,
+        useValue: {
+          listFiles: async () => ({ items: [], hasMore: false }),
+          uploadFile: async () => null,
+          createDownloadUrl: () => '',
+          downloadFile: async (fileId: string) => {
+            expect(fileId).toBe('file-1');
+            return fileBlob;
+          },
+        },
+      },
+    ]);
+
+    const service = runInInjectionContext(injector, () => new FileService());
+
+    await expect(service.downloadFile('file-1')).resolves.toBe(fileBlob);
   });
 });
