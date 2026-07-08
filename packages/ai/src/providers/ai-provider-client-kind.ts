@@ -4,15 +4,18 @@ export const DEFAULT_AI_PROVIDER_CLIENT_KINDS = [
   "openai-compatible",
   "anthropic-compatible",
   "google-compatible",
+  "ollama",
 ] as const;
 
 export type DefaultAiProviderClientKind = (typeof DEFAULT_AI_PROVIDER_CLIENT_KINDS)[number];
 
-export type AiProviderClientKind =
-| DefaultAiProviderClientKind
-  | "openai"
-  | "anthropic"
-  | "google"
-  | "amazon-bedrock"
-  | "ollama"
-  | "custom";
+export const AI_PROVIDER_CLIENT_KINDS = [
+  ...DEFAULT_AI_PROVIDER_CLIENT_KINDS,
+  "openai",
+  "anthropic",
+  "google",
+  "amazon-bedrock",
+  "custom",
+] as const;
+
+export type AiProviderClientKind = (typeof AI_PROVIDER_CLIENT_KINDS)[number];

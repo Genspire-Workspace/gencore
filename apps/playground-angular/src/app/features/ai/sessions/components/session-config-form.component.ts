@@ -139,6 +139,14 @@ import type {
 
       <div class="flex items-center justify-end gap-3">
         <button
+          class="mr-auto rounded-2xl border border-danger/30 px-4 py-2.5 text-sm font-medium text-danger transition hover:bg-danger/10"
+          type="button"
+          (click)="openDeleteModal()"
+        >
+          Delete
+        </button>
+
+        <button
           class="rounded-2xl border border-base-300 px-4 py-2.5 text-sm font-medium text-base-content transition hover:bg-base-200"
           type="button"
           (click)="cancel.emit()"
@@ -163,6 +171,34 @@ import type {
         (select)="selectModelPathFromDropdown($event, overlay)"
       />
     </ng-template>
+
+    <ng-template #deleteModal let-overlay>
+      <div class="w-[min(28rem,calc(100vw-2rem))] rounded-3xl border border-base-300 bg-base-100 p-6 shadow-2xl">
+        <h3 class="text-lg font-semibold text-base-content">Delete Session</h3>
+        <p class="mt-2 text-sm text-base-content/60">
+          Delete
+          <span class="font-medium text-base-content">{{ title() || 'this session' }}</span>?
+          This action cannot be undone.
+        </p>
+
+        <div class="mt-6 flex items-center justify-end gap-3">
+          <button
+            class="rounded-2xl border border-base-300 px-4 py-2.5 text-sm font-medium text-base-content transition hover:bg-base-200"
+            type="button"
+            (click)="overlay.close()"
+          >
+            Cancel
+          </button>
+          <button
+            class="rounded-2xl bg-danger px-4 py-2.5 text-sm font-medium text-danger-content transition hover:bg-danger/80"
+            type="button"
+            (click)="confirmDelete(overlay)"
+          >
+            Confirm
+          </button>
+        </div>
+      </div>
+    </ng-template>
   `,
 })
 export class SessionConfigFormComponent {
@@ -170,9 +206,13 @@ export class SessionConfigFormComponent {
 
   readonly save = output<IAiSessionConfigDraft>();
   readonly cancel = output<void>();
+  readonly delete = output<string>();
 
   @ViewChild('modelPathDropdown', { static: true })
   private readonly modelPathDropdownTemplate!: TemplateRef<unknown>;
+
+  @ViewChild('deleteModal', { static: true })
+  private readonly deleteModalTemplate!: TemplateRef<unknown>;
 
   private readonly providerClient = inject(AiProviderClient);
   private readonly overlayService = inject(OverlayService);
@@ -214,6 +254,7 @@ export class SessionConfigFormComponent {
   });
 
   private activeDropdownHandle: AppOverlayHandle | null = null;
+  private activeModalHandle: AppOverlayHandle | null = null;
 
   constructor() {
     effect(() => {
@@ -231,6 +272,8 @@ export class SessionConfigFormComponent {
       if (settings.provider) {
         void this.ensureProviderModels(settings.provider);
       }
+
+      this.activeModalHandle?.close();
     });
 
     void this.loadProviderCatalogue();
@@ -284,6 +327,33 @@ export class SessionConfigFormComponent {
     this.provider.set(option.providerId);
     await this.ensureProviderModels(option.providerId);
     this.model.set(option.modelName);
+    overlay.close();
+  }
+
+  protected openDeleteModal(): void {
+    this.activeModalHandle?.close();
+
+    const handle = this.overlayService.createModalTemplate(
+      {
+        templateRef: this.deleteModalTemplate,
+        viewContainerRef: this.viewContainerRef,
+      },
+      {
+        panelClass: 'app-session-delete-modal-overlay',
+        width: 'auto',
+      },
+    );
+
+    this.activeModalHandle = handle;
+    handle.afterClosed$.subscribe(() => {
+      if (this.activeModalHandle?.id === handle.id) {
+        this.activeModalHandle = null;
+      }
+    });
+  }
+
+  protected confirmDelete(overlay: AppOverlayHandle): void {
+    this.delete.emit(this.session().id);
     overlay.close();
   }
 

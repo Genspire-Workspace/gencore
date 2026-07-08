@@ -31,10 +31,8 @@ import { StatusBannerComponent } from './components/status-banner.component';
           [sending]="store.sending()"
           (newSession)="store.newSession()"
           (refreshList)="store.reloadSessionList()"
-          (openSession)="store.openSession($event)"
+          (openSession)="openSession($event)"
           (configureSession)="toggleSettings($event)"
-          (renameSession)="renameSession($event.sessionId, $event.title)"
-          (deleteSession)="deleteSession($event)"
         />
 
         <app-ai-chat-panel
@@ -63,6 +61,7 @@ import { StatusBannerComponent } from './components/status-banner.component';
               <app-ai-session-config-form
                 [session]="configuredSession()!"
                 (save)="saveSettings($event)"
+                (delete)="deleteSession($event)"
                 (cancel)="closeSettings()"
               />
 
@@ -108,6 +107,14 @@ export class AiSessionPageComponent {
     this.configuredSessionId.update((current) => current === sessionId ? null : sessionId);
   }
 
+  protected async openSession(sessionId: string): Promise<void> {
+    await this.store.openSession(sessionId);
+
+    if (this.configuredSessionId()) {
+      this.configuredSessionId.set(sessionId);
+    }
+  }
+
   protected closeSettings(): void {
     this.configuredSessionId.set(null);
   }
@@ -119,10 +126,6 @@ export class AiSessionPageComponent {
     }
 
     await this.store.updateSessionConfig(sessionId, draft);
-  }
-
-  protected async renameSession(sessionId: string, title: string): Promise<void> {
-    await this.store.renameSession(sessionId, title);
   }
 
   protected async deleteSession(sessionId: string): Promise<void> {

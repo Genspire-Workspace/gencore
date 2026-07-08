@@ -72,8 +72,6 @@ import type { IAiSessionResponse } from '../ai-session-types';
       [sending]="sending()"
       (open)="openSession.emit($event)"
       (configure)="configureSession.emit($event)"
-      (rename)="renameSession.emit($event)"
-      (delete)="deleteSession.emit($event)"
     />
 
     <div class="mt-auto border-t border-base-300 pt-3">
@@ -95,8 +93,6 @@ export class SessionSidebarComponent {
   readonly refreshList = output<void>();
   readonly openSession = output<string>();
   readonly configureSession = output<string>();
-  readonly renameSession = output<{ sessionId: string; title: string }>();
-  readonly deleteSession = output<string>();
 
   protected readonly filteredSessions = computed(() => {
     const query = this.searchTerm().trim().toLowerCase();

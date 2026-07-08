@@ -17,6 +17,7 @@ import { requireCurrentUser } from "@genspire/auth";
 import { GenError } from "@genspire/core";
 import type { AiApiKeySource } from "../../domain/models/ai-api-key.js";
 import {
+  AI_PROVIDER_CLIENT_KINDS,
   DEFAULT_AI_PROVIDER_CLIENT_KINDS,
   type AiProviderClientKind,
 } from "../../providers/ai-provider-client-kind.js";
@@ -113,7 +114,7 @@ export class AiProviderController {
   })
   getClientKinds() {
     return {
-      items: DEFAULT_AI_PROVIDER_CLIENT_KINDS.map((id) => ({ id })),
+      items: AI_PROVIDER_CLIENT_KINDS.map((id) => ({ id })),
     };
   }
 

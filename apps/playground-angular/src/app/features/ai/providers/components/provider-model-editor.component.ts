@@ -5,6 +5,7 @@ import { Component, computed, input, model, output, signal } from '@angular/core
 import { FormsModule } from '@angular/forms';
 import type { IAiModelResponseDto } from '@genspire/sdk-ai';
 import { IconComponent } from '../../../../icons/icon.component';
+import { TooltipDirective } from '../../../../shared/tooltip';
 import { ProviderModelListComponent } from '../provider-model-list.component';
 
 export interface IModelDraft {
@@ -24,13 +25,24 @@ interface IAiModelCapabilitiesDraft {
   outputKinds?: string[];
 }
 
-const COMMON_MODEL_INPUT_KINDS = ['text', 'image', 'audio', 'video', 'file'] as const;
-const COMMON_MODEL_OUTPUT_KINDS = ['text', 'image', 'audio', 'embedding', 'json', 'tool-call'] as const;
+const COMMON_MODEL_INPUT_KINDS = ['text', 'image', 'audio', 'file', 'video'] as const;
+const COMMON_MODEL_OUTPUT_KINDS = ['text', 'image', 'embedding', 'audio', 'file', 'video'] as const;
+const DISABLED_OUTPUT_KINDS = new Set(['tool-call']);
+
+const KIND_META: Record<string, { icon: string; tooltip: string }> = {
+  text: { icon: 'text_fields', tooltip: 'Text modality' },
+  image: { icon: 'image', tooltip: 'Image modality' },
+  audio: { icon: 'mic', tooltip: 'Audio modality' },
+  video: { icon: 'movie', tooltip: 'Video modality' },
+  file: { icon: 'description', tooltip: 'File modality' },
+  embedding: { icon: 'polyline', tooltip: 'Embedding vector output' },
+  json: { icon: 'data_object', tooltip: 'Structured JSON output' },
+};
 
 @Component({
   selector: 'app-ai-provider-model-editor',
   standalone: true,
-  imports: [CommonModule, FormsModule, IconComponent, ProviderModelListComponent],
+  imports: [CommonModule, FormsModule, IconComponent, TooltipDirective, ProviderModelListComponent],
   template: `
     <div class="space-y-4 border-t border-base-300 pt-6">
       <div class="flex items-center justify-between gap-3">
@@ -105,15 +117,12 @@ const COMMON_MODEL_OUTPUT_KINDS = ['text', 'image', 'audio', 'embedding', 'json'
                 <div class="space-y-3 rounded-2xl border border-base-300 bg-base px-4 py-4">
                   <div>
                     <div class="text-sm font-medium text-base-content/80">Input Kinds</div>
-                    <p class="mt-1 text-xs text-base-content/55">
-                      Select known kinds or add a custom one.
-                    </p>
                   </div>
 
-                  <div class="flex flex-wrap gap-2">
+                  <div class="grid grid-cols-3 gap-2">
                     @for (kind of inputKindSuggestions(); track kind) {
                       <button
-                        class="rounded-full border px-3 py-1.5 text-xs font-medium transition"
+                        class="inline-flex h-8 w-8 items-center justify-center rounded-xl border transition"
                         [class.border-primary]="modelInputKinds().includes(kind)"
                         [class.bg-primary/10]="modelInputKinds().includes(kind)"
                         [class.text-primary]="modelInputKinds().includes(kind)"
@@ -121,8 +130,10 @@ const COMMON_MODEL_OUTPUT_KINDS = ['text', 'image', 'audio', 'embedding', 'json'
                         [class.text-base-content/70]="!modelInputKinds().includes(kind)"
                         type="button"
                         (click)="toggleInputKind(kind)"
+                        [appTooltip]="describeKind(kind)"
+                        tooltipPosition="top"
                       >
-                        {{ kind }}
+                        <app-icon [iconName]="iconForKind(kind)" size="sm" aria-hidden="true" />
                       </button>
                     }
                   </div>
@@ -144,16 +155,24 @@ const COMMON_MODEL_OUTPUT_KINDS = ['text', 'image', 'audio', 'embedding', 'json'
                     </button>
                   </div>
 
-                  <div class="flex flex-wrap gap-2">
-                    @for (kind of modelInputKinds(); track kind) {
-                      <button
-                        class="inline-flex items-center gap-2 rounded-full bg-base-200 px-3 py-1.5 text-xs font-medium text-base-content"
-                        type="button"
-                        (click)="removeInputKind(kind)"
-                      >
-                        {{ kind }}
-                        <app-icon iconName="close" size="sm" aria-hidden="true" />
-                      </button>
+                  <div class="space-y-2">
+                    <div class="text-xs font-medium text-base-content/60">Present on model</div>
+                    @if (modelInputKinds().length === 0) {
+                      <div class="text-xs text-base-content/45">No input kinds selected.</div>
+                    } @else {
+                      <div class="grid grid-cols-3 gap-2">
+                        @for (kind of modelInputKinds(); track kind) {
+                          <button
+                            class="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-base-200 text-base-content transition hover:bg-base-300"
+                            type="button"
+                            (click)="removeInputKind(kind)"
+                            [appTooltip]="'Remove ' + describeKind(kind)"
+                            tooltipPosition="top"
+                          >
+                            <app-icon [iconName]="iconForKind(kind)" size="sm" aria-hidden="true" />
+                          </button>
+                        }
+                      </div>
                     }
                   </div>
                 </div>
@@ -161,15 +180,12 @@ const COMMON_MODEL_OUTPUT_KINDS = ['text', 'image', 'audio', 'embedding', 'json'
                 <div class="space-y-3 rounded-2xl border border-base-300 bg-base px-4 py-4">
                   <div>
                     <div class="text-sm font-medium text-base-content/80">Output Kinds</div>
-                    <p class="mt-1 text-xs text-base-content/55">
-                      Track what the model can return.
-                    </p>
                   </div>
 
-                  <div class="flex flex-wrap gap-2">
+                  <div class="grid grid-cols-3 gap-2">
                     @for (kind of outputKindSuggestions(); track kind) {
                       <button
-                        class="rounded-full border px-3 py-1.5 text-xs font-medium transition"
+                        class="inline-flex h-8 w-8 items-center justify-center rounded-xl border transition"
                         [class.border-primary]="modelOutputKinds().includes(kind)"
                         [class.bg-primary/10]="modelOutputKinds().includes(kind)"
                         [class.text-primary]="modelOutputKinds().includes(kind)"
@@ -177,8 +193,10 @@ const COMMON_MODEL_OUTPUT_KINDS = ['text', 'image', 'audio', 'embedding', 'json'
                         [class.text-base-content/70]="!modelOutputKinds().includes(kind)"
                         type="button"
                         (click)="toggleOutputKind(kind)"
+                        [appTooltip]="describeKind(kind)"
+                        tooltipPosition="top"
                       >
-                        {{ kind }}
+                        <app-icon [iconName]="iconForKind(kind)" size="sm" aria-hidden="true" />
                       </button>
                     }
                   </div>
@@ -200,16 +218,24 @@ const COMMON_MODEL_OUTPUT_KINDS = ['text', 'image', 'audio', 'embedding', 'json'
                     </button>
                   </div>
 
-                  <div class="flex flex-wrap gap-2">
-                    @for (kind of modelOutputKinds(); track kind) {
-                      <button
-                        class="inline-flex items-center gap-2 rounded-full bg-base-200 px-3 py-1.5 text-xs font-medium text-base-content"
-                        type="button"
-                        (click)="removeOutputKind(kind)"
-                      >
-                        {{ kind }}
-                        <app-icon iconName="close" size="sm" aria-hidden="true" />
-                      </button>
+                  <div class="space-y-2">
+                    <div class="text-xs font-medium text-base-content/60">Present on model</div>
+                    @if (modelOutputKinds().length === 0) {
+                      <div class="text-xs text-base-content/45">No output kinds selected.</div>
+                    } @else {
+                      <div class="grid grid-cols-3 gap-2">
+                        @for (kind of modelOutputKinds(); track kind) {
+                          <button
+                            class="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-base-200 text-base-content transition hover:bg-base-300"
+                            type="button"
+                            (click)="removeOutputKind(kind)"
+                            [appTooltip]="'Remove ' + describeKind(kind)"
+                            tooltipPosition="top"
+                          >
+                            <app-icon [iconName]="iconForKind(kind)" size="sm" aria-hidden="true" />
+                          </button>
+                        }
+                      </div>
                     }
                   </div>
                 </div>
@@ -383,6 +409,10 @@ export class ProviderModelEditorComponent {
   protected addOutputKind(): void {
     const kind = this.newOutputKind().trim();
     if (!kind) return;
+    if (this.isDisabledOutputKind(kind)) {
+      this.newOutputKind.set('');
+      return;
+    }
     this.modelOutputKinds.update((current) => this.mergeStringArray(current, [kind]));
     this.newOutputKind.set('');
   }
@@ -393,6 +423,18 @@ export class ProviderModelEditorComponent {
 
   protected requestDeleteModel(modelId: string): void {
     this.requestDelete.emit(modelId);
+  }
+
+  protected iconForKind(kind: string): string {
+    return KIND_META[kind]?.icon ?? 'category';
+  }
+
+  protected describeKind(kind: string): string {
+    return KIND_META[kind]?.tooltip ?? kind;
+  }
+
+  private isDisabledOutputKind(kind: string): boolean {
+    return DISABLED_OUTPUT_KINDS.has(kind.trim().toLowerCase());
   }
 
   private readCapabilitiesFromModel(model: IAiModelResponseDto | null): IAiModelCapabilitiesDraft | null {
@@ -408,7 +450,10 @@ export class ProviderModelEditorComponent {
     key: 'inputKinds' | 'outputKinds',
   ): string[] {
     const capabilities = this.readCapabilitiesFromModel(model);
-    return this.readStringArray(capabilities?.[key]);
+    const values = this.readStringArray(capabilities?.[key]);
+    return key === 'outputKinds'
+      ? values.filter((kind) => !this.isDisabledOutputKind(kind))
+      : values;
   }
 
   private readKindsFromModels(key: 'inputKinds' | 'outputKinds'): string[] {
@@ -424,7 +469,7 @@ export class ProviderModelEditorComponent {
   }
 
   private mergeSuggestions(...sources: readonly string[][]): string[] {
-    return this.mergeStringArray([], ...sources).sort((left, right) => left.localeCompare(right));
+    return this.mergeStringArray([], ...sources);
   }
 
   private mergeStringArray(initial: readonly string[], ...sources: readonly string[][]): string[] {
