@@ -19,25 +19,29 @@ import { ChatPanelComponent } from '../chat/chat-panel.component';
       >
         <app-ai-session-sidebar
           [sessions]="store.sessions()"
-          [activeSessionId]="store.session()?.id ?? null"
+          [activeSessionId]="store.selectedSessionId()"
           [loading]="store.loading()"
           [sending]="store.sending()"
           [streamStatus]="store.streamStatus()"
           [error]="store.error()"
-          [(provider)]="store.provider"
-          [(model)]="store.model"
+          [provider]="store.currentProvider()"
+          (providerChange)="store.setCurrentProvider($event)"
+          [model]="store.currentModel()"
+          (modelChange)="store.setCurrentModel($event)"
           (newSession)="store.newSession()"
           (refreshList)="store.reloadSessionList()"
           (openSession)="store.openSession($event)"
         />
 
         <app-ai-chat-panel
-          [title]="store.session()?.title ?? ''"
-          [messages]="store.messages()"
+          [title]="store.currentSession()?.title ?? ''"
+          [messages]="store.currentMessages()"
           [loading]="store.loading()"
           [sending]="store.sending()"
-          [(prompt)]="store.prompt"
-          [(attachments)]="store.attachments"
+          [prompt]="store.currentPrompt()"
+          (promptChange)="store.setCurrentPrompt($event)"
+          [attachments]="store.currentAttachments()"
+          (attachmentsChange)="store.setCurrentAttachments($event)"
           (send)="store.sendMessage()"
           (cancel)="store.stopStreaming()"
         />

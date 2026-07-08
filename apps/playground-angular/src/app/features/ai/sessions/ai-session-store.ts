@@ -1,6 +1,6 @@
 // file: apps\playground-angular\src\app\features\ai\sessions\ai-session-store.ts
 
-import { Injectable, inject, signal } from '@angular/core';
+import { Injectable, computed, inject, signal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { appEnv } from '../../../core/app-env';
 import { AiSessionService } from './ai-session.service';
@@ -12,87 +12,96 @@ import {
 } from './ai-session-stream';
 import type { IChatComposerAttachment, IUiChatMessage } from '../chat/chat-message.types';
 import type {
-  IAiSessionMessageDto,
+  IAiSessionClientState,
+  IAiSessionGraphResponse,
   IAiSessionResponse,
   IAiSessionStreamChunk,
+  IAiSessionTimelineDto,
 } from './ai-session-types';
 import type { IProblemDetails } from '../../../core/problem-details';
 
 @Injectable()
 export class AiSessionStore {
   private readonly aiSessionService = inject(AiSessionService);
-  private activeStreamController: AbortController | null = null;
-
-  readonly session = signal<IAiSessionResponse | null>(null);
-  readonly timelineId = signal<string | null>(null);
+  private readonly sessionStatesById = signal<Record<string, IAiSessionClientState>>({});
+  readonly selectedSessionId = signal<string | null>(null);
   readonly sessions = signal<IAiSessionResponse[]>([]);
-  readonly messages = signal<IUiChatMessage[]>([]);
-  readonly loading = signal(false);
-  readonly sending = signal(false);
-  readonly error = signal('');
-  readonly streamStatus = signal('');
-  readonly prompt = signal('');
-  readonly attachments = signal<IChatComposerAttachment[]>([]);
-  readonly provider = signal(appEnv.defaultAiProvider);
-  readonly model = signal(appEnv.defaultAiModel);
+  readonly sessionListLoading = signal(false);
+  readonly sessionListError = signal('');
+
+  readonly currentSessionState = computed<IAiSessionClientState | null>(() => {
+    const sessionId = this.selectedSessionId();
+    if (!sessionId) {
+      return null;
+    }
+
+    return this.sessionStatesById()[sessionId] ?? null;
+  });
+
+  readonly currentSession = computed<IAiSessionResponse | null>(() => {
+    const state = this.currentSessionState();
+    if (state?.graph?.session) {
+      return state.graph.session;
+    }
+
+    const sessionId = this.selectedSessionId();
+    return sessionId ? this.sessions().find((session) => session.id === sessionId) ?? null : null;
+  });
+
+  readonly loading = computed(() => this.sessionListLoading() || this.currentSessionState()?.loading || false);
+  readonly sending = computed(() => this.currentSessionState()?.sending || false);
+  readonly error = computed(() => this.currentSessionState()?.error || this.sessionListError() || '');
+  readonly streamStatus = computed(() => this.currentSessionState()?.streamStatus || '');
+  readonly currentMessages = computed(() => this.currentSessionState()?.messages ?? []);
+  readonly currentPrompt = computed(() => this.currentSessionState()?.prompt ?? '');
+  readonly currentAttachments = computed(() => this.currentSessionState()?.attachments ?? []);
+  readonly currentProvider = computed(() => this.currentSessionState()?.provider ?? appEnv.defaultAiProvider);
+  readonly currentModel = computed(() => this.currentSessionState()?.model ?? appEnv.defaultAiModel);
 
   async reloadSession(): Promise<void> {
-    this.loading.set(true);
-    this.error.set('');
-    this.streamStatus.set('');
+    this.sessionListLoading.set(true);
+    this.sessionListError.set('');
 
     try {
       await this.reloadSessionListInternal();
       const session = await this.aiSessionService.ensureSession();
-      const timelineId = await this.resolveTimelineId(session);
-      this.session.set(session);
-      this.timelineId.set(timelineId);
-      this.provider.set(this.readSessionProvider(session) || appEnv.defaultAiProvider);
-      this.model.set(this.readSessionModel(session) || appEnv.defaultAiModel);
-      this.messages.set(await this.loadMessages(session.id, timelineId));
+      this.selectSession(session.id);
+      this.aiSessionService.setActiveSessionId(session.id);
+      await this.ensureSessionState(session.id, session);
     } catch (error) {
-      this.error.set(this.readErrorMessage(error));
+      this.sessionListError.set(this.readErrorMessage(error));
     } finally {
-      this.loading.set(false);
+      this.sessionListLoading.set(false);
     }
   }
 
   async newSession(): Promise<void> {
-    this.loading.set(true);
-    this.error.set('');
-    this.streamStatus.set('');
+    this.sessionListLoading.set(true);
+    this.sessionListError.set('');
 
     try {
       const session = await this.aiSessionService.createSession({
         type: 'chat',
-        settings: this.buildSessionSettings(),
+        settings: this.buildSessionSettings(this.currentSessionState()),
         metadata: {
           source: 'playground-angular',
         },
       });
-      const timelineId = await this.resolveTimelineId(session);
-
-      this.session.set(session);
-      this.timelineId.set(timelineId);
-      this.messages.set([]);
-      this.provider.set(this.readSessionProvider(session) || appEnv.defaultAiProvider);
-      this.model.set(this.readSessionModel(session) || appEnv.defaultAiModel);
+      this.selectSession(session.id);
+      this.aiSessionService.setActiveSessionId(session.id);
+      this.ensureLocalSessionState(session.id, session);
+      await this.refreshSessionGraph(session.id);
       await this.reloadSessionListInternal();
     } catch (error) {
-      this.error.set(this.readErrorMessage(error));
+      this.sessionListError.set(this.readErrorMessage(error));
     } finally {
-      this.loading.set(false);
+      this.sessionListLoading.set(false);
     }
   }
 
   async openSession(sessionId: string): Promise<void> {
-    if (this.loading() || this.sending()) {
-      return;
-    }
-
-    this.loading.set(true);
-    this.error.set('');
-    this.streamStatus.set('');
+    this.sessionListError.set('');
+    this.selectSession(sessionId);
 
     try {
       const session = await this.aiSessionService.activateSession(sessionId);
@@ -101,56 +110,126 @@ export class AiSessionStore {
         throw new Error('Session was not found.');
       }
 
-      const timelineId = await this.resolveTimelineId(session);
-
-      this.session.set(session);
-      this.timelineId.set(timelineId);
-      this.provider.set(this.readSessionProvider(session) || appEnv.defaultAiProvider);
-      this.model.set(this.readSessionModel(session) || appEnv.defaultAiModel);
-      this.messages.set(await this.loadMessages(session.id, timelineId));
+      this.aiSessionService.setActiveSessionId(session.id);
+      this.ensureLocalSessionState(session.id, session);
+      await this.refreshSessionGraph(session.id);
     } catch (error) {
-      this.error.set(this.readErrorMessage(error));
-    } finally {
-      this.loading.set(false);
+      this.sessionListError.set(this.readErrorMessage(error));
     }
   }
 
   async reloadSessionList(): Promise<void> {
-    this.loading.set(true);
-    this.error.set('');
+    this.sessionListLoading.set(true);
+    this.sessionListError.set('');
 
     try {
       await this.reloadSessionListInternal();
     } catch (error) {
-      this.error.set(this.readErrorMessage(error));
+      this.sessionListError.set(this.readErrorMessage(error));
     } finally {
-      this.loading.set(false);
+      this.sessionListLoading.set(false);
     }
   }
 
-  async sendMessage(): Promise<void> {
-    const prompt = this.prompt().trim();
-    const attachments = this.attachments();
-    if ((prompt.length === 0 && attachments.length === 0) || this.sending()) {
+  selectSession(sessionId: string | null): void {
+    this.selectedSessionId.set(sessionId);
+  }
+
+  async ensureSessionState(
+    sessionId: string,
+    session?: IAiSessionResponse,
+  ): Promise<IAiSessionClientState> {
+    const existing = this.sessionState(sessionId);
+    if (existing?.graph) {
+      return existing;
+    }
+
+    if (session) {
+      this.ensureLocalSessionState(sessionId, session);
+    }
+
+    await this.refreshSessionGraph(sessionId);
+    const next = this.sessionState(sessionId);
+    if (!next) {
+      throw new Error('Session state could not be initialized.');
+    }
+
+    return next;
+  }
+
+  async refreshSessionGraph(sessionId?: string, timelineId?: string): Promise<void> {
+    const targetSessionId = sessionId ?? this.selectedSessionId();
+    if (!targetSessionId) {
       return;
     }
 
-    this.sending.set(true);
-    this.error.set('');
-    this.streamStatus.set('Waiting for stream...');
+    this.patchSessionState(targetSessionId, (current) => ({
+      ...(current ?? this.createSessionState(targetSessionId)),
+      loading: true,
+      error: '',
+    }));
 
-    let session = this.session() ?? (await this.aiSessionService.ensureSession());
-    const timelineId = this.timelineId() ?? (await this.resolveTimelineId(session));
-    const nextSettings = this.buildSessionSettings(session);
+    try {
+      const graph = await this.aiSessionService.getSessionGraph(targetSessionId, timelineId);
+      this.syncSessionListEntry(graph.session);
+      this.patchSessionState(targetSessionId, (current) => this.mergeGraphIntoState(graph, current ?? this.createSessionState(targetSessionId)));
+    } catch (error) {
+      this.patchSessionState(targetSessionId, (current) => ({
+        ...(current ?? this.createSessionState(targetSessionId)),
+        loading: false,
+        error: this.readErrorMessage(error),
+      }));
+      throw error;
+    }
+  }
+
+  async sendMessage(sessionId?: string): Promise<void> {
+    let targetSessionId = sessionId ?? this.selectedSessionId();
+    let session = targetSessionId
+      ? this.sessionState(targetSessionId)?.graph?.session ??
+        this.sessions().find((item) => item.id === targetSessionId) ??
+        null
+      : this.currentSession();
+
+    if (!targetSessionId || !session) {
+      session = await this.aiSessionService.ensureSession();
+      targetSessionId = session.id;
+      this.selectSession(targetSessionId);
+      this.aiSessionService.setActiveSessionId(targetSessionId);
+      await this.ensureSessionState(targetSessionId, session);
+    }
+
+    const state = this.sessionState(targetSessionId);
+    if (!state) {
+      throw new Error('Session state is unavailable.');
+    }
+
+    const prompt = state.prompt.trim();
+    const attachments = state.attachments;
+    if ((prompt.length === 0 && attachments.length === 0) || state.sending) {
+      return;
+    }
+
+    this.patchSessionState(targetSessionId, (current) => ({
+      ...(current ?? this.createSessionState(targetSessionId!)),
+      sending: true,
+      error: '',
+      streamStatus: 'Waiting for stream...',
+    }));
+
+    const timelineId = state.activeTimelineId ?? this.resolveTimelineIdFromGraph(state.graph);
+    if (!timelineId) {
+      throw new Error('Session does not have an active timeline.');
+    }
+
+    const nextSettings = this.buildSessionSettings(state);
 
     if (!this.areSessionSettingsEqual(session, nextSettings)) {
       session = await this.aiSessionService.updateSession(session.id, {
         settings: nextSettings,
       });
+      this.syncSessionListEntry(session);
     }
-
-    this.session.set(session);
-    this.timelineId.set(timelineId);
 
     const content = this.buildUserMessageContent(prompt, attachments);
     const userMessage: IUiChatMessage = {
@@ -165,14 +244,20 @@ export class AiSessionStore {
       pending: true,
     };
 
-    this.messages.update((messages) => [...messages, userMessage, assistantMessage]);
-
-    this.prompt.set('');
-    this.attachments.set([]);
+    this.patchSessionState(targetSessionId, (current) => ({
+      ...(current ?? this.createSessionState(targetSessionId!)),
+      messages: [...(current?.messages ?? []), userMessage, assistantMessage],
+      prompt: '',
+      attachments: [],
+    }));
 
     let assembly = createAiSessionStreamAssembly();
     const streamController = new AbortController();
-    this.activeStreamController = streamController;
+    this.patchSessionState(targetSessionId, (current) => ({
+      ...(current ?? this.createSessionState(targetSessionId!)),
+      activeStreamController: streamController,
+    }));
+    const expectedMessageCount = state.messages.length + 2;
 
     try {
       await this.aiSessionService.streamMessage(
@@ -180,8 +265,8 @@ export class AiSessionStore {
         timelineId,
         {
           content,
-          provider: this.provider().trim() || undefined,
-          model: this.model().trim() || undefined,
+          provider: state.provider.trim() || undefined,
+          model: state.model.trim() || undefined,
           settings: {
             reasoningEffort: 'none',
           },
@@ -192,21 +277,20 @@ export class AiSessionStore {
         (chunk: IAiSessionStreamChunk) => {
           assembly = applyAiSessionStreamChunk(assembly, chunk);
 
+          let streamStatus = 'Streaming assistant reply...';
           if (chunk.type === 'heartbeat') {
-            this.streamStatus.set(
-              `Streaming... ${this.readHeartbeatToolName(chunk.metadata) || 'waiting for provider'} (${Math.floor((chunk.elapsedMs || 0) / 1000)}s)`,
-            );
+            streamStatus = `Streaming... ${this.readHeartbeatToolName(chunk.metadata) || 'waiting for provider'} (${Math.floor((chunk.elapsedMs || 0) / 1000)}s)`;
           } else if (chunk.type === 'completed') {
-            this.streamStatus.set('Stream finished. Reloading saved history...');
+            streamStatus = 'Stream finished. Reloading saved history...';
           } else if (chunk.type === 'error') {
-            this.streamStatus.set('Stream returned an error.');
-          } else {
-            this.streamStatus.set('Streaming assistant reply...');
+            streamStatus = 'Stream returned an error.';
           }
 
           const assistantText = resolveAiSessionAssistantText(assembly);
-          this.messages.update((messages) =>
-            messages.map((message) =>
+          this.patchSessionState(targetSessionId!, (current) => ({
+            ...(current ?? this.createSessionState(targetSessionId!)),
+            streamStatus,
+            messages: (current?.messages ?? []).map((message) =>
               message.id === assistantMessage.id
                 ? {
                     ...message,
@@ -215,7 +299,7 @@ export class AiSessionStore {
                   }
                 : message,
             ),
-          );
+          }));
         },
         {
           signal: streamController.signal,
@@ -226,21 +310,31 @@ export class AiSessionStore {
         throw new Error(assembly.error);
       }
 
-      this.messages.set(await this.loadMessages(session.id, timelineId));
+      await this.refreshSessionGraph(targetSessionId, timelineId);
       await this.reloadSessionListInternal();
-      this.streamStatus.set('Latest assistant turn saved.');
+      this.patchSessionState(targetSessionId, (current) => ({
+        ...(current ?? this.createSessionState(targetSessionId)),
+        streamStatus: 'Latest assistant turn saved.',
+      }));
     } catch (error) {
       const stopped = this.isAbortError(error);
       if (!stopped) {
-        this.error.set(this.readErrorMessage(error));
-        this.streamStatus.set('');
+        this.patchSessionState(targetSessionId, (current) => ({
+          ...(current ?? this.createSessionState(targetSessionId)),
+          error: this.readErrorMessage(error),
+          streamStatus: '',
+        }));
       } else {
-        this.error.set('');
-        this.streamStatus.set('Stream stopped.');
+        this.patchSessionState(targetSessionId, (current) => ({
+          ...(current ?? this.createSessionState(targetSessionId)),
+          error: '',
+          streamStatus: 'Stream stopped.',
+        }));
       }
 
-      this.messages.update((messages) =>
-        messages.map((message) =>
+      this.patchSessionState(targetSessionId, (current) => ({
+        ...(current ?? this.createSessionState(targetSessionId)),
+        messages: (current?.messages ?? []).map((message) =>
           message.id === assistantMessage.id
             ? {
                 ...message,
@@ -251,17 +345,29 @@ export class AiSessionStore {
               }
             : message,
         ),
-      );
-    } finally {
-      if (this.activeStreamController === streamController) {
-        this.activeStreamController = null;
+      }));
+
+      if (stopped) {
+        await this.refreshSessionGraphUntil(targetSessionId, timelineId, expectedMessageCount);
+        await this.reloadSessionListInternal();
       }
-      this.sending.set(false);
+    } finally {
+      this.patchSessionState(targetSessionId, (current) => ({
+        ...(current ?? this.createSessionState(targetSessionId)),
+        sending: false,
+        activeStreamController:
+          current?.activeStreamController === streamController ? null : current?.activeStreamController ?? null,
+      }));
     }
   }
 
-  stopStreaming(): void {
-    this.activeStreamController?.abort();
+  stopStreaming(sessionId?: string): void {
+    const targetSessionId = sessionId ?? this.selectedSessionId();
+    if (!targetSessionId) {
+      return;
+    }
+
+    this.sessionState(targetSessionId)?.activeStreamController?.abort();
   }
 
   readSessionProvider(session: IAiSessionResponse): string {
@@ -272,48 +378,70 @@ export class AiSessionStore {
     return this.readSessionSettings(session).model || '';
   }
 
-  private async loadMessages(sessionId: string, timelineId: string): Promise<IUiChatMessage[]> {
-    const turns = await this.aiSessionService.listTimelineTurns(sessionId, timelineId);
-    return turns.flatMap((turn) =>
-      turn.messages.map((message: IAiSessionMessageDto) => this.toUiMessage(message)),
-    );
+  setCurrentPrompt(value: string): void {
+    const sessionId = this.selectedSessionId();
+    if (!sessionId) {
+      return;
+    }
+
+    this.patchSessionState(sessionId, (current) => ({
+      ...(current ?? this.createSessionState(sessionId)),
+      prompt: value,
+    }));
+  }
+
+  setCurrentAttachments(value: IChatComposerAttachment[]): void {
+    const sessionId = this.selectedSessionId();
+    if (!sessionId) {
+      return;
+    }
+
+    this.patchSessionState(sessionId, (current) => ({
+      ...(current ?? this.createSessionState(sessionId)),
+      attachments: value,
+    }));
+  }
+
+  setCurrentProvider(value: string): void {
+    const sessionId = this.selectedSessionId();
+    if (!sessionId) {
+      return;
+    }
+
+    this.patchSessionState(sessionId, (current) => ({
+      ...(current ?? this.createSessionState(sessionId)),
+      provider: value,
+    }));
+  }
+
+  setCurrentModel(value: string): void {
+    const sessionId = this.selectedSessionId();
+    if (!sessionId) {
+      return;
+    }
+
+    this.patchSessionState(sessionId, (current) => ({
+      ...(current ?? this.createSessionState(sessionId)),
+      model: value,
+    }));
   }
 
   private async reloadSessionListInternal(): Promise<void> {
     this.sessions.set(await this.aiSessionService.listSessions());
   }
 
-  private toUiMessage(message: IAiSessionMessageDto): IUiChatMessage {
-    return {
-      id: message.id,
-      role: message.role,
-      content: message.content,
-    };
+  private ensureLocalSessionState(sessionId: string, session: IAiSessionResponse): void {
+    this.patchSessionState(sessionId, (current) => ({
+      ...(current ?? this.createSessionState(sessionId)),
+      provider: current?.provider || this.readSessionProvider(session) || appEnv.defaultAiProvider,
+      model: current?.model || this.readSessionModel(session) || appEnv.defaultAiModel,
+    }));
   }
 
-  private async resolveTimelineId(session: IAiSessionResponse): Promise<string> {
-    const timelineId = session.defaultTimeline?.id || session.defaultTimelineId;
-    if (timelineId) {
-      return timelineId;
-    }
-
-    const graph = await this.aiSessionService.getSessionGraph(session.id);
-    const fallbackTimelineId =
-      graph.session.defaultTimelineId ||
-      graph.timelines.find((timeline: { isDefault: boolean }) => timeline.isDefault)?.id ||
-      graph.timelines[0]?.id;
-
-    if (!fallbackTimelineId) {
-      throw new Error('Session does not have an active timeline.');
-    }
-
-    return fallbackTimelineId;
-  }
-
-  private buildSessionSettings(session?: IAiSessionResponse | null): Record<string, unknown> {
-    const current = this.readSessionSettings(session ?? null);
-    const provider = this.provider().trim();
-    const model = this.model().trim();
+  private buildSessionSettings(state?: IAiSessionClientState | null): Record<string, unknown> {
+    const current = this.readSessionSettings(state?.graph?.session ?? null);
+    const provider = state?.provider.trim() ?? '';
+    const model = state?.model.trim() ?? '';
 
     return {
       ...current,
@@ -359,6 +487,130 @@ export class AiSessionStore {
 
     const toolName = (metadata as Record<string, unknown>)['toolName'];
     return typeof toolName === 'string' ? toolName : null;
+  }
+
+  private sessionState(sessionId: string): IAiSessionClientState | null {
+    return this.sessionStatesById()[sessionId] ?? null;
+  }
+
+  private patchSessionState(
+    sessionId: string,
+    updater: (current: IAiSessionClientState | undefined) => IAiSessionClientState,
+  ): void {
+    this.sessionStatesById.update((states) => ({
+      ...states,
+      [sessionId]: updater(states[sessionId]),
+    }));
+  }
+
+  private createSessionState(sessionId: string): IAiSessionClientState {
+    return {
+      sessionId,
+      graph: null,
+      activeTimelineId: null,
+      messages: [],
+      prompt: '',
+      attachments: [],
+      provider: appEnv.defaultAiProvider,
+      model: appEnv.defaultAiModel,
+      loading: false,
+      sending: false,
+      streamStatus: '',
+      error: '',
+      activeStreamController: null,
+    };
+  }
+
+  private mergeGraphIntoState(
+    graph: IAiSessionGraphResponse,
+    current: IAiSessionClientState,
+  ): IAiSessionClientState {
+    const activeTimelineId = this.resolveTimelineIdFromGraph(graph, current.activeTimelineId);
+    return {
+      ...current,
+      graph,
+      activeTimelineId,
+      messages: this.toUiMessages(graph, activeTimelineId),
+      provider: current.provider || this.readSessionProvider(graph.session) || appEnv.defaultAiProvider,
+      model: current.model || this.readSessionModel(graph.session) || appEnv.defaultAiModel,
+      loading: false,
+    };
+  }
+
+  private resolveTimelineIdFromGraph(
+    graph: IAiSessionGraphResponse | null,
+    preferredTimelineId?: string | null,
+  ): string | null {
+    if (!graph) {
+      return null;
+    }
+
+    if (preferredTimelineId && graph.timelines.some((timeline) => timeline.id === preferredTimelineId)) {
+      return preferredTimelineId;
+    }
+
+    return (
+      graph.session.defaultTimelineId ||
+      graph.timelines.find((timeline: IAiSessionTimelineDto) => timeline.isDefault)?.id ||
+      graph.timelines[0]?.id ||
+      null
+    );
+  }
+
+  private toUiMessages(graph: IAiSessionGraphResponse, timelineId: string | null): IUiChatMessage[] {
+    if (!timelineId) {
+      return [];
+    }
+
+    const timelineTurns = graph.timelineTurns
+      .filter((timelineTurn) => timelineTurn.timelineId === timelineId)
+      .sort((left, right) => left.index - right.index);
+    const messagesByTurnId = new Map(
+      graph.messages.map((message) => [message.turnId, [] as typeof graph.messages]),
+    );
+
+    for (const message of graph.messages) {
+      const current = messagesByTurnId.get(message.turnId) ?? [];
+      current.push(message);
+      messagesByTurnId.set(message.turnId, current);
+    }
+
+    return timelineTurns.flatMap((timelineTurn) =>
+      (messagesByTurnId.get(timelineTurn.turnId) ?? [])
+        .slice()
+        .sort((left, right) => left.index - right.index)
+        .map((message) => ({
+          id: message.id,
+          role: message.role,
+          content: message.content,
+        })),
+    );
+  }
+
+  private syncSessionListEntry(session: IAiSessionResponse): void {
+    this.sessions.update((sessions) => {
+      const existingIndex = sessions.findIndex((item) => item.id === session.id);
+      if (existingIndex === -1) {
+        return [session, ...sessions];
+      }
+
+      return sessions.map((item) => (item.id === session.id ? { ...item, ...session } : item));
+    });
+  }
+
+  private async refreshSessionGraphUntil(
+    sessionId: string,
+    timelineId: string,
+    minimumMessageCount: number,
+  ): Promise<void> {
+    for (let attempt = 0; attempt < 4; attempt += 1) {
+      await this.refreshSessionGraph(sessionId, timelineId);
+      if ((this.sessionState(sessionId)?.messages.length ?? 0) >= minimumMessageCount) {
+        return;
+      }
+
+      await new Promise((resolve) => globalThis.setTimeout(resolve, 75));
+    }
   }
 
   private buildUserMessageContent(

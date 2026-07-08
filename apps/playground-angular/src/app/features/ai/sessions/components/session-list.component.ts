@@ -30,7 +30,7 @@ import type { IAiSessionResponse } from '../ai-session-types';
             [class.text-base-content]="item.id !== activeSessionId()"
             type="button"
             (click)="open.emit(item.id)"
-            [disabled]="sending()"
+            [disabled]="loading()"
           >
             <div class="text-sm font-semibold">
               {{ item.title || 'Untitled session' }}

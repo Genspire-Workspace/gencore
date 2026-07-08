@@ -17,6 +17,7 @@ import type {
   IUpdateAiSessionRequestDto,
 } from '@genspire/ai/server/contracts';
 import type { IAiChatMessageDto } from '../shared/ai-chat.types';
+import type { IChatComposerAttachment, IUiChatMessage } from '../chat/chat-message.types';
 
 export type { IAiChatMessageDto };
 
@@ -42,4 +43,20 @@ export type IAiSessionStreamChunk = IAiSseEventDto;
 
 export interface IAiSessionStreamOptions {
   signal?: AbortSignal;
+}
+
+export interface IAiSessionClientState {
+  sessionId: string;
+  graph: IAiSessionGraphResponse | null;
+  activeTimelineId: string | null;
+  messages: IUiChatMessage[];
+  prompt: string;
+  attachments: IChatComposerAttachment[];
+  provider: string;
+  model: string;
+  loading: boolean;
+  sending: boolean;
+  streamStatus: string;
+  error: string;
+  activeStreamController: AbortController | null;
 }
