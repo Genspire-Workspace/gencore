@@ -12,7 +12,7 @@ export interface IUiChatMessage {
   role: AiMessageRole;
   content: AiMessageContent;
   pending?: boolean;
-  actions?: IUiChatMessageActions;
+  actions?: IUiChatMessageActions | false;
   feedback?: IUiChatMessageFeedbackValue | null;
 }
 

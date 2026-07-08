@@ -16,7 +16,7 @@ import { IconComponent } from '../../../icons/icon.component';
   },
   imports: [CommonModule, IconComponent],
   template: `
-    @if (visibleActions().length > 0) {
+    @if (shouldRenderActions()) {
       <div
         class="mt-2 flex flex-wrap items-center gap-2"
         [class.justify-end]="message().role === 'user'"
@@ -87,7 +87,7 @@ import { IconComponent } from '../../../icons/icon.component';
             type="button"
             (click)="branch.emit({ message: message() })"
           >
-            <app-icon iconName="account_tree" size="sm" aria-hidden="true" />
+            <app-icon iconName="arrow_split" size="sm" aria-hidden="true" />
           </button>
         }
       </div>
@@ -106,6 +106,13 @@ export class ChatMessageActionsComponent {
   readonly copied = signal(false);
   readonly feedbackValue = computed(() => this.message().feedback ?? null);
 
+  readonly shouldRenderActions = computed(() => {
+    if (this.message().actions === false) {
+      return false;
+    }
+
+    return this.visibleActions().length > 0;
+  });
   readonly canCopy = computed(() => this.resolveAction('copy'));
   readonly canEdit = computed(() => this.resolveAction('edit'));
   readonly canFeedback = computed(() => this.resolveAction('feedback'));
@@ -145,11 +152,17 @@ export class ChatMessageActionsComponent {
   }
 
   private resolveAction(action: 'copy' | 'edit' | 'feedback' | 'regenerate' | 'branch'): boolean {
+    const actions = this.message().actions;
+
+    if (actions === false) {
+      return false;
+    }
+
     if (this.message().pending) {
       return false;
     }
 
-    const explicit = this.message().actions?.[action];
+    const explicit = actions ? actions[action] : undefined;
     if (explicit !== undefined) {
       return explicit;
     }
@@ -159,7 +172,7 @@ export class ChatMessageActionsComponent {
     }
 
     if (this.message().role === 'user') {
-      return action === 'copy' || action === 'edit' || action === 'branch';
+      return action === 'copy' || action === 'edit';
     }
 
     return false;

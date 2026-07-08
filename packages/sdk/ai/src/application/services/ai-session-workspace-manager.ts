@@ -920,7 +920,6 @@ export class AiSessionWorkspaceManager {
       return {
         copy: true,
         edit: true,
-        branch: true,
       };
     }
 

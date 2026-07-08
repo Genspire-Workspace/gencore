@@ -36,7 +36,7 @@ export const icons_chat: readonly IconEntry[] = [
   { name: 'thumb_up', label: 'Like' },
   { name: 'thumb_down', label: 'Dislike' },
   { name: 'refresh', label: 'Regenerate' },
-  { name: 'account_tree', label: 'Branch' },
+  { name: 'arrow_split', label: 'Branch' },
   { name: 'attach_file', label: 'Attach files' },
   { name: 'send', label: 'Send' },
   { name: 'stop', label: 'Stop' },
