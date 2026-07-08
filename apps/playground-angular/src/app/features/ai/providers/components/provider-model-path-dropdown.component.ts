@@ -18,13 +18,6 @@ export interface IAiProviderModelPathOption {
   imports: [CommonModule, FormsModule, IconComponent],
   template: `
     <div class="w-[min(28rem,calc(100vw-2rem))] rounded-2xl border border-base-300 bg-base-100 p-3 shadow-xl">
-      <div class="mb-3">
-        <div class="text-sm font-semibold text-base-content">Select Provider:Model</div>
-        <div class="mt-1 text-xs text-base-content/60">
-          Choose a full wire path in the format <span class="font-medium">provider:model</span>.
-        </div>
-      </div>
-
       <label class="relative block">
         <span class="pointer-events-none absolute inset-y-0 left-3 inline-flex items-center text-base-content/40">
           <app-icon iconName="search" size="sm" aria-hidden="true" />
