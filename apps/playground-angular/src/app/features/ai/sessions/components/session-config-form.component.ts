@@ -33,7 +33,7 @@ import type {
 @Component({
   selector: 'app-ai-session-config-form',
   host: {
-    class: 'block',
+    class: 'block h-full min-h-0',
   },
   imports: [
     CommonModule,
@@ -42,7 +42,8 @@ import type {
     ProviderModelPathDropdownComponent,
   ],
   template: `
-    <div class="space-y-5">
+    <div class="flex h-full min-h-0 flex-col">
+      <div class="flex-1 space-y-5 overflow-y-auto pr-1">
       <div>
         <h3 class="text-lg font-semibold text-base-content">Session Settings</h3>
         <p class="mt-1 text-sm text-base-content/60">
@@ -137,7 +138,9 @@ import type {
         </div>
       </div>
 
-      <div class="flex items-center justify-end gap-3">
+      </div>
+
+      <div class="mt-5 flex items-center justify-end gap-3 border-t border-base-300 pt-4">
         <button
           class="mr-auto rounded-2xl border border-danger/30 px-4 py-2.5 text-sm font-medium text-danger transition hover:bg-danger/10"
           type="button"
