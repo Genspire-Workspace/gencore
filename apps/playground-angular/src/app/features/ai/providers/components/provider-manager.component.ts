@@ -177,10 +177,8 @@ export class ProviderManagerComponent implements OnInit {
 
     const updated = await this.providerClient.updateProvider(provider.id, {
       name: draft.name || undefined,
-      kind: draft.kind || undefined,
       clientKind: draft.clientKind || undefined,
       baseUrl: draft.baseUrl || undefined,
-      api: draft.api || undefined,
       doc: draft.doc || undefined,
       website: draft.website || undefined,
     });

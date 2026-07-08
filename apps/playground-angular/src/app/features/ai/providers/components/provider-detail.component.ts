@@ -21,10 +21,8 @@ import type { AppOverlayHandle } from '../../../../shared/overlay';
 
 export interface IProviderDraft {
   name: string;
-  kind: string;
   clientKind: string;
   baseUrl: string;
-  api: string;
   doc: string;
   website: string;
 }
@@ -51,16 +49,6 @@ export interface IProviderDraft {
               type="text"
               [ngModel]="name()"
               (ngModelChange)="name.set($event)"
-            />
-          </label>
-
-          <label class="block space-y-2">
-            <span class="text-sm font-medium text-base-content/80">Kind</span>
-            <input
-              class="w-full rounded-2xl border border-base-300 bg-base px-4 py-3 text-base-content outline-none transition focus:border-primary"
-              type="text"
-              [ngModel]="kind()"
-              (ngModelChange)="kind.set($event)"
             />
           </label>
 
@@ -102,16 +90,6 @@ export interface IProviderDraft {
               type="text"
               [ngModel]="baseUrl()"
               (ngModelChange)="baseUrl.set($event)"
-            />
-          </label>
-
-          <label class="block space-y-2">
-            <span class="text-sm font-medium text-base-content/80">API</span>
-            <input
-              class="w-full rounded-2xl border border-base-300 bg-base px-4 py-3 text-base-content outline-none transition focus:border-primary"
-              type="text"
-              [ngModel]="api()"
-              (ngModelChange)="api.set($event)"
             />
           </label>
 
@@ -183,13 +161,6 @@ export interface IProviderDraft {
 
     <ng-template #clientKindDropdown let-overlay>
       <div class="w-[min(24rem,calc(100vw-2rem))] rounded-2xl border border-base-300 bg-base-100 p-3 shadow-xl">
-        <div class="mb-3">
-          <div class="text-sm font-semibold text-base-content">Select Client Kind</div>
-          <div class="mt-1 text-xs text-base-content/60">
-            Choose the transport/client compatibility for this provider.
-          </div>
-        </div>
-
         <label class="relative block">
           <span class="pointer-events-none absolute inset-y-0 left-3 inline-flex items-center text-base-content/40">
             <app-icon iconName="search" size="sm" aria-hidden="true" />
@@ -239,10 +210,8 @@ export class ProviderDetailComponent {
   private readonly viewContainerRef = inject(ViewContainerRef);
 
   readonly name = model('');
-  readonly kind = model('');
   readonly clientKind = model('');
   readonly baseUrl = model('');
-  readonly api = model('');
   readonly doc = model('');
   readonly website = model('');
 
@@ -266,10 +235,8 @@ export class ProviderDetailComponent {
 
   hydrate(provider: IAiProviderResponseDto): void {
     this.name.set(provider.name);
-    this.kind.set(provider.kind);
     this.clientKind.set(provider.clientKind);
     this.baseUrl.set(provider.baseUrl || '');
-    this.api.set(provider.api || '');
     this.doc.set(provider.doc || '');
     this.website.set(provider.website || '');
     this.clientKindSearch.set('');
@@ -278,10 +245,8 @@ export class ProviderDetailComponent {
   read(): IProviderDraft {
     return {
       name: this.name().trim(),
-      kind: this.kind().trim(),
       clientKind: this.clientKind().trim(),
       baseUrl: this.baseUrl().trim(),
-      api: this.api().trim(),
       doc: this.doc().trim(),
       website: this.website().trim(),
     };
