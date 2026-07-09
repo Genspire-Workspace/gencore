@@ -1,8 +1,12 @@
 // file: packages\core\src\config\env-service.ts
 
+function readProcessEnv(): Record<string, string | undefined> {
+  return (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env ?? {};
+}
+
 export class EnvService {
   get(key: string, defaultValue?: string): string | undefined {
-    return process.env[key] ?? defaultValue;
+    return readProcessEnv()[key] ?? defaultValue;
   }
 
   require(key: string): string {
@@ -61,6 +65,6 @@ export class EnvService {
   }
 
   getAll(): Readonly<Record<string, string | undefined>> {
-    return { ...process.env };
+    return { ...readProcessEnv() };
   }
 }

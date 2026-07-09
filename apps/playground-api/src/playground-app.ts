@@ -1,6 +1,6 @@
 // file: apps\playground-api\src\playground-app.ts
 
-import { createApp, defineApp } from "@genspire/core";
+import { createApp, defineApp, EventBus, registerEventSubscribers } from "@genspire/core";
 import { dataExtension } from "@genspire/data";
 import {
   MikroOrmMigrationRunner,
@@ -28,6 +28,8 @@ import { createPlaygroundStorageProvider } from "./storage/playground-storage-pr
 import { AuthActivityController } from "./auth/auth-activity.controller.js";
 import { AuthBanController } from "./auth/auth-ban.controller.js";
 import { AiPromptController } from "./ai/prompts/ai-prompt.controller.js";
+import { AiPromptEventSubscriber } from "./ai/prompts/ai-prompt.event-subscriber.js";
+import { createPlaygroundAiPromptSeeder } from "./ai/prompts/ai-prompt.seeder.js";
 import { AiSkillController } from "./ai/skills/ai-skill.controller.js";
 import { HealthController } from "./health/health.controller.js";
 import { TodoController } from "./todos/todo.controller.js";
@@ -106,36 +108,51 @@ export async function createPlaygroundApp(
     }),
   );
 
-  if (playgroundEnv.database.schemaMode !== "none") {
-    const seeder = createPlaygroundAuthSeeder({ env: playgroundEnv });
+  await app.use({
+    name: "playground-ai-prompt-events",
+    dependsOn: ["ai"] as const,
+    register(currentApp) {
+      currentApp.registerScoped(AiPromptEventSubscriber);
+    },
+    start(currentApp) {
+      registerEventSubscribers(
+        currentApp.container,
+        currentApp.get(EventBus),
+        [AiPromptEventSubscriber],
+      );
+    },
+  });
 
-    await app.use({
-      name: "playground-schema",
-      dependsOn: ["data-mikroorm", "auth"],
-      async start(currentApp) {
-        const orm = currentApp.get(MikroOrmService).getOrm();
+  const seeder = createPlaygroundAuthSeeder({ env: playgroundEnv });
+  const promptSeeder = createPlaygroundAiPromptSeeder();
 
-        if (playgroundEnv.database.schemaMode === "update") {
-          // Playground-only schema sync. Production deployments should use migrations.
-          await orm.schema.update();
-        } else {
-          await currentApp.get(MikroOrmMigrationRunner).up();
-        }
+  await app.use({
+    name: "playground-schema",
+    dependsOn: ["data-mikroorm", "auth"],
+    async start(currentApp) {
+      const orm = currentApp.get(MikroOrmService).getOrm();
 
-        await seeder.run(orm.em.fork());
+      if (playgroundEnv.database.schemaMode === "update") {
+        // Playground-only schema sync. Production deployments should use migrations.
+        await orm.schema.update();
+      } else if (playgroundEnv.database.schemaMode === "migrations") {
+        await currentApp.get(MikroOrmMigrationRunner).up();
+      }
 
-        const aiSeedScope = currentApp.createScope();
-        try {
-          await seedAiProviders(
-            aiSeedScope.resolve(AiProviderDbContext),
-            aiProviderCatalogue.createSeedInputs(),
-          );
-        } finally {
-          await aiSeedScope.destroy();
-        }
-      },
-    });
-  }
+      await seeder.run(orm.em.fork());
+      await promptSeeder.run(orm.em.fork());
+
+      const aiSeedScope = currentApp.createScope();
+      try {
+        await seedAiProviders(
+          aiSeedScope.resolve(AiProviderDbContext),
+          aiProviderCatalogue.createSeedInputs(),
+        );
+      } finally {
+        await aiSeedScope.destroy();
+      }
+    },
+  });
 
   const authConfig = app.get(AuthConfiguration);
 
@@ -171,7 +188,18 @@ export async function createPlaygroundApp(
   await app.use(storageServerExtension());
   await app.use(aiServerExtension({ routePrefix: "/api/v1" }));
 
-  app.get(Server).registerControllers(HealthController, AiPromptController, AiSkillController, AuthActivityController, AuthBanController, TodoController);
+  const server = app.get(Server);
+
+  server.group("/api/v1", () => {
+    server.registerControllers(AiPromptController, AiSkillController);
+  });
+
+  server.registerControllers(
+    HealthController,
+    AuthActivityController,
+    AuthBanController,
+    TodoController,
+  );
 
   return app;
 }

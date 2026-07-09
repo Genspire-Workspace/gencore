@@ -1,9 +1,20 @@
 // file: packages\core\src\logging\logger.ts
 
-import path from "node:path";
 import type { ILogEntry, LogLevel, LogStore } from "./log-store.js";
 
 type LogFormat = "pretty" | "json";
+
+interface INodeLikeProcess {
+  cwd?: () => string;
+  env?: Record<string, string | undefined>;
+  stdout?: {
+    isTTY?: boolean;
+  };
+}
+
+interface IV8ErrorConstructor {
+  captureStackTrace?: (targetObject: object, constructorOpt?: Function) => void;
+}
 
 const LOG_LEVEL_PRIORITY: Record<LogLevel, number> = {
   debug: 10,
@@ -93,10 +104,35 @@ function toErrorData(error: unknown): Record<string, unknown> {
   return { error: String(error) };
 }
 
+function readNodeProcess(): INodeLikeProcess | null {
+  const candidate = (globalThis as { process?: INodeLikeProcess }).process;
+  return candidate ?? null;
+}
+
+function normalizeSlashes(value: string): string {
+  return value.replace(/\\/g, "/");
+}
+
 function normalizeStackFile(filePath: string): string {
   const normalized = filePath.replace(/^file:\/\//, "");
-  const relative = path.relative(process.cwd(), normalized);
-  return relative && !relative.startsWith("..") ? relative : normalized;
+  const cwd = readNodeProcess()?.cwd?.();
+  if (!cwd) {
+    return normalized;
+  }
+
+  const normalizedFile = normalizeSlashes(normalized);
+  const normalizedCwd = normalizeSlashes(cwd).replace(/\/+$/, "");
+  const prefix = `${normalizedCwd}/`;
+
+  if (normalizedFile === normalizedCwd) {
+    return ".";
+  }
+
+  if (normalizedFile.startsWith(prefix)) {
+    return normalizedFile.slice(prefix.length);
+  }
+
+  return normalized;
 }
 
 function parseStackLine(line: string): { file: string; line: string; column: string } | null {
@@ -132,7 +168,7 @@ function isApplicationStackFrame(line: string): boolean {
 
 function captureCallSite(): string | undefined {
   const holder: { stack?: string } = {};
-  Error.captureStackTrace?.(holder, captureCallSite);
+  (Error as IV8ErrorConstructor).captureStackTrace?.(holder, captureCallSite);
   const stackLines = holder.stack?.split("\n").slice(1) ?? [];
 
   for (const line of stackLines) {
@@ -150,36 +186,39 @@ function captureCallSite(): string | undefined {
 }
 
 function supportsAnsiColors(): boolean {
-  if (process.env["NO_COLOR"]) {
+  const env = readNodeProcess()?.env ?? {};
+  const stdout = readNodeProcess()?.stdout;
+
+  if (env["NO_COLOR"]) {
     return false;
   }
 
-  if (process.env["FORCE_COLOR"]) {
+  if (env["FORCE_COLOR"]) {
     return true;
   }
 
-  if (process.env["COLORTERM"]) {
+  if (env["COLORTERM"]) {
     return true;
   }
 
-  if (process.env["TERM_PROGRAM"] === "vscode") {
+  if (env["TERM_PROGRAM"] === "vscode") {
     return true;
   }
 
-  if (process.env["WT_SESSION"]) {
+  if (env["WT_SESSION"]) {
     return true;
   }
 
-  if (process.env["ANSICON"]) {
+  if (env["ANSICON"]) {
     return true;
   }
 
-  const term = process.env["TERM"]?.trim().toLowerCase() ?? "";
+  const term = env["TERM"]?.trim().toLowerCase() ?? "";
   if (term && term !== "dumb") {
     return true;
   }
 
-  return Boolean(process.stdout?.isTTY);
+  return Boolean(stdout?.isTTY);
 }
 
 function colorize(value: string, code: string, enabled: boolean): string {

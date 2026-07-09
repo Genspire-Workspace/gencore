@@ -1,7 +1,7 @@
 // file: apps/playground-angular/src/app/features/ai/providers/components/provider-model-editor.component.ts
 
 import { CommonModule } from '@angular/common';
-import { Component, computed, input, model, output, signal } from '@angular/core';
+import { Component, computed, effect, input, model, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import type { IAiModelResponseDto } from '@genspire/sdk-ai';
 import { IconComponent } from '../../../../icons/icon.component';
@@ -366,6 +366,12 @@ export class ProviderModelEditorComponent {
       this.modelOutputKinds(),
     ),
   );
+
+  constructor() {
+    effect(() => {
+      this.hydrate(this.selectedModel());
+    });
+  }
 
   hydrate(model: IAiModelResponseDto | null): void {
     const capabilities = this.readCapabilitiesFromModel(model);

@@ -11,6 +11,7 @@ import {
 import { FormsModule } from '@angular/forms';
 import { IconComponent } from '../../../../icons/icon.component';
 import { ProviderManagerTriggerComponent } from '../../providers/components/provider-manager-trigger.component';
+import { PromptManagerTriggerComponent } from '../../prompts/components/prompt-manager-trigger.component';
 import { SessionListComponent } from './session-list.component';
 import type { IAiSessionResponse } from '../ai-session-types';
 
@@ -26,6 +27,7 @@ import type { IAiSessionResponse } from '../ai-session-types';
     IconComponent,
     SessionListComponent,
     ProviderManagerTriggerComponent,
+    PromptManagerTriggerComponent,
   ],
   template: `
     <div class="flex items-center gap-2">
@@ -74,8 +76,12 @@ import type { IAiSessionResponse } from '../ai-session-types';
       (configure)="configureSession.emit($event)"
     />
 
-    <div class="mt-auto border-t border-base-300 pt-3">
+    <div class="mt-auto flex flex-col gap-2 border-t border-base-300 pt-3">
       <app-ai-provider-manager-trigger
+        [disabled]="loading() || sending()"
+      />
+
+      <app-ai-prompt-manager-trigger
         [disabled]="loading() || sending()"
       />
     </div>

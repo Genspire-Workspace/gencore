@@ -98,6 +98,7 @@ export type IAiSessionMessageFeedbackValue = "good" | "bad";
 export interface IAiSessionStreamEvent extends IAiSseEventDto {
   timeline?: IAiSessionTimelineResponseDto;
   branch?: IAiSessionBranchResponseDto;
+  session?: IAiSessionResponseDto;
 }
 
 export interface IAiSessionAttachment {

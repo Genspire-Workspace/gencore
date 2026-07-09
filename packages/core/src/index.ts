@@ -24,6 +24,7 @@ export {
   OnEvent,
   getEventHandlerMetadata,
   isEventSubscriber,
+  registerEventHandlerMetadata,
 } from "./events/event-subscriber.js";
 
 export { createGuid, deterministicGuid, deterministicGuidFromParts } from "./ids/guid.js";
@@ -39,10 +40,3 @@ export { LoggerFactory, injectLogger } from "./logging/logger-factory.js";
 export { GenError } from "./result/gen-error.js";
 export { Err, Ok } from "./result/result.js";
 export type { Result } from "./result/result.js";
-
-export {
-  resolveFileDir,
-  resolveNearestAncestorDir,
-  resolveNearestPackageRoot,
-  resolveNearestSrcDir,
-} from "./runtime/runtime-paths.js";

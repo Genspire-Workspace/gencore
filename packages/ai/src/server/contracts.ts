@@ -469,6 +469,7 @@ export interface IAiSseEventDto {
     | 'heartbeat'
     | 'message'
     | 'completed'
+    | 'session_renamed'
     | 'error';
   sessionId?: string;
   timelineId?: string;
@@ -484,6 +485,7 @@ export interface IAiSseEventDto {
   finishReason?: string;
   usage?: Record<string, unknown>;
   metadata?: Record<string, unknown>;
+  session?: IAiSessionResponseDto;
   message?: IAiSessionMessageResponseDto;
   toolCall?: unknown;
   toolResult?: unknown;

@@ -1,6 +1,6 @@
 // file: packages\ai\src\application\services\session\generation-service.ts
 
-import { GenError, Scoped } from "@genspire/core";
+import { EventBus, GenError, Scoped } from "@genspire/core";
 import type {
   IEditAiUserMessageAndRegenerateInput,
   IGenerateAiSessionTurnInput,
@@ -12,6 +12,7 @@ import type { IChatGenerationRequest } from "../../../domain/chat/chat-generatio
 import type { AiContentPart, AiMessageContent } from "../../../domain/messages/ai-content-part.js";
 import type {
   IAiSessionSettings,
+  IAiSessionPromptReference,
   IAiSessionSseEvent,
 } from "../../../domain/session/types/ai-session-types.js";
 import {
@@ -45,7 +46,13 @@ import {
   toTimelineResponse,
   toToolDefinitions,
   validateSessionContent,
+  validateSessionTitle,
 } from "./shared.js";
+import {
+  DEFAULT_SESSION_SYSTEM_PROMPT_NAME,
+  DEFAULT_SESSION_TITLE_PROMPT_NAME,
+  requestAiPrompt,
+} from "../../prompts/default-session-prompts.js";
 
 const STREAM_HEARTBEAT_INTERVAL_MS = Number(
   process.env.AI_STREAM_HEARTBEAT_INTERVAL_MS ?? "1000",
@@ -59,16 +66,19 @@ interface IPreparedTurnContext {
   run: AiGenerationRunEntity;
   request: IChatGenerationRequest;
   userMessage: AiSessionMessageEntity;
+  currentUser: IGenerateAiSessionTurnInput["currentUser"];
+  shouldGenerateTitle: boolean;
   promoteTimelineOnFinalize?: boolean;
 }
 
 type ReadNextChunkResult =
   | { kind: "chunk"; result: IteratorResult<IChatGenerationChunk> }
+  | { kind: "title_renamed"; event: IAiSessionSseEvent | null }
   | { kind: "heartbeat"; toolCallId: string; toolName?: string; elapsedMs: number };
 
 @Scoped()
 export class AiSessionGenerationService {
-  static inject = [AiSessionDbContext, AiProviderDbContext, AiGenerationService];
+  static inject = [AiSessionDbContext, AiProviderDbContext, AiGenerationService, EventBus];
 
   private readonly tokenizer = new AiTokenizerService();
 
@@ -76,6 +86,7 @@ export class AiSessionGenerationService {
     private readonly db: AiSessionDbContext,
     private readonly providerDb: AiProviderDbContext,
     private readonly generationService: AiGenerationService,
+    private readonly eventBus: EventBus,
   ) {}
 
   async *generate(input: IGenerateAiSessionTurnInput): AsyncIterable<IAiSessionSseEvent> {
@@ -95,6 +106,7 @@ export class AiSessionGenerationService {
       settings: input.settings,
       metadata: input.metadata,
       sessionSettings: session.settings ?? undefined,
+      currentUser: input.currentUser,
       timelineTurnSource: input.timelineTurnSource ?? "original",
     });
 
@@ -168,6 +180,7 @@ export class AiSessionGenerationService {
       settings: input.settings,
       metadata: input.metadata,
       sessionSettings: session.settings ?? undefined,
+      currentUser: input.currentUser,
       timelineTurnSource: "regenerated",
       promoteTimelineOnFinalize: true,
     });
@@ -252,6 +265,7 @@ export class AiSessionGenerationService {
       settings: input.settings,
       metadata: input.metadata,
       sessionSettings: session.settings ?? undefined,
+      currentUser: input.currentUser,
       timelineTurnSource: "edited_user",
       promoteTimelineOnFinalize: true,
     });
@@ -286,6 +300,7 @@ export class AiSessionGenerationService {
     settings?: IGenerateAiSessionTurnInput["settings"];
     metadata?: Record<string, unknown> | null;
     sessionSettings?: IAiSessionSettings;
+    currentUser: IGenerateAiSessionTurnInput["currentUser"];
     timelineTurnSource: AiSessionTimelineTurnEntity["source"];
     promoteTimelineOnFinalize?: boolean;
   }): Promise<IPreparedTurnContext> {
@@ -356,7 +371,11 @@ export class AiSessionGenerationService {
       session.settings ?? undefined,
       input.settings,
     );
-    const systemPrompt = resolveSystemPrompt(session.settings ?? undefined, input.systemPrompt);
+    const systemPrompt = resolveSystemPrompt([
+      await this.resolveStoredSystemPrompt(input.sessionSettings, input.currentUser),
+      input.sessionSettings?.systemPrompt,
+      input.systemPrompt,
+    ]);
     const historyRequestMessages = await this.buildHistoryRequestMessages({
       provider,
       model,
@@ -396,8 +415,151 @@ export class AiSessionGenerationService {
       run,
       request,
       userMessage,
+      currentUser: input.currentUser,
+      shouldGenerateTitle:
+        timelineTurn.index === 0 && input.timelineTurnSource === "original",
       promoteTimelineOnFinalize: input.promoteTimelineOnFinalize,
     };
+  }
+
+  private async resolveStoredSystemPrompt(
+    sessionSettings: IAiSessionSettings | undefined,
+    currentUser: IGenerateAiSessionTurnInput["currentUser"],
+  ): Promise<string | undefined> {
+    const prompt = await requestAiPrompt(this.eventBus, {
+      currentUser,
+      reference: this.resolvePromptReference(
+        sessionSettings?.prompts?.systemPrompt,
+        DEFAULT_SESSION_SYSTEM_PROMPT_NAME,
+      ),
+    });
+
+    if (!prompt || typeof prompt.template !== "string") {
+      return undefined;
+    }
+
+    const template = prompt.template.trim();
+    return template.length > 0 ? template : undefined;
+  }
+
+  private resolvePromptReference(
+    reference: IAiSessionPromptReference | undefined,
+    fallbackName: string,
+  ): IAiSessionPromptReference {
+    const id = reference?.id?.trim();
+    const name = reference?.name?.trim();
+
+    return {
+      ...(id ? { id } : {}),
+      ...(name ? { name } : { name: fallbackName }),
+    };
+  }
+
+  private async tryGenerateSessionTitle(
+    prepared: IPreparedTurnContext,
+  ): Promise<IAiSessionSseEvent | null> {
+    if (!prepared.shouldGenerateTitle) {
+      return null;
+    }
+
+    const session = await this.db.sessions.findById(prepared.sessionId);
+    if (!session) {
+      return null;
+    }
+
+    if (session.title && session.title.trim() && session.title.trim() !== "AI session") {
+      return null;
+    }
+
+    const prompt = await requestAiPrompt(this.eventBus, {
+      currentUser: prepared.currentUser,
+      reference: this.resolvePromptReference(
+        session.settings?.prompts?.titleGeneratorPrompt,
+        DEFAULT_SESSION_TITLE_PROMPT_NAME,
+      ),
+    });
+
+    if (!prompt || typeof prompt.template !== "string") {
+      return null;
+    }
+
+    const userMessageText = this.toTextOnlyHistoryContent(
+      prepared.userMessage.content as AiMessageContent,
+    );
+    if (!userMessageText) {
+      return null;
+    }
+
+    const response = await this.generationService.generateChat({
+      provider: prepared.request.provider,
+      model: prepared.request.model,
+      messages: [
+        { role: "system", content: prompt.template },
+        { role: "user", content: userMessageText },
+      ],
+      settings: {
+        reasoningEffort: "none",
+        temperature: 0.2,
+        maxTokens: 32,
+      },
+      metadata: {
+        source: "session-title-generation",
+        sessionId: prepared.sessionId,
+      },
+    });
+
+    const title = validateSessionTitle(
+      this.normalizeGeneratedSessionTitle(
+        this.toTextOnlyHistoryContent(response.message.content),
+      ),
+    );
+    if (!title) {
+      return null;
+    }
+
+    const latestSession = await this.db.sessions.findById(prepared.sessionId);
+    if (!latestSession) {
+      return null;
+    }
+
+    if (
+      latestSession.title &&
+      latestSession.title.trim() &&
+      latestSession.title.trim() !== "AI session"
+    ) {
+      return null;
+    }
+
+    latestSession.title = title;
+    latestSession.updatedAt = new Date();
+    await this.db.sessions.update(latestSession);
+    await this.db.saveChanges();
+
+    return {
+      type: "session_renamed",
+      sessionId: latestSession.id,
+      session: {
+        id: latestSession.id,
+        userId: latestSession.userId,
+        title: latestSession.title ?? undefined,
+        type: latestSession.type,
+        defaultTimelineId: latestSession.defaultTimelineId ?? undefined,
+        settings: latestSession.settings ?? undefined,
+        metadata: latestSession.metadata ?? undefined,
+        createdAt: latestSession.createdAt.toISOString(),
+        updatedAt: latestSession.updatedAt.toISOString(),
+      },
+    };
+  }
+
+  private normalizeGeneratedSessionTitle(value: string | null): string | null {
+    if (!value) {
+      return null;
+    }
+
+    const firstLine = value.split(/\r?\n/u)[0]?.trim() ?? "";
+    const unquoted = firstLine.replace(/^["'\s]+|["'\s]+$/gu, "");
+    return unquoted.replace(/[.!?]+$/u, "").trim();
   }
 
   private async buildHistoryRequestMessages(input: {
@@ -587,6 +749,9 @@ export class AiSessionGenerationService {
     let accumulatedText = "";
     const toolResults: Array<NonNullable<IChatGenerationChunk["toolResult"]>> = [];
     const toolCalls: Array<NonNullable<IChatGenerationChunk["toolCall"]>> = [];
+    const titleRenameTask = this.startSessionTitleRenameTask(prepared);
+    let titleRenamePending = titleRenameTask != null;
+    let titleRenameEmitted = false;
 
     try {
       const iterator = this.generationService.streamChat(prepared.request)[Symbol.asyncIterator]();
@@ -597,7 +762,16 @@ export class AiSessionGenerationService {
           iterator,
           pendingTools,
           prepared,
+          titleRenamePending ? titleRenameTask : null,
         );
+        if (nextChunk.kind === "title_renamed") {
+          titleRenamePending = false;
+          if (nextChunk.event) {
+            titleRenameEmitted = true;
+            yield nextChunk.event;
+          }
+          continue;
+        }
         if (nextChunk.kind === "heartbeat") {
           yield {
             type: "heartbeat",
@@ -700,6 +874,15 @@ export class AiSessionGenerationService {
         }
       }
 
+      if (titleRenamePending && titleRenameTask) {
+        titleRenamePending = false;
+        const titleRenameEvent = await titleRenameTask;
+        if (titleRenameEvent) {
+          titleRenameEmitted = true;
+          yield titleRenameEvent;
+        }
+      }
+
       const assistantMessage = await this.finalizeSuccess(
         prepared,
         finalMessageChunk,
@@ -739,6 +922,17 @@ export class AiSessionGenerationService {
         metadata: prepared.run.metadata ?? undefined,
       };
     } catch (error) {
+      if (titleRenamePending && titleRenameTask) {
+        titleRenamePending = false;
+        try {
+          const titleRenameEvent = await titleRenameTask;
+          if (titleRenameEvent && !titleRenameEmitted) {
+            yield titleRenameEvent;
+          }
+        } catch {
+          // Ignore title-generation failures so the primary generation path wins.
+        }
+      }
       if (this.isAbortError(error)) {
         await this.finalizeAbort(
           prepared,
@@ -766,29 +960,56 @@ export class AiSessionGenerationService {
     }
   }
 
+  private startSessionTitleRenameTask(
+    prepared: IPreparedTurnContext,
+  ): Promise<IAiSessionSseEvent | null> | null {
+    if (!prepared.shouldGenerateTitle) {
+      return null;
+    }
+
+    return this.tryGenerateSessionTitle(prepared).catch(() => null);
+  }
+
   private async readNextChunkWithHeartbeats(
     iterator: AsyncIterator<IChatGenerationChunk>,
     pendingTools: ReadonlyMap<string, { startedAt: number; toolName?: string }>,
     prepared: IPreparedTurnContext,
+    titleRenameTask: Promise<IAiSessionSseEvent | null> | null,
   ): Promise<ReadNextChunkResult> {
     if (STREAM_HEARTBEAT_INTERVAL_MS <= 0 || pendingTools.size === 0) {
-      return {
-        kind: "chunk",
-        result: await iterator.next(),
-      };
+      const nextPromise = iterator.next();
+      if (!titleRenameTask) {
+        return {
+          kind: "chunk",
+          result: await nextPromise,
+        };
+      }
+
+      return await Promise.race<ReadNextChunkResult>([
+        nextPromise.then((result) => ({ kind: "chunk" as const, result })),
+        titleRenameTask.then((event) => ({ kind: "title_renamed" as const, event })),
+      ]);
     }
 
     const nextPromise = iterator.next();
     while (true) {
       const result = await Promise.race<
         | { kind: "chunk"; result: IteratorResult<IChatGenerationChunk> }
+        | { kind: "title_renamed"; event: IAiSessionSseEvent | null }
         | { kind: "heartbeat" }
       >([
         nextPromise.then((value) => ({ kind: "chunk" as const, result: value })),
+        ...(titleRenameTask
+          ? [titleRenameTask.then((event) => ({ kind: "title_renamed" as const, event }))]
+          : []),
         Bun.sleep(STREAM_HEARTBEAT_INTERVAL_MS).then(() => ({ kind: "heartbeat" as const })),
       ]);
 
       if (result.kind === "chunk") {
+        return result;
+      }
+
+      if (result.kind === "title_renamed") {
         return result;
       }
 

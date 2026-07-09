@@ -18,6 +18,7 @@ import {
   toSessionResponse,
   toTimelineResponse,
   validateSessionTitle,
+  withDefaultSessionPromptReferences,
 } from "./shared.js";
 
 @Scoped()
@@ -51,7 +52,7 @@ export class AiSessionService {
     session.userId = input.currentUser.id;
     session.title = validateSessionTitle(input.title);
     session.type = input.type ?? "chat";
-    session.settings = input.settings ?? null;
+    session.settings = withDefaultSessionPromptReferences(input.settings) ?? null;
     session.metadata = input.metadata ?? null;
     session.createdAt = now;
     session.updatedAt = now;
@@ -108,7 +109,7 @@ export class AiSessionService {
       validateSessionTitle(sourceSession.title) ??
       "Branched session";
     session.type = sourceSession.type;
-    session.settings = sourceSession.settings ?? null;
+    session.settings = withDefaultSessionPromptReferences(sourceSession.settings ?? undefined) ?? null;
     session.metadata = input.metadata ?? sourceSession.metadata ?? null;
     session.createdAt = now;
     session.updatedAt = now;
@@ -157,7 +158,7 @@ export class AiSessionService {
       session.type = input.type;
     }
     if (input.settings !== undefined) {
-      session.settings = input.settings;
+      session.settings = withDefaultSessionPromptReferences(input.settings ?? undefined) ?? null;
     }
     if (input.metadata !== undefined) {
       session.metadata = input.metadata;

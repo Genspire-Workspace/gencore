@@ -430,8 +430,14 @@ export class AiSessionWorkspaceManager {
           } (${Math.floor((chunk.elapsedMs ?? 0) / 1000)}s)`;
         } else if (chunk.type === "completed") {
           streamStatus = "Latest assistant turn saved.";
+        } else if (chunk.type === "session_renamed") {
+          streamStatus = "Session renamed successfully.";
         } else if (chunk.type === "error") {
           streamStatus = "Stream returned an error.";
+        }
+
+        if (chunk.type === "session_renamed") {
+          this.applySessionRenameEvent(chunk);
         }
 
         this.patchSessionState(targetId, (current) => {
@@ -819,8 +825,14 @@ export class AiSessionWorkspaceManager {
           let streamStatus = "Streaming assistant regeneration...";
           if (chunk.type === "completed") {
             streamStatus = "Latest assistant turn saved.";
+          } else if (chunk.type === "session_renamed") {
+            streamStatus = "Session renamed successfully.";
           } else if (chunk.type === "error") {
             streamStatus = "Regeneration returned an error.";
+          }
+
+          if (chunk.type === "session_renamed") {
+            this.applySessionRenameEvent(chunk);
           }
 
           this.patchSessionState(targetSessionId, (current) => {
@@ -934,6 +946,34 @@ export class AiSessionWorkspaceManager {
     });
   }
 
+  private applySessionRenameEvent(chunk: IAiSessionStreamEvent): void {
+    const renamedSession = chunk.session;
+    if (!renamedSession) {
+      return;
+    }
+
+    const nextSessions = this.snapshot.sessions.map((session) =>
+      session.id === renamedSession.id ? { ...session, ...renamedSession } : session,
+    );
+
+    const nextStates = Object.fromEntries(
+      Object.entries(this.snapshot.sessionStatesById).map(([sessionId, state]) => {
+        if (sessionId !== renamedSession.id) {
+          return [sessionId, state];
+        }
+
+        return [sessionId, this.applySessionRenameToState(state, renamedSession)];
+      }),
+    );
+
+    this.snapshot = {
+      ...this.snapshot,
+      sessions: nextSessions,
+      sessionStatesById: nextStates,
+    };
+    this.notify();
+  }
+
   private async ensureSessionRecord(): Promise<IAiSessionResponseDto> {
     const currentSessionId = this.activeSessionStore?.getActiveSessionId() ?? null;
     if (currentSessionId) {
@@ -1011,6 +1051,42 @@ export class AiSessionWorkspaceManager {
         this.readSessionModel(graph.session) ||
         this.defaultModel,
       loading: false,
+    };
+  }
+
+  private applySessionRenameToState(
+    state: IAiSessionClientState,
+    session: IAiSessionResponseDto,
+  ): IAiSessionClientState {
+    return {
+      ...state,
+      graph: state.graph
+        ? {
+            ...state.graph,
+            session: {
+              ...state.graph.session,
+              ...session,
+            },
+          }
+        : state.graph,
+      persistedGraph: state.persistedGraph
+        ? {
+            ...state.persistedGraph,
+            session: {
+              ...state.persistedGraph.session,
+              ...session,
+            },
+          }
+        : state.persistedGraph,
+      optimisticGraph: state.optimisticGraph
+        ? {
+            ...state.optimisticGraph,
+            session: {
+              ...state.optimisticGraph.session,
+              ...session,
+            },
+          }
+        : state.optimisticGraph,
     };
   }
 

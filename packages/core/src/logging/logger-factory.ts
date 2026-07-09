@@ -4,16 +4,22 @@ import { Singleton, inject } from "../container/decorators.js";
 import { Logger, normalizeLogColors, normalizeLogFormat, normalizeLogLevel } from "./logger.js";
 import { LogStore } from "./log-store.js";
 
+function readProcessEnv(): Record<string, string | undefined> {
+  return (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env ?? {};
+}
+
 @Singleton()
 export class LoggerFactory {
   constructor(private readonly store?: LogStore) {}
 
   createLogger(category: string | Function): Logger {
+    const env = readProcessEnv();
+
     return new Logger(
       typeof category === "string" ? category : category.name || "Anonymous",
-      normalizeLogLevel(process.env["LOG_LEVEL"]),
-      normalizeLogFormat(process.env["LOG_FORMAT"]),
-      normalizeLogColors(process.env["LOG_COLORS"]),
+      normalizeLogLevel(env["LOG_LEVEL"]),
+      normalizeLogFormat(env["LOG_FORMAT"]),
+      normalizeLogColors(env["LOG_COLORS"]),
       this.store,
     );
   }

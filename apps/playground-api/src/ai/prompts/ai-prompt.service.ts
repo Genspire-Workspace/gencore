@@ -1,4 +1,4 @@
-import { GenError, Scoped } from "@genspire/core";
+import { createGuid, GenError, Scoped } from "@genspire/core";
 import type { ICurrentUser } from "@genspire/auth";
 import { HttpError } from "@genspire/server";
 import { defineAiPrompt } from "@genspire/ai/domain";
@@ -150,7 +150,7 @@ export class AiPromptService {
     }
 
     const entity = new AiPromptEntity();
-    entity.id = crypto.randomUUID();
+    entity.id = createGuid();
     entity.userId = visibility === "system" ? null : currentUser.id;
     entity.visibility = visibility;
     entity.name = input.name;
@@ -310,5 +310,34 @@ export class AiPromptService {
     }
 
     return prompts;
+  }
+
+  async resolvePrompt(
+    currentUser: ICurrentUser | null,
+    reference: { id?: string; name?: string },
+  ): Promise<IAiPrompt | null> {
+    const promptId = reference.id?.trim();
+    if (promptId) {
+      const entity = await this.db.aiPrompts.findById(promptId);
+      return entity && canAccessPrompt(entity, currentUser)
+        ? toRuntimePrompt(entity)
+        : null;
+    }
+
+    const promptName = reference.name?.trim().toLowerCase();
+    if (!promptName) {
+      return null;
+    }
+
+    const prompts = await this.db.aiPrompts.list({
+      orderBy: "updatedAt",
+      direction: "desc",
+    });
+    const entity = prompts.find((item) =>
+      canAccessPrompt(item, currentUser)
+      && item.name.trim().toLowerCase() === promptName,
+    );
+
+    return entity ? toRuntimePrompt(entity) : null;
   }
 }

@@ -7,6 +7,7 @@ import {
   ViewChild,
   ViewContainerRef,
   computed,
+  effect,
   inject,
   input,
   model,
@@ -232,6 +233,25 @@ export class ProviderDetailComponent {
   });
 
   private activeDropdownHandle: AppOverlayHandle | null = null;
+
+  constructor() {
+    effect(() => {
+      const provider = this.provider();
+
+      if (provider) {
+        this.hydrate(provider);
+        return;
+      }
+
+      this.name.set('');
+      this.clientKind.set('');
+      this.baseUrl.set('');
+      this.doc.set('');
+      this.website.set('');
+      this.confirmDelete.set(false);
+      this.clientKindSearch.set('');
+    });
+  }
 
   hydrate(provider: IAiProviderResponseDto): void {
     this.name.set(provider.name);

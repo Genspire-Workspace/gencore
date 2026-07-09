@@ -15,8 +15,13 @@ import {
   AiSessionTurnEntity,
   type IAiSessionSettings,
 } from "../../../domain/session/index.js";
+import type { IAiSessionPromptReference } from "../../../domain/session/types/ai-session-types.js";
 import type { IChatGenerationSettings } from "../../../domain/chat/chat-generation-settings.js";
 import { AiSessionDbContext } from "../../../infrastructure/persistence/ai-session-db-context.js";
+import {
+  DEFAULT_SESSION_SYSTEM_PROMPT_NAME,
+  DEFAULT_SESSION_TITLE_PROMPT_NAME,
+} from "../../prompts/default-session-prompts.js";
 
 export interface IAiSessionTurnSnapshot {
   timelineTurn: AiSessionTimelineTurnEntity;
@@ -161,10 +166,55 @@ export function resolveModel(
 }
 
 export function resolveSystemPrompt(
-  sessionSettings: IAiSessionSettings | null | undefined,
-  systemPrompt?: string,
+  parts: readonly (string | null | undefined)[],
 ): string | undefined {
-  return systemPrompt ?? sessionSettings?.systemPrompt;
+  const normalized = parts
+    .map((part) => part?.trim() ?? "")
+    .filter((part) => part.length > 0);
+
+  return normalized.length > 0
+    ? normalized.join("\n\n")
+    : undefined;
+}
+
+export function withDefaultSessionPromptReferences(
+  settings: IAiSessionSettings | null | undefined,
+): IAiSessionSettings | null | undefined {
+  if (!settings) {
+    return {
+      prompts: {
+        systemPrompt: { name: DEFAULT_SESSION_SYSTEM_PROMPT_NAME },
+        titleGeneratorPrompt: { name: DEFAULT_SESSION_TITLE_PROMPT_NAME },
+      },
+    };
+  }
+
+  return {
+    ...settings,
+    prompts: {
+      systemPrompt: normalizePromptReference(
+        settings.prompts?.systemPrompt,
+        DEFAULT_SESSION_SYSTEM_PROMPT_NAME,
+      ),
+      titleGeneratorPrompt: normalizePromptReference(
+        settings.prompts?.titleGeneratorPrompt,
+        DEFAULT_SESSION_TITLE_PROMPT_NAME,
+      ),
+    },
+  };
+}
+
+function normalizePromptReference(
+  reference: IAiSessionPromptReference | undefined,
+  fallbackName: string,
+): IAiSessionPromptReference {
+  const id = reference?.id?.trim();
+  const name = reference?.name?.trim();
+
+  return {
+    ...(id ? { id } : {}),
+    ...(name ? { name } : { name: fallbackName }),
+  };
 }
 
 export function ensureStreamEnabled(

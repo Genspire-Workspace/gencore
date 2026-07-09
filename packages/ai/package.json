@@ -7,6 +7,7 @@
     ".": "./src/index.ts",
     "./tokenizer": "./src/tokenizer.ts",
     "./domain": "./src/domain.ts",
+    "./domain/prompts": "./src/domain/prompts.ts",
     "./application": "./src/application.ts",
     "./infrastructure": "./src/infrastructure.ts",
     "./server": "./src/server.ts",

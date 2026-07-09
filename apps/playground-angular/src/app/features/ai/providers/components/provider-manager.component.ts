@@ -16,6 +16,7 @@ import type {
   IAiProviderResponseDto,
 } from '@genspire/sdk-ai';
 import type { AppOverlayHandle } from '../../../../shared/overlay';
+import { IconComponent } from '../../../../icons/icon.component';
 import { AiProviderClient } from '../ai-provider.client';
 import { ProviderApiKeysComponent } from './provider-api-keys.component';
 import { ProviderDetailComponent } from './provider-detail.component';
@@ -27,6 +28,7 @@ import { ProviderModelEditorComponent } from './provider-model-editor.component'
   standalone: true,
   imports: [
     CommonModule,
+    IconComponent,
     ProviderListComponent,
     ProviderDetailComponent,
     ProviderModelEditorComponent,
@@ -39,41 +41,63 @@ import { ProviderModelEditorComponent } from './provider-model-editor.component'
           <app-ai-provider-list
             [providers]="providers()"
             [selectedProviderId]="selectedProviderId()"
-            [showClose]="true"
             (select)="selectProvider($event)"
             (create)="createProvider($event)"
-            (close)="close()"
           />
         </aside>
 
-        <section class="min-h-0 overflow-y-auto p-6">
-          @if (selectedProvider()) {
-            <div class="flex flex-col gap-6">
-              <app-ai-provider-detail
-                [provider]="selectedProvider()"
-                [clientKinds]="clientKinds()"
-                (save)="saveProvider()"
-                (delete)="deleteProvider()"
-              />
-
-              <app-ai-provider-model-editor
-                [models]="providerModels()"
-                [selectedModelId]="selectedModelId()"
-                (create)="createModel()"
-                (selectModel)="selectModel($event)"
-                (save)="saveModel()"
-                (delete)="deleteModel()"
-                (requestDelete)="requestDeleteModel($event)"
-              />
-
-              <app-ai-provider-api-keys
-                [apiKeys]="providerApiKeys()"
-                (create)="createApiKey()"
-              />
+        <section class="flex min-h-0 flex-col bg-base-100">
+          <header class="flex items-start justify-between gap-4 border-b border-base-300 bg-base-100 px-6 py-5">
+            <div class="min-w-0">
+              <h2 class="truncate text-lg font-semibold text-base-content">
+                {{ selectedProvider()?.name || 'Provider Editor' }}
+              </h2>
+              <div class="mt-1 text-sm text-base-content/60">
+                Edit provider settings, models, and API keys.
+              </div>
             </div>
-          } @else {
-            <app-ai-provider-detail [provider]="null" />
-          }
+
+            <button
+              class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-base-300 bg-base text-base-content transition hover:border-base-content/30 hover:bg-base-200"
+              type="button"
+              (click)="close()"
+              aria-label="Close provider manager"
+            >
+              <app-icon iconName="close" size="sm" aria-hidden="true" />
+            </button>
+          </header>
+
+          <div class="min-h-0 flex-1 overflow-y-auto px-6 pb-6 pt-6">
+            @if (selectedProvider()) {
+              <div class="flex flex-col gap-6">
+                <app-ai-provider-detail
+                  [provider]="selectedProvider()"
+                  [clientKinds]="clientKinds()"
+                  (save)="saveProvider()"
+                  (delete)="deleteProvider()"
+                />
+
+                <app-ai-provider-model-editor
+                  [models]="providerModels()"
+                  [selectedModelId]="selectedModelId()"
+                  (create)="createModel()"
+                  (selectModel)="selectModel($event)"
+                  (save)="saveModel()"
+                  (delete)="deleteModel()"
+                  (requestDelete)="requestDeleteModel($event)"
+                />
+
+                <app-ai-provider-api-keys
+                  [apiKeys]="providerApiKeys()"
+                  (create)="createApiKey()"
+                />
+              </div>
+            } @else {
+              <app-ai-provider-detail
+                [provider]="null"
+              />
+            }
+          </div>
         </section>
       </div>
     </div>

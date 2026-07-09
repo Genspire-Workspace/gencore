@@ -17,10 +17,19 @@ export type AiSessionBranchReason =
 export type AiSessionMessageRole = "system" | "user" | "assistant" | "tool";
 export type AiSessionFeedbackRating = "good" | "bad";
 
+export interface IAiSessionPromptReference {
+  id?: string;
+  name?: string;
+}
+
 export interface IAiSessionSettings {
   provider?: string;
   model?: string;
   systemPrompt?: string;
+  prompts?: {
+    systemPrompt?: IAiSessionPromptReference;
+    titleGeneratorPrompt?: IAiSessionPromptReference;
+  };
   generation?: IChatGenerationSettings;
   metadata?: Record<string, unknown>;
 }
@@ -35,6 +44,7 @@ export interface IAiSessionSseEvent {
     | "heartbeat"
     | "message"
     | "completed"
+    | "session_renamed"
     | "error";
   sessionId?: string;
   timelineId?: string;
@@ -50,6 +60,7 @@ export interface IAiSessionSseEvent {
   finishReason?: string;
   usage?: Record<string, unknown>;
   metadata?: Record<string, unknown>;
+  session?: unknown;
   message?: unknown;
   toolCall?: unknown;
   toolResult?: unknown;

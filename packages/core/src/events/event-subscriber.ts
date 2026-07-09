@@ -31,11 +31,19 @@ export function EventSubscriber(): <T extends Constructor>(target: T) => void {
 export function OnEvent(eventName: string): MethodDecorator {
   return (target, propertyKey) => {
     const ctor = (target as { constructor: EventSubscriberConstructor }).constructor;
-    ensureMetadata(ctor).push({
-      eventName,
-      handlerName: String(propertyKey),
-    });
+    registerEventHandlerMetadata(ctor, eventName, String(propertyKey));
   };
+}
+
+export function registerEventHandlerMetadata(
+  target: Constructor,
+  eventName: string,
+  handlerName: string,
+): void {
+  ensureMetadata(target as EventSubscriberConstructor).push({
+    eventName,
+    handlerName,
+  });
 }
 
 export function isEventSubscriber(target: unknown): target is EventSubscriberConstructor {
