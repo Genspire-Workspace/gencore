@@ -94,11 +94,7 @@ export class MarkdownRendererService {
     }
   }
 
-  private wrapCodeBlock(
-    codeBlockHtml: string,
-    language: string,
-    languageLabel: string,
-  ): string {
+  private wrapCodeBlock(codeBlockHtml: string, language: string, languageLabel: string): string {
     const escapedLanguage = this.escapeHtml(language);
     const escapedLanguageLabel = this.escapeHtml(languageLabel);
 
@@ -106,18 +102,18 @@ export class MarkdownRendererService {
       `<div class="app-code-shell" data-language="${escapedLanguage}">`,
       `<div class="app-code-header">`,
       `<span class="app-code-language">${escapedLanguageLabel}</span>`,
-      `<button type="button" class="app-code-copy-button" data-copy-code>Copy</button>`,
+      [
+        `<button type="button" class="app-code-copy-button" data-copy-code aria-label="Copy code" title="Copy code">`,
+        `<span class="app-code-copy-icon material-symbols-rounded" aria-hidden="true">content_copy</span>`,
+        `</button>`,
+      ].join(''),
       `</div>`,
       codeBlockHtml,
       `</div>`,
     ].join('');
   }
 
-  private renderPlainCodeBlock(
-    code: string,
-    language: string,
-    languageLabel: string,
-  ): string {
+  private renderPlainCodeBlock(code: string, language: string, languageLabel: string): string {
     const escapedCode = this.escapeHtml(code);
     const escapedLanguage = this.escapeHtml(language);
     const escapedLanguageLabel = this.escapeHtml(languageLabel);
@@ -127,7 +123,11 @@ export class MarkdownRendererService {
       `<div class="app-code-shell app-code-shell-plain app-code-shell-${escapedTheme}" data-language="${escapedLanguage}">`,
       `<div class="app-code-header">`,
       `<span class="app-code-language">${escapedLanguageLabel}</span>`,
-      `<button type="button" class="app-code-copy-button" data-copy-code>Copy</button>`,
+      [
+        `<button type="button" class="app-code-copy-button" data-copy-code aria-label="Copy code" title="Copy code">`,
+        `<span class="app-code-copy-icon material-symbols-rounded" aria-hidden="true">content_copy</span>`,
+        `</button>`,
+      ].join(''),
       `</div>`,
       `<pre class="app-code-block app-code-block-plain"><code>${escapedCode}</code></pre>`,
       `</div>`,

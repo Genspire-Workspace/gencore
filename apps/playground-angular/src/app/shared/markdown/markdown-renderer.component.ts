@@ -61,25 +61,23 @@ import { MarkdownRendererService } from './markdown-renderer.service';
 
     .app-markdown-renderer .app-code-shell {
       position: relative;
-      overflow: hidden;
-      overflow: clip;
+      overflow: visible;
       isolation: isolate;
-      contain: paint;
       border: 1px solid var(--color-base-300, rgba(148, 163, 184, 0.24));
       border-radius: 1rem;
       background: var(--color-base-100, rgba(15, 23, 42, 0.04));
+      clip-path: inset(0 round 1rem);
     }
 
     .app-markdown-renderer .app-code-header {
       position: sticky;
       top: 0;
-      z-index: 1;
+      z-index: 2;
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 0.75rem;
-      border-bottom: 1px solid var(--color-base-300, rgba(148, 163, 184, 0.24));
-      border-radius: 1rem 1rem 0 0;
+      border-radius: 0;
       background: color-mix(in srgb, var(--color-base-100, #ffffff) 92%, transparent);
       padding: 0.5rem 0.75rem;
       backdrop-filter: blur(10px);
@@ -104,15 +102,15 @@ import { MarkdownRendererService } from './markdown-renderer.service';
 
     .app-markdown-renderer .app-code-copy-button {
       flex: 0 0 auto;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
       cursor: pointer;
-      border: 1px solid var(--color-base-300, rgba(148, 163, 184, 0.24));
-      border-radius: 999px;
-      background: var(--color-base-200, rgba(15, 23, 42, 0.08));
-      color: var(--color-base-content, currentColor);
-      padding: 0.25rem 0.625rem;
-      font-size: 0.75rem;
-      font-weight: 600;
-      line-height: 1;
+      border: 0;
+      border-radius: 0.375rem;
+      background: transparent;
+      color: var(--color-neutral, currentColor);
+      padding: 0.25rem;
       opacity: 0.8;
       transition:
         opacity 150ms ease,
@@ -132,6 +130,17 @@ import { MarkdownRendererService } from './markdown-renderer.service';
     .app-markdown-renderer .app-code-copy-button:disabled {
       cursor: default;
       opacity: 0.72;
+    }
+
+    .app-markdown-renderer .app-code-copy-icon {
+      font-size: 1.25rem;
+      line-height: 1;
+      color: inherit;
+      font-variation-settings:
+        'FILL' 0,
+        'wght' 400,
+        'GRAD' 0,
+        'opsz' 20;
     }
 
     .app-markdown-renderer .app-code-shell pre,
@@ -276,20 +285,36 @@ export class MarkdownRendererComponent {
 
     try {
       await navigator.clipboard.writeText(code);
-      this.setCopyButtonState(copyButton, 'Copied');
+      this.setCopyButtonState(copyButton, 'copied');
     } catch {
-      this.setCopyButtonState(copyButton, 'Failed');
+      this.setCopyButtonState(copyButton, 'failed');
     }
   }
 
-  private setCopyButtonState(button: HTMLButtonElement, label: string): void {
-    const originalLabel = button.textContent?.trim() || 'Copy';
+  private setCopyButtonState(button: HTMLButtonElement, state: 'copied' | 'failed'): void {
+    const icon = button.querySelector<HTMLElement>('.app-code-copy-icon');
 
-    button.textContent = label;
+    const originalIcon = icon?.textContent?.trim() || 'content_copy';
+    const originalAriaLabel = button.getAttribute('aria-label') || 'Copy code';
+    const originalTitle = button.getAttribute('title') || 'Copy code';
+
+    if (icon) {
+      icon.textContent = state === 'copied' ? 'check' : 'error';
+    }
+
+    button.dataset['copyState'] = state;
+    button.setAttribute('aria-label', state === 'copied' ? 'Copied' : 'Copy failed');
+    button.setAttribute('title', state === 'copied' ? 'Copied' : 'Copy failed');
     button.disabled = true;
 
     window.setTimeout(() => {
-      button.textContent = originalLabel;
+      if (icon) {
+        icon.textContent = originalIcon;
+      }
+
+      delete button.dataset['copyState'];
+      button.setAttribute('aria-label', originalAriaLabel);
+      button.setAttribute('title', originalTitle);
       button.disabled = false;
     }, 1200);
   }
