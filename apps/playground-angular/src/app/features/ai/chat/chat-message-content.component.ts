@@ -1,11 +1,12 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed, input } from '@angular/core';
+import { MarkdownRendererComponent } from '../../../shared/markdown';
 import { isUrlData, summarizeToolCallArguments, toUiChatContentParts } from './chat-content-parts';
 import type { IUiChatMessage } from './chat-message.types';
 
 @Component({
   selector: 'app-ai-chat-message-content',
-  imports: [CommonModule],
+  imports: [CommonModule, MarkdownRendererComponent],
   template: `
     @if (parts().length === 0) {
       <div class="whitespace-pre-wrap">
@@ -16,7 +17,7 @@ import type { IUiChatMessage } from './chat-message.types';
         @for (part of parts(); track $index) {
           @switch (part.kind) {
             @case ('text') {
-              <div class="whitespace-pre-wrap">{{ part.text }}</div>
+              <app-markdown-renderer [content]="part.text" />
             }
             @case ('thinking') {
               <div
@@ -30,7 +31,7 @@ import type { IUiChatMessage } from './chat-message.types';
                   >
                     thinking
                   </span>
-                  <span class="whitespace-pre-wrap">{{ part.text }}</span>
+                  <app-markdown-renderer [content]="part.text" />
                 }
               </div>
             }
@@ -53,8 +54,8 @@ import type { IUiChatMessage } from './chat-message.types';
                 <span class="text-[10px] font-semibold uppercase tracking-[0.2em] opacity-60">
                   tool result
                 </span>
-                <div class="mt-1 break-all whitespace-pre-wrap">
-                  {{ renderToolResult(part.content) }}
+                <div class="mt-1 break-all">
+                  <app-markdown-renderer [content]="renderToolResult(part.content)" />
                 </div>
               </div>
             }
