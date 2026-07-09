@@ -1,3 +1,4 @@
+import type { ConnectedPosition } from '@angular/cdk/overlay';
 import {
   DestroyRef,
   Directive,
@@ -13,9 +14,13 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import type { ConnectedPosition } from '@angular/cdk/overlay';
 import type { IAiPromptResponseDto } from '@genspire/sdk-ai';
-import type { IChatComposerAttachment } from './chat-message.types';
+import type {
+  IChatComposerAttachment,
+  IChatComposerPromptReference,
+  IChatComposerReference,
+  IChatComposerReferenceKind,
+} from './chat-message.types';
 import { OverlayService } from '../../../shared/overlay';
 import type { AppOverlayHandle } from '../../../shared/overlay';
 import { AiPromptClient } from '../prompts/ai-prompt.client';
@@ -41,6 +46,24 @@ const CHAT_COMPOSER_TOKEN_DROPDOWN_POSITIONS: ConnectedPosition[] = [
   },
 ];
 
+const CHAT_COMPOSER_REFERENCE_METADATA: Record<
+  IChatComposerReferenceKind,
+  { label: string; iconName: string }
+> = {
+  prompt: {
+    label: 'Prompts',
+    iconName: 'prompt_suggestion',
+  },
+  skill: {
+    label: 'Skills',
+    iconName: 'psychology',
+  },
+  tool: {
+    label: 'Tools',
+    iconName: 'build',
+  },
+};
+
 export type ChatComposerState = 'idle' | 'writing' | 'uploading' | 'editing' | 'generating';
 export type ChatComposerTokenKind = 'slash' | 'mention' | 'skill';
 
@@ -54,15 +77,26 @@ interface IChatComposerTokenSession {
 
 export interface IChatComposerTokenSuggestion {
   id: string;
+  kind: IChatComposerReferenceKind;
+  iconName: string;
   label: string;
   description: string;
   insertText: string;
+  prompt?: IAiPromptResponseDto;
+}
+
+export interface IChatComposerTokenSuggestionSection {
+  kind: IChatComposerReferenceKind;
+  label: string;
+  iconName: string;
+  options: IChatComposerTokenSuggestion[];
 }
 
 @Directive()
 export abstract class ChatComposerBaseDirective {
   readonly prompt = model('');
   readonly attachments = model<IChatComposerAttachment[]>([]);
+  readonly references = model<IChatComposerReference[]>([]);
   readonly minRows = input(1);
   readonly maxRows = input(4);
   readonly sending = input(false);
@@ -78,21 +112,10 @@ export abstract class ChatComposerBaseDirective {
   protected readonly activeTokenSession = signal<IChatComposerTokenSession | null>(null);
   protected readonly highlightedTokenOptionIndex = signal(0);
   protected readonly promptSuggestions = signal<IChatComposerTokenSuggestion[]>([]);
-  protected readonly tokenDropdownTitle = computed(() => {
-    const session = this.activeTokenSession();
-    if (!session) {
-      return '';
-    }
-
-    switch (session.kind) {
-      case 'slash':
-        return 'Slash commands';
-      case 'mention':
-        return 'References';
-      case 'skill':
-        return 'Skills and prompts';
-    }
-  });
+  protected readonly skillSuggestions = signal<IChatComposerTokenSuggestion[]>([]);
+  protected readonly toolSuggestions = signal<IChatComposerTokenSuggestion[]>([]);
+  protected readonly promptSuggestionsLoading = signal(false);
+  protected readonly expandedPromptReferenceId = signal<string | null>(null);
   protected readonly filteredTokenSuggestions = computed(() => {
     const session = this.activeTokenSession();
     if (!session) {
@@ -100,7 +123,7 @@ export abstract class ChatComposerBaseDirective {
     }
 
     const query = session.query.trim().toLowerCase();
-    const suggestions = this.promptSuggestions();
+    const suggestions = this.getSuggestionsForSession(session);
 
     if (!query) {
       return suggestions;
@@ -112,15 +135,29 @@ export abstract class ChatComposerBaseDirective {
       ),
     );
   });
-  protected readonly hasTokenSuggestions = computed(
-    () => this.activeTokenSession() !== null && this.filteredTokenSuggestions().length > 0,
+  protected readonly hasTokenSession = computed(() => this.activeTokenSession() !== null);
+  protected readonly highlightedTokenSuggestionId = computed(
+    () => this.filteredTokenSuggestions()[this.highlightedTokenOptionIndex()]?.id ?? null,
   );
+  protected readonly tokenSuggestionSections = computed<IChatComposerTokenSuggestionSection[]>(() => {
+    const suggestions = this.filteredTokenSuggestions();
+
+    return (['prompt', 'skill', 'tool'] as const)
+      .map((kind) => ({
+        kind,
+        label: CHAT_COMPOSER_REFERENCE_METADATA[kind].label,
+        iconName: CHAT_COMPOSER_REFERENCE_METADATA[kind].iconName,
+        options: suggestions.filter((option) => option.kind === kind),
+      }))
+      .filter((section) => section.options.length > 0);
+  });
 
   private readonly promptClient = inject(AiPromptClient);
   private readonly overlayService = inject(OverlayService);
   private readonly viewContainerRef = inject(ViewContainerRef);
   private readonly destroyRef = inject(DestroyRef);
   private activeTokenOverlayHandle: AppOverlayHandle | null = null;
+  private hasAttemptedPromptSuggestionLoad = false;
 
   constructor() {
     effect(() => {
@@ -140,9 +177,16 @@ export abstract class ChatComposerBaseDirective {
       const session = this.activeTokenSession();
       const composerRoot = this.composerRootRef()?.nativeElement;
       const templateRef = this.tokenMenuTemplateRef();
-      const suggestions = this.filteredTokenSuggestions();
 
-      if (!session || !composerRoot || !templateRef || suggestions.length === 0) {
+      if (
+        (session?.trigger === '$' || session?.trigger === '/')
+        && this.promptSuggestions().length === 0
+        && !this.promptSuggestionsLoading()
+      ) {
+        void this.loadPromptSuggestions();
+      }
+
+      if (!session || !composerRoot || !templateRef) {
         this.closeTokenOverlay();
         return;
       }
@@ -156,7 +200,6 @@ export abstract class ChatComposerBaseDirective {
       this.highlightedTokenOptionIndex.update((current) => Math.min(current, nextMaxIndex));
     });
 
-    void this.loadPromptSuggestions();
     this.destroyRef.onDestroy(() => this.closeTokenOverlay());
   }
 
@@ -185,7 +228,11 @@ export abstract class ChatComposerBaseDirective {
   }
 
   canSubmit(): boolean {
-    return this.prompt().trim().length > 0 || this.attachments().length > 0;
+    return (
+      this.prompt().trim().length > 0
+      || this.attachments().length > 0
+      || this.references().length > 0
+    );
   }
 
   canSend(): boolean {
@@ -218,26 +265,35 @@ export abstract class ChatComposerBaseDirective {
   }
 
   onPromptKeydown(event: KeyboardEvent): void {
-    if (this.hasTokenSuggestions()) {
+    if (this.hasTokenSession()) {
       switch (event.key) {
         case 'ArrowDown':
-          event.preventDefault();
-          this.moveTokenSelection(1);
-          return;
+          if (this.filteredTokenSuggestions().length > 0) {
+            event.preventDefault();
+            this.moveTokenSelection(1);
+            return;
+          }
+          break;
         case 'ArrowUp':
-          event.preventDefault();
-          this.moveTokenSelection(-1);
-          return;
+          if (this.filteredTokenSuggestions().length > 0) {
+            event.preventDefault();
+            this.moveTokenSelection(-1);
+            return;
+          }
+          break;
         case 'Escape':
           event.preventDefault();
           this.closeActiveTokenSession();
           return;
         case 'Tab':
-          event.preventDefault();
-          this.selectHighlightedTokenSuggestion();
-          return;
+          if (this.filteredTokenSuggestions().length > 0) {
+            event.preventDefault();
+            this.selectHighlightedTokenSuggestion();
+            return;
+          }
+          break;
         case 'Enter':
-          if (!event.shiftKey) {
+          if (!event.shiftKey && this.filteredTokenSuggestions().length > 0) {
             event.preventDefault();
             this.selectHighlightedTokenSuggestion();
             return;
@@ -283,14 +339,6 @@ export abstract class ChatComposerBaseDirective {
     this.syncActiveToken(textarea);
   }
 
-  protected tokenSuggestionTrackBy(_: number, option: IChatComposerTokenSuggestion): string {
-    return option.id;
-  }
-
-  protected isTokenSuggestionHighlighted(index: number): boolean {
-    return this.highlightedTokenOptionIndex() === index;
-  }
-
   protected selectTokenSuggestion(
     option: IChatComposerTokenSuggestion,
     overlay?: AppOverlayHandle,
@@ -304,11 +352,13 @@ export abstract class ChatComposerBaseDirective {
     }
 
     const prefix = this.prompt().slice(0, session.start);
-    const suffix = this.prompt().slice(session.end);
-    const insertValue = `${session.trigger}${option.insertText}`;
-    const needsTrailingSpace = suffix.length === 0 || !/^\s/.test(suffix);
-    const nextPrompt = `${prefix}${insertValue}${needsTrailingSpace ? ' ' : ''}${suffix}`;
-    const nextCaret = prefix.length + insertValue.length + (needsTrailingSpace ? 1 : 0);
+    const suffix = this.prompt().slice(session.end).replace(/^\s+/, '');
+    const nextPrompt = `${prefix}${suffix}`;
+    const nextCaret = prefix.length;
+
+    if (option.kind === 'prompt' && option.prompt) {
+      this.addPromptReference(option.prompt);
+    }
 
     this.prompt.set(nextPrompt);
     this.closeActiveTokenSession(overlay);
@@ -320,8 +370,53 @@ export abstract class ChatComposerBaseDirective {
     });
   }
 
-  protected setHighlightedTokenSuggestion(index: number): void {
-    this.highlightedTokenOptionIndex.set(index);
+  protected setHighlightedTokenSuggestionById(suggestionId: string): void {
+    const nextIndex = this.filteredTokenSuggestions().findIndex((option) => option.id === suggestionId);
+    if (nextIndex < 0) {
+      return;
+    }
+
+    this.highlightedTokenOptionIndex.set(nextIndex);
+  }
+
+  protected removeReference(referenceId: string): void {
+    this.references.update((current) => current.filter((reference) => reference.id !== referenceId));
+
+    if (this.expandedPromptReferenceId() === referenceId) {
+      this.expandedPromptReferenceId.set(null);
+    }
+  }
+
+  protected togglePromptReference(referenceId: string): void {
+    this.expandedPromptReferenceId.update((current) =>
+      current === referenceId ? null : referenceId,
+    );
+  }
+
+  protected updatePromptReferenceVariable(
+    referenceId: string,
+    variableName: string,
+    value: string,
+  ): void {
+    this.references.update((current) =>
+      current.map((reference) => {
+        if (reference.kind !== 'prompt' || reference.id !== referenceId) {
+          return reference;
+        }
+
+        return {
+          ...reference,
+          variables: reference.variables.map((variable) =>
+            variable.name === variableName
+              ? {
+                  ...variable,
+                  value,
+                }
+              : variable,
+          ),
+        };
+      }),
+    );
   }
 
   protected closeActiveTokenSession(overlay?: AppOverlayHandle): void {
@@ -465,11 +560,29 @@ export abstract class ChatComposerBaseDirective {
   }
 
   private async loadPromptSuggestions(): Promise<void> {
+    if (this.promptSuggestionsLoading()) {
+      return;
+    }
+
+    if (this.hasAttemptedPromptSuggestionLoad && this.promptSuggestions().length > 0) {
+      return;
+    }
+
+    this.hasAttemptedPromptSuggestionLoad = true;
+    this.promptSuggestionsLoading.set(true);
+
     try {
       const prompts = await this.promptClient.listPrompts();
-      this.promptSuggestions.set(prompts.map((prompt) => this.toTokenSuggestion(prompt)));
+      this.promptSuggestions.set(
+        prompts
+          .filter((prompt) => prompt.type === 'user_prompt')
+          .map((prompt) => this.toTokenSuggestion(prompt)),
+      );
     } catch {
       this.promptSuggestions.set([]);
+      this.hasAttemptedPromptSuggestionLoad = false;
+    } finally {
+      this.promptSuggestionsLoading.set(false);
     }
   }
 
@@ -482,10 +595,59 @@ export abstract class ChatComposerBaseDirective {
 
     return {
       id: prompt.id,
+      kind: 'prompt',
+      iconName: CHAT_COMPOSER_REFERENCE_METADATA['prompt'].iconName,
       label,
       description,
       insertText: prompt.id,
+      prompt,
     };
+  }
+
+  private getSuggestionsForSession(session: IChatComposerTokenSession): IChatComposerTokenSuggestion[] {
+    switch (session.trigger) {
+      case '/':
+        return [
+          ...this.promptSuggestions(),
+          ...this.skillSuggestions(),
+          ...this.toolSuggestions(),
+        ];
+      case '$':
+        return this.promptSuggestions();
+      case '@':
+        return [];
+    }
+  }
+
+  private addPromptReference(prompt: IAiPromptResponseDto): void {
+    this.references.update((current) => {
+      if (current.some((reference) => reference.kind === 'prompt' && reference.promptId === prompt.id)) {
+        return current;
+      }
+
+      const reference: IChatComposerPromptReference = {
+        id: `prompt-${prompt.id}`,
+        kind: 'prompt',
+        promptId: prompt.id,
+        name: prompt.name?.trim() || prompt.id,
+        iconName: CHAT_COMPOSER_REFERENCE_METADATA['prompt'].iconName,
+        description: prompt.description?.trim() || undefined,
+        argumentHint: prompt.argumentHint?.trim() || undefined,
+        variables: (prompt.variables ?? []).map((variable) => ({
+          name: variable.name,
+          description: variable.description?.trim() || undefined,
+          required: variable.required ?? false,
+          value:
+            typeof variable.defaultValue === 'string'
+              ? variable.defaultValue
+              : variable.defaultValue == null
+                ? ''
+                : String(variable.defaultValue),
+        })),
+      };
+
+      return [...current, reference];
+    });
   }
 
   private async toAttachment(file: File): Promise<IChatComposerAttachment> {

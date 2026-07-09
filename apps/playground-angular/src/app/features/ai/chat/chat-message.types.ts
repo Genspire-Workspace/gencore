@@ -7,6 +7,8 @@ import type {
   IAiImagePart,
 } from '@genspire/ai/domain/messages';
 
+export type IChatComposerReferenceKind = 'prompt' | 'skill' | 'tool';
+
 export interface IUiChatMessage {
   id: string;
   role: AiMessageRole;
@@ -41,5 +43,42 @@ export interface IChatComposerAttachment {
   size: number;
   part: IAiImagePart | IAiFilePart;
 }
+
+export interface IChatComposerPromptVariableValue {
+  name: string;
+  description?: string;
+  required?: boolean;
+  value: string;
+}
+
+export interface IChatComposerReferenceBase {
+  id: string;
+  kind: IChatComposerReferenceKind;
+  name: string;
+  iconName: string;
+  description?: string;
+}
+
+export interface IChatComposerPromptReference extends IChatComposerReferenceBase {
+  kind: 'prompt';
+  promptId: string;
+  argumentHint?: string;
+  variables: IChatComposerPromptVariableValue[];
+}
+
+export interface IChatComposerSkillReference extends IChatComposerReferenceBase {
+  kind: 'skill';
+  skillId: string;
+}
+
+export interface IChatComposerToolReference extends IChatComposerReferenceBase {
+  kind: 'tool';
+  toolId: string;
+}
+
+export type IChatComposerReference =
+  | IChatComposerPromptReference
+  | IChatComposerSkillReference
+  | IChatComposerToolReference;
 
 export type UiChatMessageContent = AiMessageContent;

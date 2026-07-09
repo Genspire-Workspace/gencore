@@ -5,6 +5,7 @@ import { ChatMessageActionsComponent } from './chat-message-actions.component';
 import { ChatMessageContentComponent } from './chat-message-content.component';
 import type {
   IChatComposerAttachment,
+  IChatComposerReference,
   IUiChatMessage,
   IUiChatMessageActionEvent,
 } from './chat-message.types';
@@ -32,6 +33,7 @@ import type {
         <app-ai-chat-composer-edit-message
           [(prompt)]="prompt"
           [(attachments)]="attachments"
+          [(references)]="references"
           [sending]="sending()"
           [state]="sending() ? 'generating' : 'editing'"
           [minRows]="2"
@@ -62,6 +64,7 @@ export class ChatMessageBubbleUserComponent {
 
   readonly prompt = model('');
   readonly attachments = model<IChatComposerAttachment[]>([]);
+  readonly references = model<IChatComposerReference[]>([]);
 
   readonly copy = output<IUiChatMessageActionEvent>();
   readonly edit = output<IUiChatMessageActionEvent>();

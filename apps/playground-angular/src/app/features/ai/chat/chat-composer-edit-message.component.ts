@@ -3,6 +3,10 @@ import { Component, output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { IconComponent } from '../../../icons/icon.component';
 import { ChatComposerBaseDirective } from './chat-composer.base';
+import {
+  ChatComposerReferencePanelComponent,
+  type IChatComposerPromptVariableChangeEvent,
+} from './chat-composer-reference-panel.component';
 import { ChatComposerTokenMenuComponent } from './chat-composer-token-menu.component';
 
 @Component({
@@ -10,7 +14,13 @@ import { ChatComposerTokenMenuComponent } from './chat-composer-token-menu.compo
   host: {
     class: 'block',
   },
-  imports: [CommonModule, FormsModule, IconComponent, ChatComposerTokenMenuComponent],
+  imports: [
+    CommonModule,
+    FormsModule,
+    IconComponent,
+    ChatComposerReferencePanelComponent,
+    ChatComposerTokenMenuComponent,
+  ],
   template: `
     <form
       #composerRoot
@@ -27,6 +37,15 @@ import { ChatComposerTokenMenuComponent } from './chat-composer-token-menu.compo
           {{ stateLabel() }}
         </div>
       </div>
+
+      <app-ai-chat-composer-reference-panel
+        [references]="references()"
+        [disabled]="sending()"
+        [expandedPromptReferenceId]="expandedPromptReferenceId()"
+        (removeReference)="removeReference($event)"
+        (togglePromptReference)="togglePromptReference($event)"
+        (promptVariableChange)="onPromptVariableChange($event)"
+      />
 
       <textarea
         #promptTextarea
@@ -45,10 +64,9 @@ import { ChatComposerTokenMenuComponent } from './chat-composer-token-menu.compo
 
       <ng-template #tokenMenu let-overlay>
         <app-ai-chat-composer-token-menu
-          [title]="tokenDropdownTitle()"
-          [options]="filteredTokenSuggestions()"
-          [highlightedIndex]="highlightedTokenOptionIndex()"
-          (highlight)="setHighlightedTokenSuggestion($event)"
+          [sections]="tokenSuggestionSections()"
+          [highlightedOptionId]="highlightedTokenSuggestionId()"
+          (highlight)="setHighlightedTokenSuggestionById($event)"
           (select)="selectTokenSuggestion($event, overlay)"
         />
       </ng-template>
@@ -121,4 +139,8 @@ import { ChatComposerTokenMenuComponent } from './chat-composer-token-menu.compo
 })
 export class ChatComposerEditMessageComponent extends ChatComposerBaseDirective {
   readonly cancelEdit = output<void>();
+
+  protected onPromptVariableChange(event: IChatComposerPromptVariableChangeEvent): void {
+    this.updatePromptReferenceVariable(event.referenceId, event.variableName, event.value);
+  }
 }

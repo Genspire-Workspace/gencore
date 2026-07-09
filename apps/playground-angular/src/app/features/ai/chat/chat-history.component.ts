@@ -6,6 +6,7 @@ import { ChatMessageBubbleAssistantComponent } from './chat-message-bubble-assis
 import { ChatMessageBubbleUserComponent } from './chat-message-bubble-user.component';
 import type {
   IChatComposerAttachment,
+  IChatComposerReference,
   IUiChatMessage,
   IUiChatMessageActionEvent,
   IUiChatMessageFeedbackEvent,
@@ -40,6 +41,7 @@ import { ScrollService } from '../../../shared/scroll';
                 [sending]="sending()"
                 [(prompt)]="editingPrompt"
                 [(attachments)]="editingAttachments"
+                [(references)]="editingReferences"
                 (edit)="edit.emit($event)"
                 (submit)="submit.emit()"
                 (cancel)="cancel.emit()"
@@ -69,6 +71,7 @@ export class ChatHistoryComponent {
   readonly attachments = model<IChatComposerAttachment[]>([]);
   readonly editingPrompt = model('');
   readonly editingAttachments = model<IChatComposerAttachment[]>([]);
+  readonly editingReferences = model<IChatComposerReference[]>([]);
   readonly edit = output<IUiChatMessageActionEvent>();
   readonly submit = output<void>();
   readonly cancel = output<void>();

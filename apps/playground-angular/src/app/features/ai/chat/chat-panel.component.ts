@@ -7,6 +7,7 @@ import { ChatComposerComponent } from './chat-composer.component';
 import { ChatTimelineDropdownComponent } from './chat-timeline-dropdown.component';
 import type {
   IChatComposerAttachment,
+  IChatComposerReference,
   IUiChatMessageActionEvent,
   IUiChatMessageFeedbackEvent,
 } from './chat-message.types';
@@ -51,6 +52,7 @@ import type { IAiSessionClientState } from '../sessions/ai-session-types';
         [(attachments)]="attachments"
         [(editingPrompt)]="editingPrompt"
         [(editingAttachments)]="editingAttachments"
+        [(editingReferences)]="editingReferences"
         (edit)="edit.emit($event)"
         (submit)="send.emit()"
         (cancel)="cancel.emit()"
@@ -63,6 +65,7 @@ import type { IAiSessionClientState } from '../sessions/ai-session-types';
       <app-ai-chat-composer
         [(prompt)]="prompt"
         [(attachments)]="attachments"
+        [(references)]="references"
         [sending]="sending()"
         [submitLocked]="isEditing()"
         [state]="composerState()"
@@ -79,8 +82,10 @@ export class ChatPanelComponent {
 
   readonly prompt = model('');
   readonly attachments = model<IChatComposerAttachment[]>([]);
+  readonly references = model<IChatComposerReference[]>([]);
   readonly editingPrompt = model('');
   readonly editingAttachments = model<IChatComposerAttachment[]>([]);
+  readonly editingReferences = model<IChatComposerReference[]>([]);
 
   readonly send = output<void>();
   readonly cancel = output<void>();
@@ -121,7 +126,7 @@ export class ChatPanelComponent {
       return 'uploading' as const;
     }
 
-    if (this.prompt().trim().length > 0) {
+    if (this.prompt().trim().length > 0 || this.references().length > 0) {
       return 'writing' as const;
     }
 
