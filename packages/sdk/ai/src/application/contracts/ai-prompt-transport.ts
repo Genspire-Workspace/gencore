@@ -3,10 +3,12 @@ import type {
   IDeleteAiPromptResponseDto,
   IAiPromptListResponseDto,
   IAiPromptResponseDto,
+  IAiPromptTypeListResponseDto,
   IUpdateAiPromptRequestDto,
 } from "../../domain/types/ai-prompt-sdk-types.js";
 
 export interface IAiPromptTransport {
+  listPromptTypes(): Promise<IAiPromptTypeListResponseDto>;
   listPrompts(): Promise<IAiPromptListResponseDto>;
   createPrompt(input: ICreateAiPromptRequestDto): Promise<IAiPromptResponseDto>;
   getPrompt(promptId: string): Promise<IAiPromptResponseDto>;

@@ -50,7 +50,9 @@ import {
 } from "./shared.js";
 import {
   DEFAULT_SESSION_SYSTEM_PROMPT_NAME,
+  DEFAULT_SESSION_SYSTEM_PROMPT_TYPE,
   DEFAULT_SESSION_TITLE_PROMPT_NAME,
+  DEFAULT_SESSION_TITLE_PROMPT_TYPE,
   requestAiPrompt,
 } from "../../prompts/default-session-prompts.js";
 
@@ -431,6 +433,7 @@ export class AiSessionGenerationService {
       reference: this.resolvePromptReference(
         sessionSettings?.prompts?.systemPrompt,
         DEFAULT_SESSION_SYSTEM_PROMPT_NAME,
+        DEFAULT_SESSION_SYSTEM_PROMPT_TYPE,
       ),
     });
 
@@ -445,13 +448,16 @@ export class AiSessionGenerationService {
   private resolvePromptReference(
     reference: IAiSessionPromptReference | undefined,
     fallbackName: string,
+    fallbackType?: string,
   ): IAiSessionPromptReference {
     const id = reference?.id?.trim();
     const name = reference?.name?.trim();
+    const type = reference?.type?.trim();
 
     return {
       ...(id ? { id } : {}),
       ...(name ? { name } : { name: fallbackName }),
+      ...(type ? { type } : fallbackType ? { type: fallbackType } : {}),
     };
   }
 
@@ -476,6 +482,7 @@ export class AiSessionGenerationService {
       reference: this.resolvePromptReference(
         session.settings?.prompts?.titleGeneratorPrompt,
         DEFAULT_SESSION_TITLE_PROMPT_NAME,
+        DEFAULT_SESSION_TITLE_PROMPT_TYPE,
       ),
     });
 

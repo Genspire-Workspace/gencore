@@ -1,14 +1,17 @@
 // file: apps/playground-angular/src/app/features/ai/providers/components/provider-api-keys.component.ts
 
 import { CommonModule } from '@angular/common';
-import { Component, input, model, output } from '@angular/core';
+import { Component, TemplateRef, ViewChild, ViewContainerRef, inject, input, model, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import type { IAiApiKeyResponseDto } from '@genspire/sdk-ai';
+import { IconComponent } from '../../../../icons/icon.component';
+import { OverlayService } from '../../../../shared/overlay';
+import type { AppOverlayHandle } from '../../../../shared/overlay';
 
 @Component({
   selector: 'app-ai-provider-api-keys',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, IconComponent],
   template: `
     <div class="space-y-4 border-t border-base-300 pt-6">
       <div>
@@ -68,21 +71,61 @@ import type { IAiApiKeyResponseDto } from '@genspire/sdk-ai';
                     }
                   </div>
                 </div>
-                <span
-                  class="rounded-full px-2.5 py-1 text-[11px] font-medium"
-                  [ngClass]="{
-                    'bg-success/15 text-success': apiKey.enabled,
-                    'bg-base-200 text-base-content/60': !apiKey.enabled,
-                  }"
-                >
-                  {{ apiKey.enabled ? 'Enabled' : 'Disabled' }}
-                </span>
+                <div class="flex items-center gap-2">
+                  <span
+                    class="rounded-full px-2.5 py-1 text-[11px] font-medium"
+                    [ngClass]="{
+                      'bg-success/15 text-success': apiKey.enabled,
+                      'bg-base-200 text-base-content/60': !apiKey.enabled,
+                    }"
+                  >
+                    {{ apiKey.enabled ? 'Enabled' : 'Disabled' }}
+                  </span>
+                  <button
+                    class="inline-flex h-7 w-7 items-center justify-center rounded-lg text-base-content/40 transition hover:bg-base-200 hover:text-danger"
+                    type="button"
+                    (click)="openDeleteConfirmation(apiKey)"
+                    aria-label="Delete {{ apiKey.name }}"
+                  >
+                    <app-icon iconName="close" size="sm" aria-hidden="true" />
+                  </button>
+                </div>
               </div>
             </div>
           }
         </div>
       }
     </div>
+
+    <ng-template #deleteConfirmation let-overlay>
+      <div class="w-[24rem] overflow-hidden rounded-2xl border border-base-300 bg-base-100 shadow-xl">
+        <div class="px-4 py-3">
+          <h3 class="text-sm font-semibold text-base-content">Delete API Key</h3>
+        </div>
+        <div class="p-4">
+          <p class="text-sm text-base-content/70">
+            Are you sure you want to delete <strong class="text-base-content">{{ pendingDeleteKey()?.name }}</strong>?
+            This action cannot be undone.
+          </p>
+        </div>
+        <div class="flex justify-end gap-2 px-4 py-3">
+          <button
+            class="rounded-xl border border-base-300 px-4 py-2 text-sm font-medium text-base-content transition hover:bg-base-200"
+            type="button"
+            (click)="overlay.close()"
+          >
+            Cancel
+          </button>
+          <button
+            class="rounded-xl bg-danger px-4 py-2 text-sm font-medium text-danger-content transition hover:bg-danger/85"
+            type="button"
+            (click)="confirmDelete(overlay)"
+          >
+            Delete
+          </button>
+        </div>
+      </div>
+    </ng-template>
   `,
 })
 export class ProviderApiKeysComponent {
@@ -93,6 +136,15 @@ export class ProviderApiKeysComponent {
   readonly newEnv = model('');
 
   readonly create = output<void>();
+  readonly delete = output<string>();
+
+  @ViewChild('deleteConfirmation', { static: true })
+  private readonly deleteConfirmationTemplate!: TemplateRef<unknown>;
+
+  private readonly overlayService = inject(OverlayService);
+  private readonly viewContainerRef = inject(ViewContainerRef);
+
+  protected readonly pendingDeleteKey = signal<IAiApiKeyResponseDto | null>(null);
 
   read(): { name: string; value: string; env: string } {
     return {
@@ -106,5 +158,27 @@ export class ProviderApiKeysComponent {
     this.newName.set('');
     this.newValue.set('');
     this.newEnv.set('');
+  }
+
+  protected openDeleteConfirmation(apiKey: IAiApiKeyResponseDto): void {
+    this.pendingDeleteKey.set(apiKey);
+    this.overlayService.createModalTemplate(
+      {
+        templateRef: this.deleteConfirmationTemplate,
+        viewContainerRef: this.viewContainerRef,
+      },
+      {
+        panelClass: 'app-delete-confirmation-overlay',
+      },
+    );
+  }
+
+  protected confirmDelete(overlay: AppOverlayHandle): void {
+    const key = this.pendingDeleteKey();
+    if (key) {
+      this.delete.emit(key.id);
+    }
+    this.pendingDeleteKey.set(null);
+    overlay.close();
   }
 }

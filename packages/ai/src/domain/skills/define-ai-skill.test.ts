@@ -45,6 +45,7 @@ describe("defineAiSkill", () => {
   test("can bundle a prompt and a tool", () => {
     const prompt = defineAiPrompt({
       id: "capital-answer",
+      type: "user_prompt",
       template: [
         {
           role: "system",

@@ -99,4 +99,8 @@ export class AiProviderClient {
   ): Promise<IAiApiKeyResponseDto> {
     return await this.client.updateApiKey(providerId, keyId, input);
   }
+
+  async deleteApiKey(providerId: string, keyId: string): Promise<IDeleteAiProviderResponseDto> {
+    return await this.client.deleteApiKey(providerId, keyId);
+  }
 }

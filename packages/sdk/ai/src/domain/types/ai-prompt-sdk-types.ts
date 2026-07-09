@@ -1,10 +1,12 @@
 import type {
+  AiPromptType,
   AiPromptTemplate,
   IAiPrompt,
   IAiPromptVariable,
 } from "@genspire/ai/domain/prompts";
 
 export type {
+  AiPromptType,
   AiPromptTemplate,
   IAiPrompt,
   IAiPromptVariable,
@@ -23,8 +25,23 @@ export interface IAiPromptListResponseDto {
   items: IAiPromptResponseDto[];
 }
 
+export interface IAiPromptTypeResponseDto {
+  id: string;
+  name: string;
+  description?: string | null;
+  isSystem: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface IAiPromptTypeListResponseDto {
+  items: IAiPromptTypeResponseDto[];
+}
+
 export interface ICreateAiPromptRequestDto {
   visibility?: AiPromptVisibilityDto;
+  type?: AiPromptType;
+  isDefault?: boolean;
   name: string;
   description?: string;
   argumentHint?: string;
@@ -36,6 +53,8 @@ export interface ICreateAiPromptRequestDto {
 
 export interface IUpdateAiPromptRequestDto {
   visibility?: AiPromptVisibilityDto;
+  type?: AiPromptType;
+  isDefault?: boolean;
   name?: string;
   description?: string;
   argumentHint?: string;

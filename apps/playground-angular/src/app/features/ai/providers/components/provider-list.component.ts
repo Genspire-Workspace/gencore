@@ -73,14 +73,14 @@ import { IconComponent } from '../../../../icons/icon.component';
             @for (provider of filteredProviders(); track provider.id) {
               <button
                 class="block w-full rounded-2xl border px-4 py-3 text-left transition"
-                [class.border-primary]="provider.id === selectedProviderId()"
-                [class.bg-base-200]="provider.id === selectedProviderId()"
-                [class.border-base-300]="provider.id !== selectedProviderId()"
-                [class.bg-base-100]="provider.id !== selectedProviderId()"
+                [ngClass]="{
+                  'border-primary bg-primary/10 text-primary': provider.id === selectedProviderId(),
+                  'border-base-300 bg-base-100 text-base-content': provider.id !== selectedProviderId(),
+                }"
                 type="button"
                 (click)="select.emit(provider.id)"
               >
-                <div class="text-sm font-semibold text-base-content">{{ provider.name }}</div>
+                <div class="text-sm font-semibold">{{ provider.name }}</div>
                 <div class="mt-1 text-xs text-base-content/60">
                   {{ provider.kind }} / {{ provider.clientKind }}
                 </div>

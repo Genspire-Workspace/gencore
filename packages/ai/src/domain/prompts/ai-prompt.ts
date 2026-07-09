@@ -3,6 +3,7 @@
 import type { IAiMessage } from "../messages/ai-message.js";
 
 export type AiPromptTemplate = string | readonly IAiMessage[];
+export type AiPromptType = string;
 
 export interface IAiPromptVariable {
   name: string;
@@ -23,6 +24,8 @@ export interface IAiRenderedPrompt {
 
 export interface IAiPrompt {
   id: string;
+  type: AiPromptType;
+  isDefault?: boolean;
   name?: string;
   description?: string;
   argumentHint?: string;

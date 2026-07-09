@@ -8,6 +8,8 @@ import { AuthRefreshTokenEntity, AuthRoleEntity, AuthUserRoleEntity, AuthEventEn
 import { FileEntity } from "@genspire/storage";
 import { TodoEntity } from "../todos/todo.entity.js";
 import { AiPromptEntity } from "../ai/prompts/ai-prompt.entity.js";
+import { AiPromptTypeEntity } from "../ai/prompts/ai-prompt-type.entity.js";
+import { AiPromptTypeDefaultEntity } from "../ai/prompts/ai-prompt-type-default.entity.js";
 import { AiSkillEntity } from "../ai/skills/ai-skill.entity.js";
 import { PlaygroundAuthUserEntity } from "../auth/playground-auth-user.entity.js";
 import type { IPlaygroundEnv } from "../config/playground-env.js";
@@ -67,6 +69,8 @@ export async function createPlaygroundMikroOrmConfig(
     AiApiKeyEntity,
     AiModelEntity,
     AiProviderEntity,
+    AiPromptTypeEntity,
+    AiPromptTypeDefaultEntity,
     AiPromptEntity,
     AiSkillEntity,
     PlaygroundAuthUserEntity,

@@ -2,13 +2,17 @@ import { createGuid, GenError, Scoped } from "@genspire/core";
 import type { ICurrentUser } from "@genspire/auth";
 import { HttpError } from "@genspire/server";
 import { defineAiPrompt } from "@genspire/ai/domain";
-import type { AiPromptTemplate, IAiPrompt, IAiPromptVariable } from "@genspire/ai/domain";
+import type { AiPromptTemplate, AiPromptType, IAiPrompt, IAiPromptVariable } from "@genspire/ai/domain";
 import { AiPromptRenderer } from "@genspire/ai/application";
 import { PlaygroundDbContext } from "../../database/playground-db-context.js";
 import { AiPromptEntity, type AiPromptVisibility } from "./ai-prompt.entity.js";
+import { AiPromptTypeDefaultEntity } from "./ai-prompt-type-default.entity.js";
+import { AiPromptTypeEntity } from "./ai-prompt-type.entity.js";
 import type {
   AiPromptListResponseDto,
   AiPromptResponseDto,
+  AiPromptTypeListResponseDto,
+  AiPromptTypeResponseDto,
   CreateAiPromptRequestDto,
   RenderAiPromptRequestDto,
   RenderAiPromptResponseDto,
@@ -19,7 +23,36 @@ interface IAiPromptListFilters {
   name?: string;
   ownerUserId?: string;
   visibility?: AiPromptVisibility;
+  type?: AiPromptType;
 }
+
+const BUILTIN_PROMPT_TYPES = [
+  {
+    id: "system_prompt",
+    name: "System Prompt",
+    description: "Prompts used as system-level instructions for chat generation.",
+  },
+  {
+    id: "user_prompt",
+    name: "User Prompt",
+    description: "General prompts intended for user-authored or user-facing prompt flows.",
+  },
+  {
+    id: "chat_title_generation",
+    name: "Chat Title Generation",
+    description: "Prompts used to generate chat session titles.",
+  },
+  {
+    id: "chat_summarization",
+    name: "Chat Summarization",
+    description: "Prompts used to summarize chat sessions or conversation branches.",
+  },
+  {
+    id: "chat_memory_extraction",
+    name: "Chat Memory Extraction",
+    description: "Prompts used to extract durable memory from chat conversations.",
+  },
+] as const;
 
 function isAdmin(currentUser: ICurrentUser | null | undefined): boolean {
   return currentUser?.roles.includes("admin") === true;
@@ -55,11 +88,17 @@ function canMutatePrompt(
   return entity.userId === currentUser.id;
 }
 
-function toPromptResponse(entity: AiPromptEntity): AiPromptResponseDto {
+function createPromptResponse(
+  entity: AiPromptEntity,
+  defaultPromptIdsByType: ReadonlyMap<string, string>,
+): AiPromptResponseDto {
+  const promptType = readStoredPromptType(entity);
   return {
     id: entity.id,
     userId: entity.userId,
     visibility: entity.visibility,
+    type: promptType,
+    isDefault: defaultPromptIdsByType.get(promptType) === entity.id,
     name: entity.name,
     description: entity.description,
     argumentHint: entity.argumentHint,
@@ -72,9 +111,15 @@ function toPromptResponse(entity: AiPromptEntity): AiPromptResponseDto {
   };
 }
 
-function toRuntimePrompt(entity: AiPromptEntity): IAiPrompt {
+function createRuntimePrompt(
+  entity: AiPromptEntity,
+  defaultPromptIdsByType: ReadonlyMap<string, string>,
+): IAiPrompt {
+  const promptType = readStoredPromptType(entity);
   return defineAiPrompt({
     id: entity.id,
+    type: promptType,
+    isDefault: defaultPromptIdsByType.get(promptType) === entity.id,
     name: entity.name,
     description: entity.description ?? undefined,
     argumentHint: entity.argumentHint ?? undefined,
@@ -83,6 +128,17 @@ function toRuntimePrompt(entity: AiPromptEntity): IAiPrompt {
     variables: entity.variables as IAiPromptVariable[] | undefined,
     metadata: entity.metadata ?? undefined,
   });
+}
+
+function toPromptTypeResponse(entity: AiPromptTypeEntity): AiPromptTypeResponseDto {
+  return {
+    id: entity.id,
+    name: entity.name,
+    description: entity.description,
+    isSystem: entity.isSystem,
+    createdAt: entity.createdAt.toISOString(),
+    updatedAt: entity.updatedAt.toISOString(),
+  };
 }
 
 function normalizeVisibility(
@@ -103,6 +159,17 @@ function hasPromptTemplateValue(template: unknown): template is AiPromptTemplate
   return Array.isArray(template) && template.length > 0;
 }
 
+function normalizePromptType(type: string | undefined): AiPromptType {
+  if (type === undefined || type === null || type.trim().length === 0) {
+    return "user_prompt";
+  }
+  return type.trim();
+}
+
+function readStoredPromptType(entity: Pick<AiPromptEntity, "type">): AiPromptType {
+  return normalizePromptType(entity.type ?? undefined);
+}
+
 @Scoped()
 export class AiPromptService {
   static inject = [PlaygroundDbContext];
@@ -110,6 +177,18 @@ export class AiPromptService {
   private readonly renderer = new AiPromptRenderer();
 
   constructor(private readonly db: PlaygroundDbContext) {}
+
+  async listPromptTypes(): Promise<AiPromptTypeListResponseDto> {
+    await this.ensureBuiltInPromptTypes();
+    const promptTypes = await this.db.aiPromptTypes.list({
+      orderBy: "name",
+      direction: "asc",
+    });
+
+    return {
+      items: promptTypes.map(toPromptTypeResponse),
+    };
+  }
 
   async listAccessible(
     currentUser: ICurrentUser | null,
@@ -119,19 +198,21 @@ export class AiPromptService {
       orderBy: "updatedAt",
       direction: "desc",
     });
+    const defaultPromptIdsByType = await this.readDefaultPromptIdsByType();
     const normalizedName = filters.name?.trim().toLowerCase();
 
     return {
       items: prompts
         .filter((entity) => canAccessPrompt(entity, currentUser))
         .filter((entity) => !filters.visibility || entity.visibility === filters.visibility)
+        .filter((entity) => !filters.type || readStoredPromptType(entity) === filters.type)
         .filter((entity) => !filters.ownerUserId || entity.userId === filters.ownerUserId)
         .filter((entity) =>
           !normalizedName ||
           entity.name.toLowerCase().includes(normalizedName) ||
           entity.description?.toLowerCase().includes(normalizedName),
         )
-        .map(toPromptResponse),
+        .map((entity) => createPromptResponse(entity, defaultPromptIdsByType)),
     };
   }
 
@@ -144,6 +225,7 @@ export class AiPromptService {
     }
 
     const visibility = normalizeVisibility(input.visibility);
+    const type = await this.requirePromptType(normalizePromptType(input.type));
 
     if (visibility === "system" && !isAdmin(currentUser)) {
       throw new HttpError(403, "Only admins can create system prompts.");
@@ -153,6 +235,7 @@ export class AiPromptService {
     entity.id = createGuid();
     entity.userId = visibility === "system" ? null : currentUser.id;
     entity.visibility = visibility;
+    entity.type = type;
     entity.name = input.name;
     entity.description = input.description ?? null;
     entity.argumentHint = input.argumentHint ?? null;
@@ -163,12 +246,19 @@ export class AiPromptService {
     entity.createdAt = new Date();
     entity.updatedAt = new Date();
 
-    toRuntimePrompt(entity);
+    createRuntimePrompt(entity, new Map([[readStoredPromptType(entity), entity.id]]));
 
     await this.db.aiPrompts.add(entity);
+    await this.syncDefaultPromptAssignment({
+      promptId: entity.id,
+      previousType: null,
+      nextType: readStoredPromptType(entity),
+      shouldBeDefault: input.isDefault === true,
+    });
     await this.db.saveChanges();
 
-    return toPromptResponse(entity);
+    const defaultPromptIdsByType = await this.readDefaultPromptIdsByType();
+    return createPromptResponse(entity, defaultPromptIdsByType);
   }
 
   async getAccessibleById(
@@ -181,7 +271,8 @@ export class AiPromptService {
       return null;
     }
 
-    return toPromptResponse(entity);
+    const defaultPromptIdsByType = await this.readDefaultPromptIdsByType();
+    return createPromptResponse(entity, defaultPromptIdsByType);
   }
 
   async updateById(
@@ -199,6 +290,11 @@ export class AiPromptService {
       throw new HttpError(403, "You do not have permission to update this prompt.");
     }
 
+    const defaultPromptIdsByType = await this.readDefaultPromptIdsByType();
+    const currentType = readStoredPromptType(entity);
+    const currentIsDefault = defaultPromptIdsByType.get(currentType) === entity.id;
+    const previousType = currentType;
+
     if (input.visibility !== undefined) {
       const visibility = normalizeVisibility(input.visibility);
 
@@ -208,6 +304,10 @@ export class AiPromptService {
 
       entity.visibility = visibility;
       entity.userId = visibility === "system" ? null : entity.userId ?? currentUser.id;
+    }
+
+    if (input.type !== undefined) {
+      entity.type = await this.requirePromptType(normalizePromptType(input.type));
     }
 
     if (input.name !== undefined) {
@@ -238,12 +338,20 @@ export class AiPromptService {
       entity.metadata = input.metadata ?? null;
     }
 
-    toRuntimePrompt(entity);
+    createRuntimePrompt(entity, new Map([[readStoredPromptType(entity), entity.id]]));
 
     await this.db.aiPrompts.update(entity);
+    await this.syncDefaultPromptAssignment({
+      promptId: entity.id,
+      previousType,
+      nextType: readStoredPromptType(entity),
+      shouldBeDefault: input.isDefault ?? currentIsDefault,
+      wasDefault: currentIsDefault,
+    });
     await this.db.saveChanges();
 
-    return toPromptResponse(entity);
+    const nextDefaultPromptIdsByType = await this.readDefaultPromptIdsByType();
+    return createPromptResponse(entity, nextDefaultPromptIdsByType);
   }
 
   async deleteById(
@@ -258,6 +366,11 @@ export class AiPromptService {
 
     if (!canMutatePrompt(entity, currentUser)) {
       throw new HttpError(403, "You do not have permission to delete this prompt.");
+    }
+
+    const defaultAssignment = await this.db.aiPromptTypeDefaults.findById(readStoredPromptType(entity));
+    if (defaultAssignment?.promptId === entity.id) {
+      await this.db.aiPromptTypeDefaults.remove(defaultAssignment);
     }
 
     await this.db.aiPrompts.remove(entity);
@@ -277,7 +390,8 @@ export class AiPromptService {
       return null;
     }
 
-    const rendered = this.renderer.render(toRuntimePrompt(entity), {
+    const defaultPromptIdsByType = await this.readDefaultPromptIdsByType();
+    const rendered = this.renderer.render(createRuntimePrompt(entity, defaultPromptIdsByType), {
       variables: input.variables,
       metadata: input.metadata,
     });
@@ -298,6 +412,7 @@ export class AiPromptService {
     promptIds: readonly string[],
   ): Promise<IAiPrompt[]> {
     const prompts: IAiPrompt[] = [];
+    const defaultPromptIdsByType = await this.readDefaultPromptIdsByType();
 
     for (const promptId of promptIds) {
       const entity = await this.db.aiPrompts.findById(promptId);
@@ -306,7 +421,7 @@ export class AiPromptService {
         throw new HttpError(404, `AI prompt '${promptId}' was not found.`);
       }
 
-      prompts.push(toRuntimePrompt(entity));
+      prompts.push(createRuntimePrompt(entity, defaultPromptIdsByType));
     }
 
     return prompts;
@@ -314,30 +429,137 @@ export class AiPromptService {
 
   async resolvePrompt(
     currentUser: ICurrentUser | null,
-    reference: { id?: string; name?: string },
+    reference: { id?: string; name?: string; type?: string },
   ): Promise<IAiPrompt | null> {
     const promptId = reference.id?.trim();
     if (promptId) {
       const entity = await this.db.aiPrompts.findById(promptId);
+      const defaultPromptIdsByType = await this.readDefaultPromptIdsByType();
       return entity && canAccessPrompt(entity, currentUser)
-        ? toRuntimePrompt(entity)
+        ? createRuntimePrompt(entity, defaultPromptIdsByType)
         : null;
     }
 
     const promptName = reference.name?.trim().toLowerCase();
     if (!promptName) {
-      return null;
+      const promptType = reference.type?.trim();
+      if (!promptType) {
+        return null;
+      }
+
+      const defaultAssignment = await this.db.aiPromptTypeDefaults.findById(promptType);
+      if (!defaultAssignment) {
+        return null;
+      }
+      const defaultEntity = await this.db.aiPrompts.findById(defaultAssignment.promptId);
+
+      return defaultEntity && canAccessPrompt(defaultEntity, currentUser)
+        ? createRuntimePrompt(defaultEntity, new Map([[promptType, defaultEntity.id]]))
+        : null;
     }
 
     const prompts = await this.db.aiPrompts.list({
       orderBy: "updatedAt",
       direction: "desc",
     });
+    const defaultPromptIdsByType = await this.readDefaultPromptIdsByType();
     const entity = prompts.find((item) =>
       canAccessPrompt(item, currentUser)
       && item.name.trim().toLowerCase() === promptName,
     );
 
-    return entity ? toRuntimePrompt(entity) : null;
+    return entity ? createRuntimePrompt(entity, defaultPromptIdsByType) : null;
+  }
+
+  private async requirePromptType(typeId: string): Promise<AiPromptType> {
+    await this.ensureBuiltInPromptTypes();
+    const promptType = await this.db.aiPromptTypes.findById(typeId);
+    if (!promptType) {
+      throw new GenError(`Unsupported prompt type '${typeId}'.`, "AI_PROMPT_VALIDATION_ERROR");
+    }
+
+    return promptType.id;
+  }
+
+  private async ensureBuiltInPromptTypes(): Promise<void> {
+    let changed = false;
+
+    for (const definition of BUILTIN_PROMPT_TYPES) {
+      const existing = await this.db.aiPromptTypes.findById(definition.id);
+      if (existing) {
+        if (
+          existing.name !== definition.name
+          || existing.description !== definition.description
+          || existing.isSystem !== true
+        ) {
+          existing.name = definition.name;
+          existing.description = definition.description;
+          existing.isSystem = true;
+          existing.updatedAt = new Date();
+          await this.db.aiPromptTypes.update(existing);
+          changed = true;
+        }
+        continue;
+      }
+
+      const promptType = new AiPromptTypeEntity();
+      promptType.id = definition.id;
+      promptType.name = definition.name;
+      promptType.description = definition.description;
+      promptType.isSystem = true;
+      promptType.createdAt = new Date();
+      promptType.updatedAt = new Date();
+      await this.db.aiPromptTypes.add(promptType);
+      changed = true;
+    }
+
+    if (changed) {
+      await this.db.saveChanges();
+    }
+  }
+
+  private async readDefaultPromptIdsByType(): Promise<Map<string, string>> {
+    const assignments = await this.db.aiPromptTypeDefaults.list({
+      orderBy: "updatedAt",
+      direction: "desc",
+    });
+
+    return new Map(assignments.map((assignment) => [assignment.typeId, assignment.promptId]));
+  }
+
+  private async syncDefaultPromptAssignment(input: {
+    promptId: string;
+    previousType: string | null;
+    nextType: string;
+    shouldBeDefault: boolean;
+    wasDefault?: boolean;
+  }): Promise<void> {
+    if (input.previousType && input.previousType !== input.nextType) {
+      const previousAssignment = await this.db.aiPromptTypeDefaults.findById(input.previousType);
+      if (previousAssignment?.promptId === input.promptId) {
+        await this.db.aiPromptTypeDefaults.remove(previousAssignment);
+      }
+    }
+
+    const targetAssignment = await this.db.aiPromptTypeDefaults.findById(input.nextType);
+    if (input.shouldBeDefault) {
+      if (targetAssignment) {
+        targetAssignment.promptId = input.promptId;
+        targetAssignment.updatedAt = new Date();
+        await this.db.aiPromptTypeDefaults.update(targetAssignment);
+      } else {
+        const created = new AiPromptTypeDefaultEntity();
+        created.typeId = input.nextType;
+        created.promptId = input.promptId;
+        created.createdAt = new Date();
+        created.updatedAt = new Date();
+        await this.db.aiPromptTypeDefaults.add(created);
+      }
+      return;
+    }
+
+    if ((input.wasDefault ?? false) && targetAssignment?.promptId === input.promptId) {
+      await this.db.aiPromptTypeDefaults.remove(targetAssignment);
+    }
   }
 }

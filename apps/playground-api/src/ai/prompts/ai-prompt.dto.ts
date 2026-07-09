@@ -1,7 +1,42 @@
 import { ApiDto, ApiField, defineApiType } from "@genspire/server";
 import { AiChatMessageDto } from "@genspire/ai/server";
+import type { AiPromptType } from "@genspire/ai/domain";
 
 export type AiPromptVisibilityDto = "private" | "shared" | "system";
+export type AiPromptTypeDto = AiPromptType;
+
+@ApiDto({
+  description: "Persisted AI prompt type",
+})
+export class AiPromptTypeResponseDto {
+  @ApiField({ type: "string" })
+  id!: string;
+
+  @ApiField({ type: "string" })
+  name!: string;
+
+  @ApiField({ type: "string", required: false })
+  description?: string | null;
+
+  @ApiField({ type: "boolean" })
+  isSystem!: boolean;
+
+  @ApiField({ type: "string", format: "date-time" })
+  createdAt!: string;
+
+  @ApiField({ type: "string", format: "date-time" })
+  updatedAt!: string;
+}
+
+@ApiDto({
+  description: "AI prompt type list response",
+})
+export class AiPromptTypeListResponseDto {
+  @ApiField({
+    arrayOf: AiPromptTypeResponseDto,
+  })
+  items!: AiPromptTypeResponseDto[];
+}
 
 @ApiDto({
   description: "AI prompt variable definition",
@@ -26,6 +61,12 @@ export class AiPromptVariableDto {
 export class CreateAiPromptRequestDto {
   @ApiField({ type: "string", required: false })
   visibility?: AiPromptVisibilityDto;
+
+  @ApiField({ type: "string", required: false })
+  type?: AiPromptTypeDto;
+
+  @ApiField({ type: "boolean", required: false })
+  isDefault?: boolean;
 
   @ApiField({ type: "string" })
   name!: string;
@@ -58,6 +99,12 @@ export class CreateAiPromptRequestDto {
 export class UpdateAiPromptRequestDto {
   @ApiField({ type: "string", required: false })
   visibility?: AiPromptVisibilityDto;
+
+  @ApiField({ type: "string", required: false })
+  type?: AiPromptTypeDto;
+
+  @ApiField({ type: "boolean", required: false })
+  isDefault?: boolean;
 
   @ApiField({ type: "string", required: false })
   name?: string;
@@ -96,6 +143,12 @@ export class AiPromptResponseDto {
 
   @ApiField({ type: "string" })
   visibility!: AiPromptVisibilityDto;
+
+  @ApiField({ type: "string" })
+  type!: AiPromptTypeDto;
+
+  @ApiField({ type: "boolean" })
+  isDefault!: boolean;
 
   @ApiField({ type: "string" })
   name!: string;

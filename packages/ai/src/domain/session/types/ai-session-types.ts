@@ -20,6 +20,7 @@ export type AiSessionFeedbackRating = "good" | "bad";
 export interface IAiSessionPromptReference {
   id?: string;
   name?: string;
+  type?: string;
 }
 
 export interface IAiSessionSettings {

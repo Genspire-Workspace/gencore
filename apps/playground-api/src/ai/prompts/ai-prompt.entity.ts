@@ -1,5 +1,6 @@
-import { Entity, Index, PrimaryKey, Property } from "@mikro-orm/decorators";
-import type { AiPromptTemplate } from "@genspire/ai/domain";
+import { Entity, Index, ManyToOne, PrimaryKey, Property } from "@mikro-orm/decorators";
+import type { AiPromptTemplate, AiPromptType } from "@genspire/ai/domain";
+import { AiPromptTypeEntity } from "./ai-prompt-type.entity.js";
 
 export type AiPromptVisibility = "private" | "shared" | "system";
 
@@ -7,6 +8,7 @@ export type AiPromptVisibility = "private" | "shared" | "system";
 @Index({ name: "ai_prompts_user_id_index", properties: ["userId"] })
 @Index({ name: "ai_prompts_visibility_index", properties: ["visibility"] })
 @Index({ name: "ai_prompts_name_index", properties: ["name"] })
+@Index({ name: "ai_prompts_type_index", properties: ["type"] })
 export class AiPromptEntity {
   @PrimaryKey({ type: "string" })
   id!: string;
@@ -16,6 +18,9 @@ export class AiPromptEntity {
 
   @Property({ type: "string" })
   visibility: AiPromptVisibility = "private";
+
+  @ManyToOne(() => AiPromptTypeEntity, { fieldName: "type_id", mapToPk: true, nullable: true })
+  type: AiPromptType | null = null;
 
   @Property({ type: "string" })
   name!: string;

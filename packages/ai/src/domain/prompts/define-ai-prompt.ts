@@ -27,6 +27,11 @@ export function defineAiPrompt(prompt: IAiPrompt): IAiPrompt {
     throw new AiError("AI prompt id is required.");
   }
 
+  const type = prompt.type?.trim();
+  if (!type) {
+    throw new AiError(`AI prompt '${id}' must define a prompt type.`);
+  }
+
   const variables = prompt.variables?.map((variable) =>
     normalizeVariable(variable, id)
   );
@@ -45,6 +50,8 @@ export function defineAiPrompt(prompt: IAiPrompt): IAiPrompt {
   return {
     ...prompt,
     id,
+    type,
+    isDefault: prompt.isDefault === true,
     name: prompt.name?.trim(),
     description: prompt.description?.trim(),
     argumentHint: prompt.argumentHint?.trim(),

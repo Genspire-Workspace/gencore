@@ -6,6 +6,7 @@ import type { IAiPrompt } from "../../domain/prompts/ai-prompt.js";
 
 const createPrompt = (id: string, template = `Prompt ${id}`): IAiPrompt => ({
   id,
+  type: "user_prompt",
   template,
 });
 

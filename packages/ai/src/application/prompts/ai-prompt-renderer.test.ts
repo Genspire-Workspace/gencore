@@ -8,6 +8,7 @@ describe("AiPromptRenderer", () => {
   test("renders string template into user message", () => {
     const prompt = defineAiPrompt({
       id: "capital-answer",
+      type: "user_prompt",
       template: "What is the capital of {{country}}?",
       variables: [{ name: "country", required: true }],
     });
@@ -28,6 +29,7 @@ describe("AiPromptRenderer", () => {
   test("renders message template", () => {
     const prompt = defineAiPrompt({
       id: "capital-answer",
+      type: "user_prompt",
       template: [
         {
           role: "system",
@@ -84,6 +86,7 @@ describe("AiPromptRenderer", () => {
   test("applies default variable values", () => {
     const prompt = defineAiPrompt({
       id: "capital-answer",
+      type: "user_prompt",
       template: "Find the capital of {{country}}.",
       variables: [{ name: "country", defaultValue: "France" }],
     });
@@ -97,6 +100,7 @@ describe("AiPromptRenderer", () => {
   test("throws on missing required variable", () => {
     const prompt = defineAiPrompt({
       id: "capital-answer",
+      type: "user_prompt",
       template: "Find the capital of {{country}}.",
       variables: [{ name: "country", required: true }],
     });
@@ -111,6 +115,7 @@ describe("AiPromptRenderer", () => {
   test("throws on unresolved placeholder", () => {
     const prompt = defineAiPrompt({
       id: "capital-answer",
+      type: "user_prompt",
       template: "Find the capital of {{country}}.",
     });
 

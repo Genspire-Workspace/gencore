@@ -271,6 +271,8 @@ export async function loadAiPromptFromMarkdownFile(filePath: string): Promise<IA
   return defineAiPrompt({
     ...frontmatter,
     id: frontmatter.id ?? derivedPromptId,
+    type: frontmatter.type ?? "user_prompt",
+    isDefault: frontmatter.isDefault === true,
     name: frontmatter.name ?? derivedPromptId,
     template,
   });

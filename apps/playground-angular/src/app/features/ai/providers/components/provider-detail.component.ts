@@ -117,32 +117,14 @@ export interface IProviderDraft {
 
         <div class="flex flex-wrap items-center justify-between gap-3">
           <div class="flex flex-wrap items-center gap-2">
-            @if (confirmDelete()) {
-              <span class="text-sm text-danger">Delete this provider and all its models?</span>
-              <button
-                class="rounded-2xl border border-base-300 px-4 py-2.5 text-sm font-medium text-base-content transition hover:bg-base-200"
-                type="button"
-                (click)="confirmDelete.set(false)"
-              >
-                Cancel
-              </button>
-              <button
-                class="rounded-2xl bg-danger px-4 py-2.5 text-sm font-medium text-danger-content transition hover:bg-danger/85"
-                type="button"
-                (click)="delete.emit()"
-              >
-                Confirm Delete
-              </button>
-            } @else {
-              <button
-                class="inline-flex items-center gap-2 rounded-2xl border border-danger/30 px-4 py-2.5 text-sm font-medium text-danger transition hover:bg-danger/10"
-                type="button"
-                (click)="confirmDelete.set(true)"
-              >
-                <app-icon iconName="delete" size="sm" aria-hidden="true" />
-                Delete Provider
-              </button>
-            }
+            <button
+              class="inline-flex items-center gap-2 rounded-2xl border border-danger/30 px-4 py-2.5 text-sm font-medium text-danger transition hover:bg-danger/10"
+              type="button"
+              (click)="openDeleteConfirmation()"
+            >
+              <app-icon iconName="delete" size="sm" aria-hidden="true" />
+              Delete Provider
+            </button>
           </div>
 
           <button
@@ -198,6 +180,36 @@ export interface IProviderDraft {
         </div>
       </div>
     </ng-template>
+
+    <ng-template #deleteConfirmation let-overlay>
+      <div class="w-[24rem] overflow-hidden rounded-2xl border border-base-300 bg-base-100 shadow-xl">
+        <div class="px-4 py-3">
+          <h3 class="text-sm font-semibold text-base-content">Delete Provider</h3>
+        </div>
+        <div class="p-4">
+          <p class="text-sm text-base-content/70">
+            Are you sure you want to delete <strong class="text-base-content">{{ provider()?.name }}</strong> and all its models?
+            This action cannot be undone.
+          </p>
+        </div>
+        <div class="flex justify-end gap-2 px-4 py-3">
+          <button
+            class="rounded-xl border border-base-300 px-4 py-2 text-sm font-medium text-base-content transition hover:bg-base-200"
+            type="button"
+            (click)="overlay.close()"
+          >
+            Cancel
+          </button>
+          <button
+            class="rounded-xl bg-danger px-4 py-2 text-sm font-medium text-danger-content transition hover:bg-danger/85"
+            type="button"
+            (click)="confirmDelete(overlay)"
+          >
+            Delete
+          </button>
+        </div>
+      </div>
+    </ng-template>
   `,
 })
 export class ProviderDetailComponent {
@@ -206,6 +218,9 @@ export class ProviderDetailComponent {
 
   @ViewChild('clientKindDropdown', { static: true })
   private readonly clientKindDropdownTemplate!: TemplateRef<unknown>;
+
+  @ViewChild('deleteConfirmation', { static: true })
+  private readonly deleteConfirmationTemplate!: TemplateRef<unknown>;
 
   private readonly overlayService = inject(OverlayService);
   private readonly viewContainerRef = inject(ViewContainerRef);
@@ -219,7 +234,6 @@ export class ProviderDetailComponent {
   readonly save = output<void>();
   readonly delete = output<void>();
 
-  protected readonly confirmDelete = signal(false);
   protected readonly clientKindSearch = signal('');
   protected readonly filteredClientKinds = computed(() => {
     const query = this.clientKindSearch().trim().toLowerCase();
@@ -248,7 +262,6 @@ export class ProviderDetailComponent {
       this.baseUrl.set('');
       this.doc.set('');
       this.website.set('');
-      this.confirmDelete.set(false);
       this.clientKindSearch.set('');
     });
   }
@@ -300,5 +313,22 @@ export class ProviderDetailComponent {
   protected selectClientKind(clientKind: string, overlay: AppOverlayHandle): void {
     this.clientKind.set(clientKind);
     overlay.close();
+  }
+
+  protected openDeleteConfirmation(): void {
+    this.overlayService.createModalTemplate(
+      {
+        templateRef: this.deleteConfirmationTemplate,
+        viewContainerRef: this.viewContainerRef,
+      },
+      {
+        panelClass: 'app-delete-confirmation-overlay',
+      },
+    );
+  }
+
+  protected confirmDelete(overlay: AppOverlayHandle): void {
+    overlay.close();
+    this.delete.emit();
   }
 }

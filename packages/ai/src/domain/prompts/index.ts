@@ -1,6 +1,7 @@
 // file: packages/ai/src/domain/prompts/index.ts
 
 export type {
+  AiPromptType,
   AiPromptTemplate,
   IAiPrompt,
   IAiPromptRenderInput,

@@ -5,6 +5,7 @@ import { AiPromptService } from "./ai-prompt.service.js";
 import {
   AiPromptListResponseDto,
   AiPromptResponseDto,
+  AiPromptTypeListResponseDto,
   CreateAiPromptRequestDto,
   RenderAiPromptRequestDto,
   RenderAiPromptResponseDto,
@@ -20,6 +21,14 @@ export class AiPromptController {
   static inject = [AiPromptService];
 
   constructor(private readonly service: AiPromptService) {}
+
+  @Get("/types", {
+    summary: "List AI prompt types",
+    response: AiPromptTypeListResponseDto,
+  })
+  async listTypes() {
+    return await this.service.listPromptTypes();
+  }
 
   @Get("/", {
     summary: "List accessible AI prompts",

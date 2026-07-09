@@ -6,6 +6,8 @@ import {
 import type {
   IAiPromptListResponseDto,
   IAiPromptResponseDto,
+  IAiPromptTypeListResponseDto,
+  IAiPromptTypeResponseDto,
   ICreateAiPromptRequestDto,
   IDeleteAiPromptResponseDto,
   IUpdateAiPromptRequestDto,
@@ -21,6 +23,11 @@ export class AiPromptClient {
     getAccessToken: () => this.authService.ensureValidAccessToken(),
   });
   private readonly client = new FetchAiPromptClient(this.transport);
+
+  async listPromptTypes(): Promise<IAiPromptTypeResponseDto[]> {
+    const response: IAiPromptTypeListResponseDto = await this.client.listPromptTypes();
+    return response.items;
+  }
 
   async listPrompts(): Promise<IAiPromptResponseDto[]> {
     const response: IAiPromptListResponseDto = await this.client.listPrompts();

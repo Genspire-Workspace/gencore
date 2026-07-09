@@ -58,6 +58,7 @@ function createSkillPromptTemplate(
 
   return defineAiPrompt({
     id: skillName,
+    type: "user_prompt",
     name: skillName,
     description,
     argumentHint,

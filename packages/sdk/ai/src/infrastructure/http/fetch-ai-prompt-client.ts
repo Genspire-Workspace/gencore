@@ -3,6 +3,7 @@ import type {
   IDeleteAiPromptResponseDto,
   IAiPromptListResponseDto,
   IAiPromptResponseDto,
+  IAiPromptTypeListResponseDto,
   IUpdateAiPromptRequestDto,
 } from "../../domain/types/ai-prompt-sdk-types.js";
 import type { IAiPromptTransport } from "../../application/contracts/ai-prompt-transport.js";
@@ -23,6 +24,10 @@ export class FetchAiPromptClient implements IAiPromptTransport {
       options instanceof FetchAiHttpTransport
         ? options
         : new FetchAiHttpTransport(options);
+  }
+
+  async listPromptTypes(): Promise<IAiPromptTypeListResponseDto> {
+    return await this.transport.get<IAiPromptTypeListResponseDto>(`${AI_PROMPT_API_PATH}/types`);
   }
 
   async listPrompts(): Promise<IAiPromptListResponseDto> {

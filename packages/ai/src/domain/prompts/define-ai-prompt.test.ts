@@ -7,6 +7,7 @@ describe("defineAiPrompt", () => {
   test("trims id, name, and description", () => {
     const prompt = defineAiPrompt({
       id: "  capital-answer  ",
+      type: "user_prompt",
       name: "  Capital Answer  ",
       description: "  Finds a capital city.  ",
       template: "What is the capital of {{country}}?",
@@ -21,6 +22,7 @@ describe("defineAiPrompt", () => {
     expect(() =>
       defineAiPrompt({
         id: "   ",
+        type: "user_prompt",
         template: "Prompt",
       })).toThrow("AI prompt id is required.");
   });
@@ -29,6 +31,7 @@ describe("defineAiPrompt", () => {
     expect(() =>
       defineAiPrompt({
         id: "capital-answer",
+        type: "user_prompt",
         template: "Prompt",
         variables: [{ name: "   " }],
       })).toThrow("AI prompt 'capital-answer' has a variable with no name.");
@@ -38,10 +41,20 @@ describe("defineAiPrompt", () => {
     expect(() =>
       defineAiPrompt({
         id: "capital-answer",
+        type: "user_prompt",
         template: "Prompt",
         variables: [{ name: "country" }, { name: "country" }],
       })).toThrow(
         "AI prompt 'capital-answer' has a duplicate variable 'country'.",
       );
+  });
+
+  test("rejects blank prompt type", () => {
+    expect(() =>
+      defineAiPrompt({
+        id: "capital-answer",
+        type: "   ",
+        template: "Prompt",
+      })).toThrow("AI prompt 'capital-answer' must define a prompt type.");
   });
 });

@@ -1,9 +1,11 @@
 // file: packages/ai/src/domain/prompts/ai-prompt-frontmatter.ts
 
-import type { IAiPromptVariable } from "./ai-prompt.js";
+import type { AiPromptType, IAiPromptVariable } from "./ai-prompt.js";
 
 export interface IAiPromptFrontmatter {
   id?: string;
+  type?: AiPromptType;
+  isDefault?: boolean;
   name?: string;
   description?: string;
   argumentHint?: string;

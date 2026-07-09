@@ -98,6 +98,7 @@ function toPromptDefinition(
 
   return defineAiPrompt({
     id: promptId,
+    type: "user_prompt",
     name: prompt.name,
     description: prompt.description,
     argumentHint: prompt.argumentHint,

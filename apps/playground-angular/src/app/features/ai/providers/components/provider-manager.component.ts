@@ -90,6 +90,7 @@ import { ProviderModelEditorComponent } from './provider-model-editor.component'
                 <app-ai-provider-api-keys
                   [apiKeys]="providerApiKeys()"
                   (create)="createApiKey()"
+                  (delete)="deleteApiKey($event)"
                 />
               </div>
             } @else {
@@ -314,5 +315,13 @@ export class ProviderManagerComponent implements OnInit {
 
     this.providerApiKeys.update((current) => [created, ...current]);
     apiKeys.reset();
+  }
+
+  protected async deleteApiKey(keyId: string): Promise<void> {
+    const provider = this.selectedProvider();
+    if (!provider) return;
+
+    await this.providerClient.deleteApiKey(provider.id, keyId);
+    this.providerApiKeys.update((current) => current.filter((item) => item.id !== keyId));
   }
 }

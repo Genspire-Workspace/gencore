@@ -15,10 +15,12 @@ import {
   signal,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import type { IAiModelResponseDto, IAiProviderResponseDto } from '@genspire/sdk-ai';
+import type { IAiModelResponseDto, IAiPromptResponseDto, IAiProviderResponseDto } from '@genspire/sdk-ai';
+import { appEnv } from '../../../../core/app-env';
 import { IconComponent } from '../../../../icons/icon.component';
 import { OverlayService } from '../../../../shared/overlay';
 import type { AppOverlayHandle } from '../../../../shared/overlay';
+import { AiPromptClient } from '../../prompts/ai-prompt.client';
 import { AiProviderClient } from '../../providers/ai-provider.client';
 import {
   ProviderModelPathDropdownComponent,
@@ -31,6 +33,10 @@ import type {
 } from '../ai-session-types';
 
 const MAX_TOKEN_OPTIONS = [1024, 2048, 4096, 8192, 16384, 32768, 65536, 131072] as const;
+const DEFAULT_SYSTEM_PROMPT_NAME = 'System Prompt';
+const DEFAULT_TEMPERATURE = '1.0';
+const DEFAULT_TOP_P = '1.00';
+const DEFAULT_MAX_TOKENS = '1024';
 
 interface IAiModelCapabilitiesView {
   maxTextInputTokens?: number;
@@ -246,6 +252,7 @@ export class SessionConfigFormComponent {
   private readonly deleteModalTemplate!: TemplateRef<unknown>;
 
   private readonly providerClient = inject(AiProviderClient);
+  private readonly promptClient = inject(AiPromptClient);
   private readonly overlayService = inject(OverlayService);
   private readonly viewContainerRef = inject(ViewContainerRef);
 
@@ -261,6 +268,7 @@ export class SessionConfigFormComponent {
 
   protected readonly providers = signal<IAiProviderResponseDto[]>([]);
   protected readonly modelsByProvider = signal<Record<string, IAiModelResponseDto[]>>({});
+  private readonly prompts = signal<IAiPromptResponseDto[]>([]);
 
   protected readonly modelPathOptions = computed<IAiProviderModelPathOption[]>(() =>
     this.providers().flatMap((provider) =>
@@ -333,21 +341,20 @@ export class SessionConfigFormComponent {
       const settings = this.readSettings(session);
 
       this.title.set(session.title || '');
-      this.provider.set(settings.provider || '');
-      this.model.set(settings.model || '');
-      this.systemPrompt.set(settings.systemPrompt || '');
-      this.temperature.set(settings.temperature?.toString() || '');
-      this.topP.set(settings.topP?.toString() || '');
-      this.maxTokens.set(settings.maxTokens?.toString() || '');
+      this.provider.set(settings.provider || appEnv.defaultAiProvider);
+      this.model.set(settings.model || this.resolveDefaultModelValue(settings.provider || appEnv.defaultAiProvider));
+      this.systemPrompt.set(this.buildEffectiveSystemPrompt(settings));
+      this.temperature.set(settings.temperature?.toString() || DEFAULT_TEMPERATURE);
+      this.topP.set(settings.topP?.toString() || DEFAULT_TOP_P);
+      this.maxTokens.set(settings.maxTokens?.toString() || DEFAULT_MAX_TOKENS);
 
-      if (settings.provider) {
-        void this.ensureProviderModels(settings.provider);
-      }
+      void this.ensureProviderModels(this.provider());
 
       this.activeModalHandle?.close();
     });
 
     void this.loadProviderCatalogue();
+    void this.loadPromptCatalogue();
   }
 
   protected readDraft(): IAiSessionConfigDraft {
@@ -355,7 +362,7 @@ export class SessionConfigFormComponent {
       title: this.title(),
       provider: this.provider(),
       model: this.model(),
-      systemPrompt: this.systemPrompt(),
+      systemPrompt: this.normalizeSystemPromptForSave(this.systemPrompt()),
       temperature: this.temperature(),
       topP: this.topP(),
       maxTokens: this.maxTokens(),
@@ -447,6 +454,13 @@ export class SessionConfigFormComponent {
 
     const providerIds = providers.map((provider) => provider.id);
     await Promise.all(providerIds.map((providerId) => this.ensureProviderModels(providerId)));
+    this.patchResolvedDefaultsForCurrentSession();
+  }
+
+  private async loadPromptCatalogue(): Promise<void> {
+    const prompts = await this.promptClient.listPrompts();
+    this.prompts.set(prompts);
+    this.patchResolvedDefaultsForCurrentSession();
   }
 
   private async ensureProviderModels(providerId: string): Promise<void> {
@@ -577,6 +591,163 @@ export class SessionConfigFormComponent {
       temperature: typeof settings['temperature'] === 'number' ? settings['temperature'] : undefined,
       topP: typeof settings['topP'] === 'number' ? settings['topP'] : undefined,
       maxTokens: typeof settings['maxTokens'] === 'number' ? settings['maxTokens'] : undefined,
+      prompts: this.readPromptReferences(settings['prompts']),
     };
+  }
+
+  private readPromptReferences(value: unknown): IAiSessionSettings['prompts'] | undefined {
+    if (!value || typeof value !== 'object') {
+      return undefined;
+    }
+
+    const prompts = value as Record<string, unknown>;
+    return {
+      systemPrompt: this.readPromptReference(prompts['systemPrompt']),
+      titleGeneratorPrompt: this.readPromptReference(prompts['titleGeneratorPrompt']),
+    };
+  }
+
+  private readPromptReference(value: unknown): { id?: string; name?: string; type?: string } | undefined {
+    if (!value || typeof value !== 'object') {
+      return undefined;
+    }
+
+    const reference = value as Record<string, unknown>;
+    const id = typeof reference['id'] === 'string' ? reference['id'].trim() : '';
+    const name = typeof reference['name'] === 'string' ? reference['name'].trim() : '';
+    const type = typeof reference['type'] === 'string' ? reference['type'].trim() : '';
+    if (!id && !name && !type) {
+      return undefined;
+    }
+
+    return {
+      ...(id ? { id } : {}),
+      ...(name ? { name } : {}),
+      ...(type ? { type } : {}),
+    };
+  }
+
+  private buildEffectiveSystemPrompt(settings: IAiSessionSettings): string {
+    const defaultPrompt = this.resolveDefaultSystemPromptTemplate(settings);
+    const override = settings.systemPrompt?.trim() ?? '';
+
+    if (!defaultPrompt) {
+      return override;
+    }
+
+    if (!override) {
+      return defaultPrompt;
+    }
+
+    return `${defaultPrompt}\n\n${override}`;
+  }
+
+  private resolveDefaultSystemPromptTemplate(settings: IAiSessionSettings): string {
+    const reference = settings.prompts?.systemPrompt;
+    const prompts = this.prompts();
+    if (prompts.length === 0) {
+      return '';
+    }
+
+    const prompt = prompts.find((candidate) =>
+      (reference?.id && candidate.id === reference.id)
+      || (
+        reference?.name
+        && typeof candidate.name === 'string'
+        && candidate.name.trim().toLowerCase() === reference.name.trim().toLowerCase()
+      )
+      || (
+        reference?.type
+        && typeof candidate.type === 'string'
+        && candidate.type.trim().toLowerCase() === reference.type.trim().toLowerCase()
+        && candidate.isDefault === true
+      )
+      || (
+        typeof candidate.name === 'string'
+        && candidate.name.trim().toLowerCase() === DEFAULT_SYSTEM_PROMPT_NAME.toLowerCase()
+      ),
+    );
+
+    return typeof prompt?.template === 'string' ? prompt.template.trim() : '';
+  }
+
+  private normalizeSystemPromptForSave(value: string): string {
+    const normalizedValue = value.trim();
+    if (!normalizedValue) {
+      return '';
+    }
+
+    const defaultPrompt = this.resolveDefaultSystemPromptTemplate(this.readSettings(this.session()));
+    if (!defaultPrompt) {
+      return normalizedValue;
+    }
+
+    if (normalizedValue === defaultPrompt) {
+      return '';
+    }
+
+    if (!normalizedValue.startsWith(defaultPrompt)) {
+      return normalizedValue;
+    }
+
+    return normalizedValue.slice(defaultPrompt.length).replace(/^\s+/u, '');
+  }
+
+  private patchResolvedDefaultsForCurrentSession(): void {
+    const settings = this.readSettings(this.session());
+
+    if (!settings.provider && !this.provider().trim()) {
+      this.provider.set(this.resolveDefaultProviderValue());
+    }
+
+    if (!settings.model && !this.model().trim()) {
+      this.model.set(this.resolveDefaultModelValue(this.provider()));
+    }
+
+    const currentSystemPrompt = this.systemPrompt().trim();
+    if (
+      (!settings.systemPrompt && !currentSystemPrompt)
+      || currentSystemPrompt === (settings.systemPrompt?.trim() ?? '')
+    ) {
+      this.systemPrompt.set(this.buildEffectiveSystemPrompt(settings));
+    }
+
+    if (settings.temperature === undefined && !this.temperature().trim()) {
+      this.temperature.set(DEFAULT_TEMPERATURE);
+    }
+
+    if (settings.topP === undefined && !this.topP().trim()) {
+      this.topP.set(DEFAULT_TOP_P);
+    }
+
+    if (settings.maxTokens === undefined && !this.maxTokens().trim()) {
+      this.maxTokens.set(DEFAULT_MAX_TOKENS);
+    }
+  }
+
+  private resolveDefaultProviderValue(): string {
+    const providers = this.providers();
+    if (providers.some((provider) => provider.id === appEnv.defaultAiProvider)) {
+      return appEnv.defaultAiProvider;
+    }
+
+    return providers[0]?.id || appEnv.defaultAiProvider;
+  }
+
+  private resolveDefaultModelValue(providerId: string): string {
+    const normalizedProviderId = providerId.trim();
+    if (!normalizedProviderId) {
+      return '';
+    }
+
+    const models = this.modelsByProvider()[normalizedProviderId] ?? [];
+    if (normalizedProviderId === appEnv.defaultAiProvider) {
+      const configuredDefault = models.find((model) => model.name === appEnv.defaultAiModel);
+      if (configuredDefault) {
+        return configuredDefault.name;
+      }
+    }
+
+    return models[0]?.name || (normalizedProviderId === appEnv.defaultAiProvider ? appEnv.defaultAiModel : '');
   }
 }

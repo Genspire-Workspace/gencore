@@ -20,7 +20,9 @@ import type { IChatGenerationSettings } from "../../../domain/chat/chat-generati
 import { AiSessionDbContext } from "../../../infrastructure/persistence/ai-session-db-context.js";
 import {
   DEFAULT_SESSION_SYSTEM_PROMPT_NAME,
+  DEFAULT_SESSION_SYSTEM_PROMPT_TYPE,
   DEFAULT_SESSION_TITLE_PROMPT_NAME,
+  DEFAULT_SESSION_TITLE_PROMPT_TYPE,
 } from "../../prompts/default-session-prompts.js";
 
 export interface IAiSessionTurnSnapshot {
@@ -183,8 +185,11 @@ export function withDefaultSessionPromptReferences(
   if (!settings) {
     return {
       prompts: {
-        systemPrompt: { name: DEFAULT_SESSION_SYSTEM_PROMPT_NAME },
-        titleGeneratorPrompt: { name: DEFAULT_SESSION_TITLE_PROMPT_NAME },
+        systemPrompt: { type: DEFAULT_SESSION_SYSTEM_PROMPT_TYPE, name: DEFAULT_SESSION_SYSTEM_PROMPT_NAME },
+        titleGeneratorPrompt: {
+          type: DEFAULT_SESSION_TITLE_PROMPT_TYPE,
+          name: DEFAULT_SESSION_TITLE_PROMPT_NAME,
+        },
       },
     };
   }
@@ -195,10 +200,12 @@ export function withDefaultSessionPromptReferences(
       systemPrompt: normalizePromptReference(
         settings.prompts?.systemPrompt,
         DEFAULT_SESSION_SYSTEM_PROMPT_NAME,
+        DEFAULT_SESSION_SYSTEM_PROMPT_TYPE,
       ),
       titleGeneratorPrompt: normalizePromptReference(
         settings.prompts?.titleGeneratorPrompt,
         DEFAULT_SESSION_TITLE_PROMPT_NAME,
+        DEFAULT_SESSION_TITLE_PROMPT_TYPE,
       ),
     },
   };
@@ -207,13 +214,16 @@ export function withDefaultSessionPromptReferences(
 function normalizePromptReference(
   reference: IAiSessionPromptReference | undefined,
   fallbackName: string,
+  fallbackType?: string,
 ): IAiSessionPromptReference {
   const id = reference?.id?.trim();
   const name = reference?.name?.trim();
+  const type = reference?.type?.trim();
 
   return {
     ...(id ? { id } : {}),
     ...(name ? { name } : { name: fallbackName }),
+    ...(type ? { type } : fallbackType ? { type: fallbackType } : {}),
   };
 }
 

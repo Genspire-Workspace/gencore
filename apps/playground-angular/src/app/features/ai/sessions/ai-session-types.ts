@@ -57,6 +57,18 @@ export interface IAiSessionSettings {
   temperature?: number;
   topP?: number;
   maxTokens?: number;
+  prompts?: {
+    systemPrompt?: {
+      id?: string;
+      name?: string;
+      type?: string;
+    };
+    titleGeneratorPrompt?: {
+      id?: string;
+      name?: string;
+      type?: string;
+    };
+  };
 }
 
 export interface IAiSessionConfigDraft {

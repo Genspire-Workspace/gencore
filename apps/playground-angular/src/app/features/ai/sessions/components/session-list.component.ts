@@ -28,12 +28,10 @@ import type { IAiSessionResponse } from '../ai-session-types';
           <div class="group relative">
             <button
               class="block w-full rounded-2xl border px-4 py-3 pr-14 text-left transition"
-              [class.border-primary]="item.id === activeSessionId()"
-              [class.bg-base-200]="item.id === activeSessionId()"
-              [class.text-primary]="item.id === activeSessionId()"
-              [class.border-base-300]="item.id !== activeSessionId()"
-              [class.bg-base-100]="item.id !== activeSessionId()"
-              [class.text-base-content]="item.id !== activeSessionId()"
+              [ngClass]="{
+                'border-primary bg-primary/10 text-primary': item.id === activeSessionId(),
+                'border-base-300 bg-base-100 text-base-content': item.id !== activeSessionId(),
+              }"
               type="button"
               (click)="open.emit(item.id)"
               [disabled]="loading()"
