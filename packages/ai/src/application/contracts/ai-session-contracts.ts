@@ -56,6 +56,15 @@ export interface ICreateAiBranchInput {
   metadata?: Record<string, unknown> | null;
 }
 
+export interface ICreateAiSessionBranchInput {
+  currentUser: ICurrentUser;
+  sessionId: string;
+  sourceTimelineId: string;
+  sourceTurnId: string;
+  title?: string | null;
+  metadata?: Record<string, unknown> | null;
+}
+
 export interface ICreateOrUpdateAiMessageFeedbackInput {
   currentUser: ICurrentUser;
   sessionId: string;

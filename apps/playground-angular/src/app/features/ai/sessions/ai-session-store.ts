@@ -11,6 +11,7 @@ import type {
 import type {
   IAiSessionConfigDraft,
   IAiSessionClientState,
+  IAiSessionGraphResponse,
   IAiSessionResponse,
   IAiSessionUpdateRequest,
   IAiSessionUiMessage,
@@ -59,10 +60,20 @@ export class AiSessionStore {
   readonly sending = computed(() => this.currentSessionState()?.sending || false);
   readonly error = computed(() => this.currentSessionState()?.error || this.sessionListError() || '');
   readonly streamStatus = computed(() => this.currentSessionState()?.streamStatus || '');
+  readonly currentGraph = computed<IAiSessionGraphResponse | null>(
+    () => (this.currentSessionState()?.graph as IAiSessionGraphResponse | null) ?? null,
+  );
+  readonly currentActiveTimelineId = computed(() => this.currentSessionState()?.activeTimelineId ?? null);
   readonly currentMessages = computed(() => this.currentSessionState()?.messages ?? []);
   readonly currentPrompt = computed(() => this.currentSessionState()?.prompt ?? '');
   readonly currentAttachments = computed(
     () => (this.currentSessionState()?.attachments ?? []) as IChatComposerAttachment[],
+  );
+  readonly currentEditingPrompt = computed(
+    () => this.currentSessionState()?.editingDraft?.prompt ?? '',
+  );
+  readonly currentEditingAttachments = computed(
+    () => (this.currentSessionState()?.editingDraft?.attachments ?? []) as IChatComposerAttachment[],
   );
   readonly currentProvider = computed(() => this.currentSessionState()?.provider ?? appEnv.defaultAiProvider);
   readonly currentModel = computed(() => this.currentSessionState()?.model ?? appEnv.defaultAiModel);
@@ -115,12 +126,24 @@ export class AiSessionStore {
     this.workspace.setCurrentAttachments(value as IAiSessionUiAttachment[]);
   }
 
+  setCurrentEditingPrompt(value: string): void {
+    this.workspace.setEditingPrompt(value);
+  }
+
+  setCurrentEditingAttachments(value: IChatComposerAttachment[]): void {
+    this.workspace.setEditingAttachments(value as IAiSessionUiAttachment[]);
+  }
+
   setCurrentProvider(value: string): void {
     this.workspace.setCurrentProvider(value);
   }
 
   setCurrentModel(value: string): void {
     this.workspace.setCurrentModel(value);
+  }
+
+  setActiveTimeline(timelineId: string | null): void {
+    this.workspace.setActiveTimeline(timelineId);
   }
 
   async updateSessionConfig(

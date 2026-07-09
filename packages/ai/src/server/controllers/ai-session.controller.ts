@@ -37,6 +37,8 @@ import {
   AiSessionTimelineTurnListResponseDto,
   CreateAiBranchRequestDto,
   CreateAiMessageFeedbackRequestDto,
+  CreateAiSessionBranchRequestDto,
+  CreateAiSessionBranchResponseDto,
   CreateAiSessionRequestDto,
   CreateAiTimelineRequestDto,
   EditAiUserAndRegenerateRequestDto,
@@ -323,6 +325,31 @@ export class AiSessionController {
         sessionId: ctx.params.sessionId!,
         ...(await ctx.json<CreateAiBranchRequestDto>()),
       }), { status: 201 });
+    } catch (error) {
+      return mapSessionError(error) ?? problem({ status: 500, title: "Internal Server Error" });
+    }
+  }
+
+  @Post("/:sessionId/session-branches", {
+    summary: "Clone a session from a timeline prefix",
+    request: CreateAiSessionBranchRequestDto,
+    response: CreateAiSessionBranchResponseDto,
+  })
+  async createSessionBranch(ctx: RequestContext) {
+    try {
+      const currentUser = requireCurrentUser(ctx);
+      const session = await this.sessionService.createSessionBranch({
+        currentUser,
+        sessionId: ctx.params.sessionId!,
+        ...(await ctx.json<CreateAiSessionBranchRequestDto>()),
+      });
+
+      const graph = await this.graphService.getGraph({
+        currentUser,
+        sessionId: session.id,
+      });
+
+      return json({ session, graph }, { status: 201 });
     } catch (error) {
       return mapSessionError(error) ?? problem({ status: 500, title: "Internal Server Error" });
     }

@@ -6,6 +6,7 @@ import type {
   IAiSessionEditingDraft,
   IAiSessionGraphDto,
   IAiSessionMessageFeedbackValue,
+  IAiSessionOptimisticStreamState,
   IAiSessionResponseDto,
   IAiSessionStreamEvent,
   IAiSessionViewMessage,
@@ -17,6 +18,7 @@ import type { IAiSessionTransport } from "../contracts/ai-session-transport.js";
 import {
   applyAiSessionStreamChunk,
   createAiSessionStreamAssembly,
+  resolveAiSessionAssistantContent,
   resolveAiSessionAssistantText,
 } from "./ai-session-stream.js";
 
@@ -200,15 +202,24 @@ export class AiSessionWorkspaceManager {
     this.syncSessionListEntry(session);
     this.patchSessionState(sessionId, (current) => {
       const next = current ?? this.createSessionState(sessionId);
+      const persistedGraph = next.persistedGraph
+        ? {
+            ...next.persistedGraph,
+            session,
+          }
+        : next.persistedGraph;
+      const optimisticGraph = next.optimisticGraph
+        ? {
+            ...next.optimisticGraph,
+            session,
+          }
+        : next.optimisticGraph;
 
       return {
-        ...next,
-        graph: next.graph
-          ? {
-              ...next.graph,
-              session,
-            }
-          : next.graph,
+        ...this.applyGraphState(next, {
+          persistedGraph,
+          optimisticGraph,
+        }),
         provider: this.readSessionProvider(session) || next.provider,
         model: this.readSessionModel(session) || next.model,
       };
@@ -327,18 +338,14 @@ export class AiSessionWorkspaceManager {
       throw new Error("Session state is unavailable.");
     }
 
-    const prompt = state.prompt.trim();
-    const attachments = state.attachments;
+    const editingDraft = state.editingDraft;
+    const promptSource = editingDraft ? editingDraft.prompt : state.prompt;
+    const attachmentSource = editingDraft ? editingDraft.attachments : state.attachments;
+    const prompt = promptSource.trim();
+    const attachments = attachmentSource;
     if ((prompt.length === 0 && attachments.length === 0) || state.sending) {
       return;
     }
-
-    this.patchSessionState(targetId, (current) => ({
-      ...(current ?? this.createSessionState(targetId)),
-      sending: true,
-      error: "",
-      streamStatus: "Waiting for stream...",
-    }));
 
     const timelineId =
       state.activeTimelineId ?? this.resolveTimelineIdFromGraph(state.graph);
@@ -356,54 +363,44 @@ export class AiSessionWorkspaceManager {
 
     const content = this.buildUserMessageContent(prompt, attachments);
     const sessionSettings = this.readSessionSettings(session);
-    const editingDraft = state.editingDraft;
-    const userMessage: IAiSessionViewMessage = {
-      id: `local-user-${Date.now()}`,
-      messageId: `local-user-${Date.now()}`,
-      sessionId: session.id,
-      timelineId,
-      turnId: editingDraft?.turnId ?? `local-user-turn-${Date.now()}`,
-      index: editingDraft ? -2 : -1,
-      role: "user",
-      content,
-      actions: this.defaultActionsForRole("user"),
-    };
-    const assistantMessage: IAiSessionViewMessage = {
-      id: `local-assistant-${Date.now()}`,
-      messageId: `local-assistant-${Date.now()}`,
-      sessionId: session.id,
-      timelineId,
-      turnId: `local-assistant-turn-${Date.now()}`,
-      index: -1,
-      role: "assistant",
-      content: "",
-      pending: true,
-      actions: this.defaultActionsForRole("assistant"),
-    };
-
-    this.patchSessionState(targetId, (current) => ({
-      ...(current ?? this.createSessionState(targetId)),
-      messages: editingDraft
-        ? [
-            ...(current?.messages ?? []).filter(
-              (message) => message.turnId !== editingDraft.turnId,
-            ),
-            userMessage,
-            assistantMessage,
-          ]
-        : [...(current?.messages ?? []), userMessage, assistantMessage],
-      prompt: "",
-      attachments: [],
-      editingDraft: null,
-    }));
+    const optimistic = editingDraft
+      ? this.buildOptimisticBranchState(state, {
+          sessionId: session.id,
+          sourceTimelineId: timelineId,
+          sourceTurnId: editingDraft.turnId,
+          branchName: "Edited user regeneration",
+          branchReason: "user_edit_regeneration",
+          turnSource: "edited_user",
+          userContent: content,
+        })
+      : this.buildOptimisticMessageState(state, {
+          sessionId: session.id,
+          timelineId,
+          userContent: content,
+        });
 
     let assembly = createAiSessionStreamAssembly();
     const streamController = new AbortController();
     this.patchSessionState(targetId, (current) => ({
-      ...(current ?? this.createSessionState(targetId)),
+      ...this.applyGraphState(
+        current ?? this.createSessionState(targetId),
+        {
+          optimisticGraph: optimistic.graph,
+          activeTimelineId: optimistic.activeTimelineId,
+        },
+      ),
+      sending: true,
+      error: "",
+      streamStatus: editingDraft
+        ? "Waiting for regeneration stream..."
+        : "Waiting for stream...",
+      prompt: editingDraft ? current?.prompt ?? state.prompt : "",
+      attachments: editingDraft ? current?.attachments ?? state.attachments : [],
+      editingDraft: null,
       activeStreamController: streamController,
+      optimisticStream: optimistic.stream,
     }));
-    const expectedMessageCount = state.messages.length + 2;
+    const expectedMessageCount = optimistic.visibleMessageCount;
     let streamedTimelineId = timelineId;
 
     try {
@@ -432,26 +429,36 @@ export class AiSessionWorkspaceManager {
             this.readHeartbeatToolName(chunk.metadata) ?? "waiting for provider"
           } (${Math.floor((chunk.elapsedMs ?? 0) / 1000)}s)`;
         } else if (chunk.type === "completed") {
-          streamStatus = "Stream finished. Reloading saved history...";
+          streamStatus = "Latest assistant turn saved.";
         } else if (chunk.type === "error") {
           streamStatus = "Stream returned an error.";
         }
 
-        this.patchSessionState(targetId, (current) => ({
-          ...(current ?? this.createSessionState(targetId)),
-          activeTimelineId: streamedTimelineId,
-          streamStatus,
-          messages: (current?.messages ?? []).map((message) =>
-            message.id === assistantMessage.id
-              ? {
-                  ...message,
-                  timelineId: streamedTimelineId,
-                  content: resolveAiSessionAssistantText(assembly),
-                  pending: !assembly.finished,
-                }
-              : message,
-          ),
-        }));
+        this.patchSessionState(targetId, (current) => {
+          const next = current ?? this.createSessionState(targetId);
+          const updatedGraphs = this.applyStreamChunkToOptimisticState(
+            next,
+            chunk,
+            assembly,
+          );
+          const promotedOnComplete = chunk.type === "completed"
+            ? this.applyGraphState(updatedGraphs, {
+                persistedGraph: updatedGraphs.optimisticGraph,
+                optimisticGraph: null,
+                activeTimelineId: streamedTimelineId,
+              })
+            : updatedGraphs;
+
+          return {
+            ...promotedOnComplete,
+            optimisticStream:
+              chunk.type === "completed"
+                ? null
+                : promotedOnComplete.optimisticStream,
+            activeTimelineId: streamedTimelineId,
+            streamStatus,
+          };
+        });
       };
 
       if (editingDraft) {
@@ -487,32 +494,24 @@ export class AiSessionWorkspaceManager {
         throw new Error(assembly.error);
       }
 
-      await this.refreshSessionGraph(targetId, streamedTimelineId);
       await this.reloadSessionListInternal();
-      this.patchSessionState(targetId, (current) => ({
-        ...(current ?? this.createSessionState(targetId)),
-        streamStatus: "Latest assistant turn saved.",
-      }));
     } catch (error) {
       const stopped = this.isAbortError(error);
-      this.patchSessionState(targetId, (current) => ({
-        ...(current ?? this.createSessionState(targetId)),
-        error: stopped ? "" : this.readErrorMessage(error),
-        streamStatus: stopped ? "Stream stopped." : "",
-        messages: (current?.messages ?? []).map((message) =>
-          message.id === assistantMessage.id
-            ? {
-                ...message,
-                content:
-                  resolveAiSessionAssistantText(assembly) ||
-                  (stopped
-                    ? "Generation stopped."
-                    : "Assistant stream failed."),
-                pending: false,
-              }
-            : message,
+      this.patchSessionState(targetId, (current) =>
+        this.handleOptimisticStreamFailure(
+          current ?? this.createSessionState(targetId),
+          {
+            assembly,
+            stopped,
+            error: stopped ? null : this.readErrorMessage(error),
+            fallbackText:
+              resolveAiSessionAssistantText(assembly) ||
+              (stopped
+                ? "Generation stopped."
+                : "Assistant stream failed."),
+          },
         ),
-      }));
+      );
 
       if (stopped) {
         await this.refreshSessionGraphUntil(
@@ -596,6 +595,29 @@ export class AiSessionWorkspaceManager {
     }));
   }
 
+  setActiveTimeline(timelineId: string | null, sessionId?: string): void {
+    const targetSessionId = sessionId ?? this.snapshot.selectedSessionId;
+    if (!targetSessionId) {
+      return;
+    }
+
+    this.patchSessionState(targetSessionId, (current) => {
+      const next = current ?? this.createSessionState(targetSessionId);
+      const graph = next.graph;
+      if (
+        timelineId &&
+        graph &&
+        !graph.timelines.some((timeline) => timeline.id === timelineId)
+      ) {
+        return next;
+      }
+
+      return this.applyGraphState(next, {
+        activeTimelineId: timelineId,
+      });
+    });
+  }
+
   beginEditMessage(message: IAiSessionViewMessage, sessionId?: string): void {
     const targetSessionId = sessionId ?? this.snapshot.selectedSessionId;
     if (!targetSessionId || message.role !== "user") {
@@ -604,16 +626,63 @@ export class AiSessionWorkspaceManager {
 
     this.patchSessionState(targetSessionId, (current) => ({
       ...(current ?? this.createSessionState(targetSessionId)),
-      prompt: this.readContentText(message.content),
-      attachments: [],
       editingDraft: {
         messageId: message.messageId,
         turnId: message.turnId,
         sessionId: message.sessionId,
         timelineId: message.timelineId,
         originalContent: message.content,
+        prompt: this.readContentText(message.content),
+        attachments: [],
       },
     }));
+  }
+
+  setEditingPrompt(value: string, sessionId?: string): void {
+    const targetSessionId = sessionId ?? this.snapshot.selectedSessionId;
+    if (!targetSessionId) {
+      return;
+    }
+
+    this.patchSessionState(targetSessionId, (current) => {
+      const next = current ?? this.createSessionState(targetSessionId);
+      if (!next.editingDraft) {
+        return next;
+      }
+
+      return {
+        ...next,
+        editingDraft: {
+          ...next.editingDraft,
+          prompt: value,
+        },
+      };
+    });
+  }
+
+  setEditingAttachments(
+    value: IAiSessionAttachment[],
+    sessionId?: string,
+  ): void {
+    const targetSessionId = sessionId ?? this.snapshot.selectedSessionId;
+    if (!targetSessionId) {
+      return;
+    }
+
+    this.patchSessionState(targetSessionId, (current) => {
+      const next = current ?? this.createSessionState(targetSessionId);
+      if (!next.editingDraft) {
+        return next;
+      }
+
+      return {
+        ...next,
+        editingDraft: {
+          ...next.editingDraft,
+          attachments: value,
+        },
+      };
+    });
   }
 
   cancelEditMessage(sessionId?: string): void {
@@ -656,20 +725,22 @@ export class AiSessionWorkspaceManager {
       return;
     }
 
-    const result = await this.transport.createBranch(targetSessionId, {
+    const result = await this.transport.createSessionBranch(targetSessionId, {
       sourceTimelineId: message.timelineId,
       sourceTurnId: message.turnId,
-      reason: "manual_branch",
       metadata: {
         source: this.source,
       },
     });
 
-    this.patchSessionState(targetSessionId, (current) => ({
-      ...(current ?? this.createSessionState(targetSessionId)),
-      activeTimelineId: result.timeline.id,
-    }));
-    await this.refreshSessionGraph(targetSessionId, result.timeline.id);
+    this.syncSessionListEntry(result.session);
+    this.selectSession(result.session.id);
+    this.patchSessionState(result.session.id, (current) =>
+      this.mergeGraphIntoState(
+        result.graph,
+        current ?? this.createSessionState(result.session.id),
+      ),
+    );
     await this.reloadSessionListInternal();
   }
 
@@ -693,27 +764,33 @@ export class AiSessionWorkspaceManager {
     let assembly = createAiSessionStreamAssembly();
     let streamedTimelineId = timelineId;
     const streamController = new AbortController();
-
-    const assistantMessage: IAiSessionViewMessage = {
-      id: `local-regenerated-assistant-${Date.now()}`,
-      messageId: `local-regenerated-assistant-${Date.now()}`,
+    const sourceUserMessage = this.findUserMessageForTurn(state.graph, message.turnId);
+    if (!sourceUserMessage) {
+      return;
+    }
+    const optimistic = this.buildOptimisticBranchState(state, {
       sessionId: targetSessionId,
-      timelineId,
-      turnId: `local-regenerated-turn-${Date.now()}`,
-      index: -1,
-      role: "assistant",
-      content: "",
-      pending: true,
-      actions: this.defaultActionsForRole("assistant"),
-    };
+      sourceTimelineId: timelineId,
+      sourceTurnId: message.turnId,
+      branchName: "Assistant regeneration",
+      branchReason: "assistant_regeneration",
+      turnSource: "regenerated",
+      userContent: sourceUserMessage.content,
+    });
 
     this.patchSessionState(targetSessionId, (current) => ({
-      ...(current ?? this.createSessionState(targetSessionId)),
+      ...this.applyGraphState(
+        current ?? this.createSessionState(targetSessionId),
+        {
+          optimisticGraph: optimistic.graph,
+          activeTimelineId: optimistic.activeTimelineId,
+        },
+      ),
       sending: true,
       error: "",
       streamStatus: "Waiting for regeneration stream...",
       activeStreamController: streamController,
-      messages: [...(current?.messages ?? []), assistantMessage],
+      optimisticStream: optimistic.stream,
     }));
 
     try {
@@ -741,26 +818,36 @@ export class AiSessionWorkspaceManager {
 
           let streamStatus = "Streaming assistant regeneration...";
           if (chunk.type === "completed") {
-            streamStatus = "Regeneration finished. Reloading saved history...";
+            streamStatus = "Latest assistant turn saved.";
           } else if (chunk.type === "error") {
             streamStatus = "Regeneration returned an error.";
           }
 
-          this.patchSessionState(targetSessionId, (current) => ({
-            ...(current ?? this.createSessionState(targetSessionId)),
-            activeTimelineId: streamedTimelineId,
-            streamStatus,
-            messages: (current?.messages ?? []).map((item) =>
-              item.id === assistantMessage.id
-                ? {
-                    ...item,
-                    timelineId: streamedTimelineId,
-                    content: resolveAiSessionAssistantText(assembly),
-                    pending: !assembly.finished,
-                  }
-                : item,
-            ),
-          }));
+          this.patchSessionState(targetSessionId, (current) => {
+            const next = current ?? this.createSessionState(targetSessionId);
+            const updatedGraphs = this.applyStreamChunkToOptimisticState(
+              next,
+              chunk,
+              assembly,
+            );
+            const promotedOnComplete = chunk.type === "completed"
+              ? this.applyGraphState(updatedGraphs, {
+                  persistedGraph: updatedGraphs.optimisticGraph,
+                  optimisticGraph: null,
+                  activeTimelineId: streamedTimelineId,
+                })
+              : updatedGraphs;
+
+            return {
+              ...promotedOnComplete,
+              optimisticStream:
+                chunk.type === "completed"
+                  ? null
+                  : promotedOnComplete.optimisticStream,
+              activeTimelineId: streamedTimelineId,
+              streamStatus,
+            };
+          });
         },
         {
           signal: streamController.signal,
@@ -771,8 +858,35 @@ export class AiSessionWorkspaceManager {
         throw new Error(assembly.error);
       }
 
-      await this.refreshSessionGraph(targetSessionId, streamedTimelineId);
       await this.reloadSessionListInternal();
+    } catch (error) {
+      const stopped = this.isAbortError(error);
+      this.patchSessionState(targetSessionId, (current) =>
+        this.handleOptimisticStreamFailure(
+          current ?? this.createSessionState(targetSessionId),
+          {
+            assembly,
+            stopped,
+            error: stopped ? null : this.readErrorMessage(error),
+            fallbackText:
+              resolveAiSessionAssistantText(assembly) ||
+              (stopped
+                ? "Generation stopped."
+                : "Assistant stream failed."),
+          },
+        ),
+      );
+
+      if (stopped) {
+        await this.refreshSessionGraphUntil(
+          targetSessionId,
+          streamedTimelineId,
+          optimistic.visibleMessageCount,
+        );
+        await this.reloadSessionListInternal();
+      } else {
+        throw error;
+      }
     } finally {
       this.patchSessionState(targetSessionId, (current) => ({
         ...(current ?? this.createSessionState(targetSessionId)),
@@ -858,6 +972,8 @@ export class AiSessionWorkspaceManager {
     return {
       sessionId,
       graph: null,
+      persistedGraph: null,
+      optimisticGraph: null,
       activeTimelineId: null,
       messages: [],
       prompt: "",
@@ -870,6 +986,7 @@ export class AiSessionWorkspaceManager {
       streamStatus: "",
       error: "",
       activeStreamController: null,
+      optimisticStream: null,
     };
   }
 
@@ -877,15 +994,14 @@ export class AiSessionWorkspaceManager {
     graph: IAiSessionGraphDto,
     current: IAiSessionClientState,
   ): IAiSessionClientState {
-    const activeTimelineId = this.resolveTimelineIdFromGraph(
-      graph,
-      current.activeTimelineId,
-    );
+    const next = this.applyGraphState(current, {
+      persistedGraph: graph,
+      optimisticGraph: null,
+      activeTimelineId: current.activeTimelineId,
+    });
     return {
-      ...current,
-      graph,
-      activeTimelineId,
-      messages: this.toViewMessages(graph, activeTimelineId),
+      ...next,
+      optimisticStream: null,
       provider:
         current.provider ||
         this.readSessionProvider(graph.session) ||
@@ -954,10 +1070,21 @@ export class AiSessionWorkspaceManager {
           role: message.role,
           content: message.content,
           name: message.name,
+          pending: this.isPendingMessage(message),
           feedback: this.findFeedbackRating(graph, message.id),
           actions: this.defaultActionsForRole(message.role),
           metadata: message.metadata,
         })),
+    );
+  }
+
+  private isPendingMessage(
+    message: IAiSessionGraphDto["messages"][number],
+  ): boolean {
+    return Boolean(
+      message.metadata &&
+      typeof message.metadata === "object" &&
+      message.metadata["__sdkPending"] === true,
     );
   }
 
@@ -971,6 +1098,698 @@ export class AiSessionWorkspaceManager {
     }
 
     return feedback.rating;
+  }
+
+  private applyGraphState(
+    current: IAiSessionClientState,
+    input: {
+      persistedGraph?: IAiSessionGraphDto | null;
+      optimisticGraph?: IAiSessionGraphDto | null;
+      activeTimelineId?: string | null;
+    },
+  ): IAiSessionClientState {
+    const persistedGraph =
+      input.persistedGraph !== undefined ? input.persistedGraph : current.persistedGraph;
+    const optimisticGraph =
+      input.optimisticGraph !== undefined ? input.optimisticGraph : current.optimisticGraph;
+    const graph = optimisticGraph ?? persistedGraph ?? null;
+    const activeTimelineId = this.resolveTimelineIdFromGraph(
+      graph,
+      input.activeTimelineId !== undefined
+        ? input.activeTimelineId
+        : current.activeTimelineId,
+    );
+
+    return {
+      ...current,
+      graph,
+      persistedGraph,
+      optimisticGraph,
+      activeTimelineId,
+      messages: graph ? this.toViewMessages(graph, activeTimelineId) : [],
+    };
+  }
+
+  private buildOptimisticMessageState(
+    state: IAiSessionClientState,
+    input: {
+      sessionId: string;
+      timelineId: string;
+      userContent: IAiSessionViewMessage["content"];
+    },
+  ): {
+    graph: IAiSessionGraphDto;
+    stream: IAiSessionOptimisticStreamState;
+    activeTimelineId: string;
+    visibleMessageCount: number;
+  } {
+    if (!state.graph) {
+      throw new Error("Session graph is unavailable.");
+    }
+
+    const graph = this.cloneGraph(state.graph);
+    const now = new Date().toISOString();
+    const turnId = this.createOptimisticId("turn");
+    const timelineTurnId = this.createOptimisticId("timeline-turn");
+    const userMessageId = this.createOptimisticId("user-message");
+    const assistantMessageId = this.createOptimisticId("assistant-message");
+    const nextTurnIndex = this.nextTimelineTurnIndex(graph, input.timelineId);
+
+    graph.turns.push({
+      id: turnId,
+      sessionId: input.sessionId,
+      status: "running",
+      provider: state.provider || undefined,
+      model: state.model || undefined,
+      startedAt: now,
+      metadata: {
+        source: this.source,
+      },
+      createdAt: now,
+      updatedAt: now,
+    });
+    graph.timelineTurns.push({
+      id: timelineTurnId,
+      sessionId: input.sessionId,
+      timelineId: input.timelineId,
+      turnId,
+      index: nextTurnIndex,
+      source: "original",
+      createdAt: now,
+      updatedAt: now,
+    });
+    graph.messages.push(
+      this.createOptimisticGraphMessage({
+        id: userMessageId,
+        sessionId: input.sessionId,
+        turnId,
+        index: 0,
+        role: "user",
+        content: input.userContent,
+      }),
+      this.createOptimisticGraphMessage({
+        id: assistantMessageId,
+        sessionId: input.sessionId,
+        turnId,
+        index: 1,
+        role: "assistant",
+        content: "",
+        metadata: this.createPendingMetadata(),
+      }),
+    );
+
+    return {
+      graph,
+      stream: {
+        kind: "message",
+        started: false,
+        rollbackGraph: state.graph,
+        rollbackActiveTimelineId: state.activeTimelineId,
+        optimisticTimelineId: input.timelineId,
+        optimisticTurnId: turnId,
+        optimisticTimelineTurnId: timelineTurnId,
+        optimisticUserMessageId: userMessageId,
+        optimisticAssistantMessageId: assistantMessageId,
+      },
+      activeTimelineId: input.timelineId,
+      visibleMessageCount: this.toViewMessages(graph, input.timelineId).length,
+    };
+  }
+
+  private buildOptimisticBranchState(
+    state: IAiSessionClientState,
+    input: {
+      sessionId: string;
+      sourceTimelineId: string;
+      sourceTurnId: string;
+      branchName: string;
+      branchReason: string;
+      turnSource: "regenerated" | "edited_user";
+      userContent: IAiSessionViewMessage["content"];
+    },
+  ): {
+    graph: IAiSessionGraphDto;
+    stream: IAiSessionOptimisticStreamState;
+    activeTimelineId: string;
+    visibleMessageCount: number;
+  } {
+    if (!state.graph) {
+      throw new Error("Session graph is unavailable.");
+    }
+
+    const graph = this.cloneGraph(state.graph);
+    const now = new Date().toISOString();
+    const sourceTimelineTurn = graph.timelineTurns.find(
+      (timelineTurn) =>
+        timelineTurn.timelineId === input.sourceTimelineId &&
+        timelineTurn.turnId === input.sourceTurnId,
+    );
+    if (!sourceTimelineTurn) {
+      throw new Error("Source turn is not attached to the requested timeline.");
+    }
+
+    const optimisticTimelineId = this.createOptimisticId("timeline");
+    const optimisticBranchId = this.createOptimisticId("branch");
+    const optimisticTurnId = this.createOptimisticId("turn");
+    const optimisticTimelineTurnId = this.createOptimisticId("timeline-turn");
+    const optimisticUserMessageId = this.createOptimisticId("user-message");
+    const optimisticAssistantMessageId = this.createOptimisticId("assistant-message");
+
+    graph.timelines.push({
+      id: optimisticTimelineId,
+      sessionId: input.sessionId,
+      name: input.branchName,
+      isDefault: false,
+      metadata: {
+        source: this.source,
+        __sdkOptimistic: true,
+      },
+      createdAt: now,
+      updatedAt: now,
+    });
+    graph.branches.push({
+      id: optimisticBranchId,
+      sessionId: input.sessionId,
+      sourceTimelineId: input.sourceTimelineId,
+      sourceTurnId: input.sourceTurnId,
+      sourceTurnIndex: sourceTimelineTurn.index,
+      targetTimelineId: optimisticTimelineId,
+      reason: input.branchReason,
+      metadata: {
+        source: this.source,
+        __sdkOptimistic: true,
+      },
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    for (const timelineTurn of graph.timelineTurns
+      .filter(
+        (item) =>
+          item.timelineId === input.sourceTimelineId &&
+          item.index < sourceTimelineTurn.index,
+      )
+      .sort((left, right) => left.index - right.index)) {
+      graph.timelineTurns.push({
+        id: this.createOptimisticId("timeline-turn-copy"),
+        sessionId: input.sessionId,
+        timelineId: optimisticTimelineId,
+        turnId: timelineTurn.turnId,
+        index: timelineTurn.index,
+        source: "branch_copy",
+        createdAt: now,
+        updatedAt: now,
+      });
+    }
+
+    graph.turns.push({
+      id: optimisticTurnId,
+      sessionId: input.sessionId,
+      status: "running",
+      provider: state.provider || undefined,
+      model: state.model || undefined,
+      startedAt: now,
+      metadata: {
+        source: this.source,
+      },
+      createdAt: now,
+      updatedAt: now,
+    });
+    graph.timelineTurns.push({
+      id: optimisticTimelineTurnId,
+      sessionId: input.sessionId,
+      timelineId: optimisticTimelineId,
+      turnId: optimisticTurnId,
+      index: sourceTimelineTurn.index,
+      source: input.turnSource,
+      createdAt: now,
+      updatedAt: now,
+    });
+    graph.messages.push(
+      this.createOptimisticGraphMessage({
+        id: optimisticUserMessageId,
+        sessionId: input.sessionId,
+        turnId: optimisticTurnId,
+        index: 0,
+        role: "user",
+        content: input.userContent,
+      }),
+      this.createOptimisticGraphMessage({
+        id: optimisticAssistantMessageId,
+        sessionId: input.sessionId,
+        turnId: optimisticTurnId,
+        index: 1,
+        role: "assistant",
+        content: "",
+        metadata: this.createPendingMetadata(),
+      }),
+    );
+
+    return {
+      graph,
+      stream: {
+        kind: input.turnSource === "edited_user" ? "edit" : "regenerate",
+        started: false,
+        rollbackGraph: state.graph,
+        rollbackActiveTimelineId: state.activeTimelineId,
+        optimisticTimelineId,
+        optimisticTurnId,
+        optimisticTimelineTurnId,
+        optimisticUserMessageId,
+        optimisticAssistantMessageId,
+        optimisticBranchId,
+      },
+      activeTimelineId: optimisticTimelineId,
+      visibleMessageCount: this.toViewMessages(graph, optimisticTimelineId).length,
+    };
+  }
+
+  private applyStreamChunkToOptimisticState(
+    state: IAiSessionClientState,
+    chunk: IAiSessionStreamEvent,
+    assembly: ReturnType<typeof createAiSessionStreamAssembly>,
+  ): IAiSessionClientState {
+    if (!state.optimisticGraph || !state.optimisticStream) {
+      return state;
+    }
+
+    let optimisticGraph = state.optimisticGraph;
+    let optimisticStream = state.optimisticStream;
+
+    if (chunk.type === "started") {
+      optimisticGraph = this.applyStartedChunkToOptimisticGraph(
+        optimisticGraph,
+        optimisticStream,
+        chunk,
+      );
+      optimisticStream = {
+        ...optimisticStream,
+        started: true,
+        optimisticTimelineId:
+          this.readStartedTimelineId(chunk) ?? optimisticStream.optimisticTimelineId,
+        optimisticTurnId: chunk.turnId ?? optimisticStream.optimisticTurnId,
+        optimisticTimelineTurnId:
+          chunk.timelineTurnId ?? optimisticStream.optimisticTimelineTurnId,
+        optimisticUserMessageId:
+          chunk.messageId ?? optimisticStream.optimisticUserMessageId,
+        optimisticBranchId:
+          chunk.branch?.id ?? optimisticStream.optimisticBranchId,
+      };
+    }
+
+    if (
+      chunk.type === "delta" ||
+      chunk.type === "reasoning_delta" ||
+      chunk.type === "tool_call" ||
+      chunk.type === "tool_result" ||
+      chunk.type === "message" ||
+      chunk.type === "completed" ||
+      chunk.type === "error"
+    ) {
+      optimisticGraph = this.updateOptimisticAssistantMessage(
+        optimisticGraph,
+        optimisticStream,
+        {
+          id:
+            chunk.type === "message"
+              ? chunk.messageId ?? chunk.message?.id ?? optimisticStream.optimisticAssistantMessageId
+              : optimisticStream.optimisticAssistantMessageId,
+          timelineId:
+            this.readStartedTimelineId(chunk) ?? chunk.timelineId ?? optimisticStream.optimisticTimelineId,
+          turnId: chunk.turnId ?? optimisticStream.optimisticTurnId,
+          content:
+            chunk.type === "error"
+              ? resolveAiSessionAssistantText(assembly)
+              : resolveAiSessionAssistantContent(assembly),
+          pending: !(chunk.type === "message" || chunk.type === "completed" || chunk.type === "error"),
+          metadata:
+            chunk.type === "message"
+              ? chunk.message?.metadata
+              : chunk.type === "completed" || chunk.type === "error"
+                ? undefined
+                : this.createPendingMetadata(),
+          provider:
+            chunk.type === "message"
+              ? chunk.message?.provider
+              : chunk.provider,
+          model:
+            chunk.type === "message"
+              ? chunk.message?.model
+              : chunk.model,
+          name: chunk.type === "message" ? chunk.message?.name : undefined,
+          usage: chunk.type === "message" ? chunk.message?.usage : undefined,
+          toolCalls: chunk.type === "message" ? chunk.message?.toolCalls : undefined,
+          toolResults: chunk.type === "message" ? chunk.message?.toolResults : undefined,
+        },
+      );
+    }
+
+    if (
+      chunk.type === "message" &&
+      (chunk.messageId || chunk.message?.id)
+    ) {
+      optimisticStream = {
+        ...optimisticStream,
+        optimisticAssistantMessageId:
+          chunk.messageId ??
+          chunk.message?.id ??
+          optimisticStream.optimisticAssistantMessageId,
+      };
+    }
+
+    if (chunk.type === "completed") {
+      optimisticGraph = this.updateOptimisticTurn(
+        optimisticGraph,
+        optimisticStream,
+        {
+          id: optimisticStream.optimisticTurnId,
+          status: "completed",
+          finishedAt: new Date().toISOString(),
+          finishReason: chunk.finishReason,
+          error: undefined,
+        },
+      );
+    }
+
+    if (chunk.type === "error") {
+      optimisticGraph = this.updateOptimisticTurn(
+        optimisticGraph,
+        optimisticStream,
+        {
+          id: optimisticStream.optimisticTurnId,
+          status: "failed",
+          finishedAt: new Date().toISOString(),
+          error: chunk.error,
+        },
+      );
+    }
+
+    return {
+      ...this.applyGraphState(state, {
+        optimisticGraph,
+        activeTimelineId:
+          this.readStartedTimelineId(chunk) ??
+          chunk.timelineId ??
+          optimisticStream.optimisticTimelineId,
+      }),
+      optimisticStream,
+    };
+  }
+
+  private handleOptimisticStreamFailure(
+    state: IAiSessionClientState,
+    input: {
+      assembly: ReturnType<typeof createAiSessionStreamAssembly>;
+      stopped: boolean;
+      error: string | null;
+      fallbackText: string;
+    },
+  ): IAiSessionClientState {
+    const optimisticStream = state.optimisticStream;
+    const optimisticGraph = state.optimisticGraph;
+
+    if (!optimisticStream || !optimisticGraph) {
+      return {
+        ...state,
+        error: input.error ?? "",
+        streamStatus: input.stopped ? "Stream stopped." : "",
+      };
+    }
+
+    if (!optimisticStream.started) {
+      return {
+        ...this.applyGraphState(state, {
+          optimisticGraph: null,
+          activeTimelineId: optimisticStream.rollbackActiveTimelineId,
+        }),
+        error: input.error ?? "",
+        streamStatus: input.stopped ? "Stream stopped." : "",
+        optimisticStream: null,
+      };
+    }
+
+    const failedGraph = this.updateOptimisticAssistantMessage(
+      optimisticGraph,
+      optimisticStream,
+      {
+        content: input.fallbackText,
+        pending: false,
+      },
+    );
+    const finalizedGraph = this.updateOptimisticTurn(
+      failedGraph,
+      optimisticStream,
+      {
+        id: optimisticStream.optimisticTurnId,
+        status: input.stopped ? "aborted" : "failed",
+        finishedAt: new Date().toISOString(),
+        finishReason: input.stopped ? "aborted" : undefined,
+        error: input.stopped ? undefined : input.error ?? undefined,
+      },
+    );
+
+    return {
+      ...this.applyGraphState(state, {
+        optimisticGraph: finalizedGraph,
+        activeTimelineId: optimisticStream.optimisticTimelineId,
+      }),
+      error: input.error ?? "",
+      streamStatus: input.stopped ? "Stream stopped." : "",
+    };
+  }
+
+  private applyStartedChunkToOptimisticGraph(
+    graph: IAiSessionGraphDto,
+    optimisticStream: IAiSessionOptimisticStreamState,
+    chunk: IAiSessionStreamEvent,
+  ): IAiSessionGraphDto {
+    const replacements = new Map<string, string>();
+    const startedTimelineId = this.readStartedTimelineId(chunk);
+
+    if (
+      optimisticStream.kind !== "message" &&
+      startedTimelineId &&
+      startedTimelineId !== optimisticStream.optimisticTimelineId
+    ) {
+      replacements.set(optimisticStream.optimisticTimelineId, startedTimelineId);
+    }
+    if (chunk.turnId && chunk.turnId !== optimisticStream.optimisticTurnId) {
+      replacements.set(optimisticStream.optimisticTurnId, chunk.turnId);
+    }
+    if (
+      chunk.timelineTurnId &&
+      chunk.timelineTurnId !== optimisticStream.optimisticTimelineTurnId
+    ) {
+      replacements.set(optimisticStream.optimisticTimelineTurnId, chunk.timelineTurnId);
+    }
+    if (chunk.messageId && chunk.messageId !== optimisticStream.optimisticUserMessageId) {
+      replacements.set(optimisticStream.optimisticUserMessageId, chunk.messageId);
+    }
+    if (
+      optimisticStream.optimisticBranchId &&
+      chunk.branch?.id &&
+      chunk.branch.id !== optimisticStream.optimisticBranchId
+    ) {
+      replacements.set(optimisticStream.optimisticBranchId, chunk.branch.id);
+    }
+
+    if (replacements.size === 0) {
+      return graph;
+    }
+
+    return {
+      ...graph,
+      session: {
+        ...graph.session,
+        defaultTimelineId:
+          graph.session.defaultTimelineId &&
+          replacements.get(graph.session.defaultTimelineId)
+            ? replacements.get(graph.session.defaultTimelineId)
+            : graph.session.defaultTimelineId,
+      },
+      timelines: graph.timelines.map((timeline) => ({
+        ...timeline,
+        id: replacements.get(timeline.id) ?? timeline.id,
+        sessionId: chunk.sessionId ?? timeline.sessionId,
+      })),
+      timelineTurns: graph.timelineTurns.map((timelineTurn) => ({
+        ...timelineTurn,
+        id: replacements.get(timelineTurn.id) ?? timelineTurn.id,
+        timelineId: replacements.get(timelineTurn.timelineId) ?? timelineTurn.timelineId,
+        turnId: replacements.get(timelineTurn.turnId) ?? timelineTurn.turnId,
+        sessionId: chunk.sessionId ?? timelineTurn.sessionId,
+      })),
+      turns: graph.turns.map((turn) => ({
+        ...turn,
+        id: replacements.get(turn.id) ?? turn.id,
+        sessionId: chunk.sessionId ?? turn.sessionId,
+      })),
+      messages: graph.messages.map((message) => ({
+        ...message,
+        id: replacements.get(message.id) ?? message.id,
+        turnId: replacements.get(message.turnId) ?? message.turnId,
+        sessionId: chunk.sessionId ?? message.sessionId,
+      })),
+      branches: graph.branches.map((branch) => ({
+        ...branch,
+        id: replacements.get(branch.id) ?? branch.id,
+        targetTimelineId:
+          replacements.get(branch.targetTimelineId) ?? branch.targetTimelineId,
+      })),
+      generationRuns: graph.generationRuns.map((run) => ({
+        ...run,
+        turnId: replacements.get(run.turnId) ?? run.turnId,
+        timelineId: replacements.get(run.timelineId) ?? run.timelineId,
+        sessionId: chunk.sessionId ?? run.sessionId,
+      })),
+    };
+  }
+
+  private updateOptimisticAssistantMessage(
+    graph: IAiSessionGraphDto,
+    optimisticStream: IAiSessionOptimisticStreamState,
+    input: {
+      id?: string;
+      timelineId?: string;
+      turnId?: string;
+      content?: IAiSessionViewMessage["content"];
+      pending?: boolean;
+      metadata?: Record<string, unknown>;
+      provider?: string;
+      model?: string;
+      name?: string;
+      usage?: Record<string, unknown>;
+      toolCalls?: unknown[];
+      toolResults?: unknown[];
+    },
+  ): IAiSessionGraphDto {
+    return {
+      ...graph,
+      messages: graph.messages.map((message) =>
+        message.id === optimisticStream.optimisticAssistantMessageId
+          ? {
+              ...message,
+              id: input.id ?? message.id,
+              turnId: input.turnId ?? message.turnId,
+              content: input.content ?? message.content,
+              name: input.name ?? message.name,
+              provider: input.provider ?? message.provider,
+              model: input.model ?? message.model,
+              usage: input.usage ?? message.usage,
+              toolCalls: input.toolCalls ?? message.toolCalls,
+              toolResults: input.toolResults ?? message.toolResults,
+              metadata:
+                input.metadata !== undefined
+                  ? input.metadata
+                  : input.pending === true
+                    ? this.createPendingMetadata()
+                    : undefined,
+            }
+          : message,
+      ),
+      timelineTurns: graph.timelineTurns.map((timelineTurn) =>
+        timelineTurn.id === optimisticStream.optimisticTimelineTurnId
+          ? {
+              ...timelineTurn,
+              timelineId: input.timelineId ?? timelineTurn.timelineId,
+              turnId: input.turnId ?? timelineTurn.turnId,
+            }
+          : timelineTurn,
+      ),
+    };
+  }
+
+  private updateOptimisticTurn(
+    graph: IAiSessionGraphDto,
+    optimisticStream: IAiSessionOptimisticStreamState,
+    input: {
+      id: string;
+      status: "running" | "completed" | "failed" | "aborted";
+      finishedAt?: string;
+      finishReason?: string;
+      error?: string;
+    },
+  ): IAiSessionGraphDto {
+    return {
+      ...graph,
+      turns: graph.turns.map((turn) =>
+        turn.id === optimisticStream.optimisticTurnId
+          ? {
+              ...turn,
+              id: input.id,
+              status: input.status,
+              finishedAt: input.finishedAt ?? turn.finishedAt,
+              finishReason: input.finishReason ?? turn.finishReason,
+              error: input.error ?? turn.error,
+            }
+          : turn,
+      ),
+    };
+  }
+
+  private createOptimisticGraphMessage(input: {
+    id: string;
+    sessionId: string;
+    turnId: string;
+    index: number;
+    role: "system" | "user" | "assistant" | "tool";
+    content: IAiSessionViewMessage["content"];
+    metadata?: Record<string, unknown>;
+  }): IAiSessionGraphDto["messages"][number] {
+    const now = new Date().toISOString();
+    return {
+      id: input.id,
+      sessionId: input.sessionId,
+      turnId: input.turnId,
+      index: input.index,
+      role: input.role,
+      content: input.content,
+      metadata: input.metadata,
+      createdAt: now,
+      updatedAt: now,
+    };
+  }
+
+  private createPendingMetadata(): Record<string, unknown> {
+    return {
+      __sdkPending: true,
+      source: this.source,
+    };
+  }
+
+  private createOptimisticId(prefix: string): string {
+    return `sdk-${prefix}-${Date.now()}-${crypto.randomUUID()}`;
+  }
+
+  private cloneGraph(graph: IAiSessionGraphDto): IAiSessionGraphDto {
+    if (typeof structuredClone === "function") {
+      return structuredClone(graph);
+    }
+
+    return JSON.parse(JSON.stringify(graph)) as IAiSessionGraphDto;
+  }
+
+  private nextTimelineTurnIndex(
+    graph: IAiSessionGraphDto,
+    timelineId: string,
+  ): number {
+    const timelineTurns = graph.timelineTurns.filter(
+      (timelineTurn) => timelineTurn.timelineId === timelineId,
+    );
+    if (timelineTurns.length === 0) {
+      return 0;
+    }
+
+    return Math.max(...timelineTurns.map((timelineTurn) => timelineTurn.index)) + 1;
+  }
+
+  private findUserMessageForTurn(
+    graph: IAiSessionGraphDto,
+    turnId: string,
+  ): IAiSessionGraphDto["messages"][number] | null {
+    return graph.messages.find(
+      (message) => message.turnId === turnId && message.role === "user",
+    ) ?? null;
   }
 
   private defaultActionsForRole(
@@ -998,7 +1817,7 @@ export class AiSessionWorkspaceManager {
   }
 
   private readStartedTimelineId(chunk: IAiSessionStreamEvent): string | null {
-    const timelineId = chunk.timeline?.id;
+    const timelineId = chunk.timeline?.id ?? chunk.timelineId;
     return typeof timelineId === "string" ? timelineId : null;
   }
 

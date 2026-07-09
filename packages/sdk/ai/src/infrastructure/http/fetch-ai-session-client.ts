@@ -2,6 +2,8 @@ import type {
   ICreateAiBranchRequestDto,
   ICreateAiBranchResponseDto,
   ICreateAiMessageFeedbackRequestDto,
+  ICreateAiSessionBranchRequestDto,
+  ICreateAiSessionBranchResponseDto,
   IDeleteAiSessionResponseDto,
   IAiSessionMessageFeedbackResponseDto,
   IAiSessionGraphDto,
@@ -98,6 +100,16 @@ export class FetchAiSessionClient implements IAiSessionTransport {
   ): Promise<ICreateAiBranchResponseDto> {
     return await this.transport.post<ICreateAiBranchResponseDto>(
       `${AI_SESSION_API_PATH}/${sessionId}/branches`,
+      input,
+    );
+  }
+
+  async createSessionBranch(
+    sessionId: string,
+    input: ICreateAiSessionBranchRequestDto,
+  ): Promise<ICreateAiSessionBranchResponseDto> {
+    return await this.transport.post<ICreateAiSessionBranchResponseDto>(
+      `${AI_SESSION_API_PATH}/${sessionId}/session-branches`,
       input,
     );
   }

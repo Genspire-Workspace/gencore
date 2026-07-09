@@ -33,6 +33,7 @@ import {
   listTimelineTurnSnapshots,
   listTurnMessages,
   nextIndex,
+  promoteSessionDefaultTimeline,
   requireAccessibleSession,
   requireTimelineInSession,
   requireTurnInSession,
@@ -58,6 +59,7 @@ interface IPreparedTurnContext {
   run: AiGenerationRunEntity;
   request: IChatGenerationRequest;
   userMessage: AiSessionMessageEntity;
+  promoteTimelineOnFinalize?: boolean;
 }
 
 type ReadNextChunkResult =
@@ -126,6 +128,7 @@ export class AiSessionGenerationService {
     branchTimeline.sessionId = session.id;
     branchTimeline.name = "Assistant regeneration";
     branchTimeline.isDefault = false;
+    branchTimeline.previousTimelineId = input.timelineId;
     branchTimeline.metadata = input.metadata ?? null;
     branchTimeline.createdAt = new Date();
     branchTimeline.updatedAt = new Date();
@@ -166,6 +169,7 @@ export class AiSessionGenerationService {
       metadata: input.metadata,
       sessionSettings: session.settings ?? undefined,
       timelineTurnSource: "regenerated",
+      promoteTimelineOnFinalize: true,
     });
 
     return {
@@ -208,6 +212,7 @@ export class AiSessionGenerationService {
     branchTimeline.sessionId = session.id;
     branchTimeline.name = "Edited user regeneration";
     branchTimeline.isDefault = false;
+    branchTimeline.previousTimelineId = input.timelineId;
     branchTimeline.metadata = input.metadata ?? null;
     branchTimeline.createdAt = new Date();
     branchTimeline.updatedAt = new Date();
@@ -248,6 +253,7 @@ export class AiSessionGenerationService {
       metadata: input.metadata,
       sessionSettings: session.settings ?? undefined,
       timelineTurnSource: "edited_user",
+      promoteTimelineOnFinalize: true,
     });
 
     return {
@@ -278,9 +284,10 @@ export class AiSessionGenerationService {
     systemPrompt?: string;
     tools?: IGenerateAiSessionTurnInput["tools"];
     settings?: IGenerateAiSessionTurnInput["settings"];
-      metadata?: Record<string, unknown> | null;
-      sessionSettings?: IAiSessionSettings;
-      timelineTurnSource: AiSessionTimelineTurnEntity["source"];
+    metadata?: Record<string, unknown> | null;
+    sessionSettings?: IAiSessionSettings;
+    timelineTurnSource: AiSessionTimelineTurnEntity["source"];
+    promoteTimelineOnFinalize?: boolean;
   }): Promise<IPreparedTurnContext> {
     const session = await this.db.sessions.findById(input.sessionId);
     if (!session) {
@@ -389,6 +396,7 @@ export class AiSessionGenerationService {
       run,
       request,
       userMessage,
+      promoteTimelineOnFinalize: input.promoteTimelineOnFinalize,
     };
   }
 
@@ -861,10 +869,13 @@ export class AiSessionGenerationService {
 
     const session = await this.db.sessions.findById(prepared.sessionId);
     if (session) {
-      session.updatedAt = now;
+      if (prepared.promoteTimelineOnFinalize) {
+        await promoteSessionDefaultTimeline(this.db, session, prepared.timelineId);
+      }
       if (!session.title) {
         session.title = "AI session";
       }
+      session.updatedAt = now;
       await this.db.sessions.update(session);
     }
 
@@ -1008,10 +1019,13 @@ export class AiSessionGenerationService {
 
     const session = await this.db.sessions.findById(prepared.sessionId);
     if (session) {
-      session.updatedAt = now;
+      if (prepared.promoteTimelineOnFinalize) {
+        await promoteSessionDefaultTimeline(this.db, session, prepared.timelineId);
+      }
       if (!session.title) {
         session.title = "AI session";
       }
+      session.updatedAt = now;
       await this.db.sessions.update(session);
     }
 

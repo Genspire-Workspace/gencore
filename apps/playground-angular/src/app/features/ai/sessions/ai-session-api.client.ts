@@ -9,6 +9,7 @@ import { streamSseJson } from '../shared/ai-sse-client';
 import type {
   IAiSessionBranchListResponseDto,
   IAiSessionBranchResponseDto,
+  IAiSessionBranchSessionResponseDto,
   IAiSessionCreateRequest,
   IAiSessionGraphResponse,
   IAiSessionListResponse,
@@ -24,6 +25,7 @@ import type {
 import type {
   ICreateAiBranchRequestDto,
   ICreateAiMessageFeedbackRequestDto,
+  ICreateAiSessionBranchRequestDto,
   ICreateAiTimelineRequestDto,
   IEditAiUserAndRegenerateRequestDto,
   IRegenerateAiAssistantRequestDto,
@@ -135,6 +137,18 @@ export class AiSessionApiClient {
     return await firstValueFrom(
       this.http.post<{ branch: IAiSessionBranchResponseDto; timeline: IAiSessionTimelineDto }>(
         `${appEnv.apiBaseUrl}${AI_SESSION_API_PATH}/${sessionId}/branches`,
+        input,
+      ),
+    );
+  }
+
+  async createSessionBranch(
+    sessionId: string,
+    input: ICreateAiSessionBranchRequestDto,
+  ): Promise<IAiSessionBranchSessionResponseDto> {
+    return await firstValueFrom(
+      this.http.post<IAiSessionBranchSessionResponseDto>(
+        `${appEnv.apiBaseUrl}${AI_SESSION_API_PATH}/${sessionId}/session-branches`,
         input,
       ),
     );

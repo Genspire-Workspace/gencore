@@ -40,6 +40,7 @@ export class AiSessionTimelineService {
     timeline.sessionId = session.id;
     timeline.name = input.name?.trim() ? input.name.trim() : null;
     timeline.isDefault = false;
+    timeline.previousTimelineId = null;
     timeline.metadata = input.metadata ?? null;
     timeline.createdAt = now;
     timeline.updatedAt = now;

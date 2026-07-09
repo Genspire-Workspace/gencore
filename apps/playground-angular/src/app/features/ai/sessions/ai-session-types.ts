@@ -14,6 +14,7 @@ import type {
   IAiSessionMessageFeedbackResponseDto as IAiSessionMessageFeedbackContractDto,
   IAiSseEventDto,
   IAiSessionListResponseDto,
+  ICreateAiSessionBranchResponseDto,
   IAiSessionMessageResponseDto,
   IAiSessionTimelineResponseDto,
   IAiSessionTimelineTurnItemDto,
@@ -40,6 +41,7 @@ export type IAiSessionTimelineTurnSnapshotDto = IAiSessionTimelineTurnItemDto;
 export type IAiSessionGraphResponse = IAiSessionGraphDto;
 export type IAiSessionBranchResponseDto = IAiSessionBranchContractDto;
 export type IAiSessionBranchListResponseDto = IAiSessionBranchListContractDto;
+export type IAiSessionBranchSessionResponseDto = ICreateAiSessionBranchResponseDto;
 export type IAiSessionMessageFeedbackResponseDto =
   IAiSessionMessageFeedbackContractDto;
 export type IAiSessionCreateRequest = ICreateAiSessionRequestDto;

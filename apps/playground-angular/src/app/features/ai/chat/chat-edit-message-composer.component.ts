@@ -1,27 +1,25 @@
-// file: apps\playground-angular\src\app\features\ai\chat\chat-composer.component.ts
-
-import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Component, output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { IconComponent } from '../../../icons/icon.component';
-import { TooltipDirective } from '../../../shared/tooltip';
 import { ChatComposerBaseDirective } from './chat-composer.base';
 
 @Component({
-  selector: 'app-ai-chat-composer',
+  selector: 'app-ai-chat-edit-message-composer',
   host: {
     class: 'block',
   },
-  imports: [CommonModule, FormsModule, IconComponent, TooltipDirective],
+  imports: [CommonModule, FormsModule, IconComponent],
   template: `
-    <form class="flex flex-col gap-3 rounded-3xl border border-base-300 bg-base p-2" (ngSubmit)="onSubmit()">
+    <form
+      class="flex flex-col gap-3 rounded-3xl border border-primary/25 bg-base p-2 shadow-sm"
+      (ngSubmit)="onSubmit()"
+    >
       <div class="flex items-center justify-between px-2 pt-1">
-        <div class="inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-base-content/50">
+        <div class="inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">
           <span
             class="h-2 w-2 rounded-full"
-            [class.bg-base-content/25]="state() === 'idle'"
-            [class.bg-primary]="state() === 'writing' || state() === 'editing'"
-            [class.bg-warning]="state() === 'uploading'"
+            [class.bg-primary]="state() === 'editing'"
             [class.bg-accent]="state() === 'generating'"
           ></span>
           {{ stateLabel() }}
@@ -35,7 +33,7 @@ import { ChatComposerBaseDirective } from './chat-composer.base';
         (ngModelChange)="onPromptChange($event, promptTextarea)"
         (keydown)="onPromptKeydown($event)"
         name="prompt"
-        placeholder="Ask something like: What is the capital of Spain?"
+        placeholder="Revise this message..."
         [rows]="minRows()"
         [disabled]="sending()"
       ></textarea>
@@ -76,38 +74,36 @@ import { ChatComposerBaseDirective } from './chat-composer.base';
           type="button"
           [disabled]="sending()"
           (click)="fileInput.click()"
-          aria-label="Attach files"
-          appTooltip="Attach files"
         >
           <app-icon iconName="attach_file" size="md" aria-hidden="true" />
         </button>
 
-        <button
-          [class]="
-            sending()
-              ? 'inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-danger leading-none text-danger-content transition hover:bg-danger/80 disabled:cursor-not-allowed'
-              : submitLocked()
-                ? 'inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-base-300 leading-none text-base-content/35 transition disabled:cursor-not-allowed'
+        <div class="flex items-center gap-3">
+          <button
+            class="inline-flex h-12 w-12 items-center justify-center rounded-2xl border border-base-300 bg-base-100 leading-none text-base-content transition hover:border-base-content/30 hover:bg-base-200 disabled:cursor-not-allowed disabled:opacity-50"
+            type="button"
+            [disabled]="sending()"
+            (click)="cancelEdit.emit()"
+          >
+            <app-icon iconName="close" size="md" aria-hidden="true" />
+          </button>
+
+          <button
+            [class]="
+              sending()
+                ? 'inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-danger leading-none text-danger-content transition hover:bg-danger/80 disabled:cursor-not-allowed'
                 : 'inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-primary leading-none text-base-content transition hover:bg-primary/80 disabled:cursor-not-allowed disabled:bg-base-300'
-          "
-          type="submit"
-          [disabled]="!canSend()"
-          [appTooltip]="
-            sending()
-              ? 'Stop generation'
-              : submitLocked()
-                ? 'Finish or cancel the active edit first'
-                : 'Send message'
-          "
-        >
-          <app-icon
-            [iconName]="sending() ? 'stop' : 'send'"
-            size="md"
-            aria-hidden="true"
-          />
-        </button>
+            "
+            type="submit"
+            [disabled]="!canSend()"
+          >
+            <app-icon [iconName]="sending() ? 'stop' : 'send'" size="md" aria-hidden="true" />
+          </button>
+        </div>
       </div>
     </form>
   `,
 })
-export class ChatComposerComponent extends ChatComposerBaseDirective {}
+export class ChatEditMessageComposerComponent extends ChatComposerBaseDirective {
+  readonly cancelEdit = output<void>();
+}

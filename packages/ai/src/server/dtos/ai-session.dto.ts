@@ -22,6 +22,8 @@ import type {
   ICreateAiBranchRequestDto,
   ICreateAiBranchResponseDto,
   ICreateAiMessageFeedbackRequestDto,
+  ICreateAiSessionBranchRequestDto,
+  ICreateAiSessionBranchResponseDto,
   ICreateAiSessionRequestDto,
   ICreateAiTimelineRequestDto,
   IEditAiUserAndRegenerateRequestDto,
@@ -76,6 +78,9 @@ export class AiSessionTimelineResponseDto implements IAiSessionTimelineResponseD
 
   @ApiField({ type: "boolean" })
   isDefault!: boolean;
+
+  @ApiField({ type: "string", required: false })
+  previousTimelineId?: string;
 
   @ApiField({ type: "object", required: false })
   metadata?: Record<string, unknown>;
@@ -422,6 +427,30 @@ export class CreateAiBranchResponseDto implements ICreateAiBranchResponseDto {
 
   @ApiField({ dto: AiSessionTimelineResponseDto })
   timeline!: AiSessionTimelineResponseDto;
+}
+
+@ApiDto({ description: "Create AI session branch request" })
+export class CreateAiSessionBranchRequestDto implements ICreateAiSessionBranchRequestDto {
+  @ApiField({ type: "string" })
+  sourceTimelineId!: string;
+
+  @ApiField({ type: "string" })
+  sourceTurnId!: string;
+
+  @ApiField({ type: "string", required: false })
+  title?: string;
+
+  @ApiField({ type: "object", required: false })
+  metadata?: Record<string, unknown>;
+}
+
+@ApiDto({ description: "Create AI session branch response" })
+export class CreateAiSessionBranchResponseDto implements ICreateAiSessionBranchResponseDto {
+  @ApiField({ dto: AiSessionResponseDto })
+  session!: AiSessionResponseDto;
+
+  @ApiField({ dto: () => AiSessionGraphDto })
+  graph!: AiSessionGraphDto;
 }
 
 @ApiDto({ description: "Timeline turn detail item" })

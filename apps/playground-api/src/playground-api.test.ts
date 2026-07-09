@@ -1134,6 +1134,356 @@ Review {{item}}.`,
     }
   });
 
+  test("manual session branch clones only the requested timeline prefix into a new session", async () => {
+    const app = await createPlaygroundApp({
+      port: 0,
+      env: createTestEnv(dbPath),
+    });
+    const generationService = app.get(AiGenerationService);
+    const originalStreamChat = generationService.streamChat.bind(generationService);
+
+    await app.start();
+
+    try {
+      const server = app.get(Server);
+      const { accessToken } = await registerAndGetToken(server);
+      let answerIndex = 0;
+
+      generationService.streamChat = (async function* (request: IChatGenerationRequest) {
+        answerIndex += 1;
+        yield {
+          id: crypto.randomUUID(),
+          provider: request.provider ?? "ollama",
+          model: request.model ?? "gemma4:12b",
+          type: "message",
+          message: {
+            role: "assistant",
+            content: `Answer ${answerIndex}`,
+          },
+          finishReason: "stop",
+        };
+      }) as typeof generationService.streamChat;
+
+      const sessionResponse = await server.handle(
+        new Request("http://localhost/api/v1/ai/sessions", {
+          method: "POST",
+          headers: authHeaders(accessToken),
+          body: JSON.stringify({
+            title: "Source Session",
+          }),
+        }),
+      );
+
+      expect(sessionResponse.status).toBe(201);
+      const session = await sessionResponse.json() as {
+        id: string;
+        defaultTimeline: { id: string };
+      };
+
+      const firstGenerateResponse = await server.handle(
+        new Request(`http://localhost/api/v1/ai/sessions/${session.id}/timelines/${session.defaultTimeline.id}/generate`, {
+          method: "POST",
+          headers: authHeaders(accessToken),
+          body: JSON.stringify({
+            content: "Question 1",
+            provider: "ollama",
+            model: "gemma4:12b",
+          }),
+        }),
+      );
+      expect(firstGenerateResponse.status).toBe(200);
+      await firstGenerateResponse.text();
+
+      const secondGenerateResponse = await server.handle(
+        new Request(`http://localhost/api/v1/ai/sessions/${session.id}/timelines/${session.defaultTimeline.id}/generate`, {
+          method: "POST",
+          headers: authHeaders(accessToken),
+          body: JSON.stringify({
+            content: "Question 2",
+            provider: "ollama",
+            model: "gemma4:12b",
+          }),
+        }),
+      );
+      expect(secondGenerateResponse.status).toBe(200);
+      await secondGenerateResponse.text();
+
+      const turnsResponse = await server.handle(
+        new Request(`http://localhost/api/v1/ai/sessions/${session.id}/timelines/${session.defaultTimeline.id}/turns`, {
+          headers: { authorization: `Bearer ${accessToken}` },
+        }),
+      );
+      expect(turnsResponse.status).toBe(200);
+      const turns = await turnsResponse.json() as {
+        items: Array<{ turn: { id: string } }>;
+      };
+
+      const branchResponse = await server.handle(
+        new Request(`http://localhost/api/v1/ai/sessions/${session.id}/session-branches`, {
+          method: "POST",
+          headers: authHeaders(accessToken),
+          body: JSON.stringify({
+            sourceTimelineId: session.defaultTimeline.id,
+            sourceTurnId: turns.items[0]?.turn.id,
+          }),
+        }),
+      );
+
+      expect(branchResponse.status).toBe(201);
+      const branchBody = await branchResponse.json() as {
+        session: { id: string; defaultTimelineId?: string };
+        graph: {
+          session: { id: string; defaultTimelineId?: string };
+          timelines: Array<{ id: string; previousTimelineId?: string }>;
+          timelineTurns: Array<{ timelineId: string; turnId: string }>;
+          messages: Array<{ role: string; content: unknown }>;
+        };
+      };
+
+      expect(branchBody.session.id).not.toBe(session.id);
+      expect(branchBody.graph.session.id).toBe(branchBody.session.id);
+      expect(branchBody.graph.timelineTurns).toHaveLength(1);
+      expect(new Set(branchBody.graph.timelineTurns.map((item) => item.timelineId))).toEqual(
+        new Set([branchBody.session.defaultTimelineId]),
+      );
+      expect(branchBody.graph.timelines[0]?.previousTimelineId).toBe(session.defaultTimeline.id);
+      expect(
+        branchBody.graph.messages.map((message) => `${message.role}:${getMessageText(message.content)}`),
+      ).toEqual([
+        "user:Question 1",
+        "assistant:Answer 1",
+      ]);
+    } finally {
+      generationService.streamChat = originalStreamChat;
+      await app.stop();
+    }
+  });
+
+  test("assistant regeneration promotes the new timeline to the session default and records the previous timeline", async () => {
+    const app = await createPlaygroundApp({
+      port: 0,
+      env: createTestEnv(dbPath),
+    });
+    const generationService = app.get(AiGenerationService);
+    const originalStreamChat = generationService.streamChat.bind(generationService);
+
+    await app.start();
+
+    try {
+      const server = app.get(Server);
+      const { accessToken } = await registerAndGetToken(server);
+      let answerIndex = 0;
+
+      generationService.streamChat = (async function* (request: IChatGenerationRequest) {
+        answerIndex += 1;
+        yield {
+          id: crypto.randomUUID(),
+          provider: request.provider ?? "ollama",
+          model: request.model ?? "gemma4:12b",
+          type: "message",
+          message: {
+            role: "assistant",
+            content: `Answer ${answerIndex}`,
+          },
+          finishReason: "stop",
+        };
+      }) as typeof generationService.streamChat;
+
+      const sessionResponse = await server.handle(
+        new Request("http://localhost/api/v1/ai/sessions", {
+          method: "POST",
+          headers: authHeaders(accessToken),
+          body: JSON.stringify({
+            title: "Regeneration Session",
+          }),
+        }),
+      );
+      expect(sessionResponse.status).toBe(201);
+      const session = await sessionResponse.json() as {
+        id: string;
+        defaultTimeline: { id: string };
+      };
+
+      await (await server.handle(
+        new Request(`http://localhost/api/v1/ai/sessions/${session.id}/timelines/${session.defaultTimeline.id}/generate`, {
+          method: "POST",
+          headers: authHeaders(accessToken),
+          body: JSON.stringify({
+            content: "Question 1",
+            provider: "ollama",
+            model: "gemma4:12b",
+          }),
+        }),
+      )).text();
+
+      await (await server.handle(
+        new Request(`http://localhost/api/v1/ai/sessions/${session.id}/timelines/${session.defaultTimeline.id}/generate`, {
+          method: "POST",
+          headers: authHeaders(accessToken),
+          body: JSON.stringify({
+            content: "Question 2",
+            provider: "ollama",
+            model: "gemma4:12b",
+          }),
+        }),
+      )).text();
+
+      const turnsResponse = await server.handle(
+        new Request(`http://localhost/api/v1/ai/sessions/${session.id}/timelines/${session.defaultTimeline.id}/turns`, {
+          headers: { authorization: `Bearer ${accessToken}` },
+        }),
+      );
+      const turns = await turnsResponse.json() as {
+        items: Array<{ turn: { id: string } }>;
+      };
+
+      const regenerateResponse = await server.handle(
+        new Request(`http://localhost/api/v1/ai/sessions/${session.id}/timelines/${session.defaultTimeline.id}/regenerate-assistant`, {
+          method: "POST",
+          headers: authHeaders(accessToken),
+          body: JSON.stringify({
+            sourceTurnId: turns.items[1]?.turn.id,
+            provider: "ollama",
+            model: "gemma4:12b",
+          }),
+        }),
+      );
+      expect(regenerateResponse.status).toBe(200);
+      const events = parseSseEvents(await regenerateResponse.text());
+      const startedEvent = events.find((event) => event.type === "started") as {
+        timeline?: { id?: string; previousTimelineId?: string };
+      } | undefined;
+      expect(startedEvent?.timeline?.id).toBeDefined();
+      expect(startedEvent?.timeline?.previousTimelineId).toBe(session.defaultTimeline.id);
+
+      const updatedSessionResponse = await server.handle(
+        new Request(`http://localhost/api/v1/ai/sessions/${session.id}`, {
+          headers: { authorization: `Bearer ${accessToken}` },
+        }),
+      );
+      const updatedSession = await updatedSessionResponse.json() as {
+        defaultTimelineId?: string;
+      };
+      expect(updatedSession.defaultTimelineId).toBe(startedEvent?.timeline?.id);
+
+      const graphResponse = await server.handle(
+        new Request(`http://localhost/api/v1/ai/sessions/${session.id}/graph`, {
+          headers: { authorization: `Bearer ${accessToken}` },
+        }),
+      );
+      const graph = await graphResponse.json() as {
+        timelines: Array<{ id: string; isDefault: boolean; previousTimelineId?: string }>;
+      };
+      const promotedTimeline = graph.timelines.find((timeline) => timeline.id === startedEvent?.timeline?.id);
+      expect(promotedTimeline?.isDefault).toBe(true);
+      expect(promotedTimeline?.previousTimelineId).toBe(session.defaultTimeline.id);
+    } finally {
+      generationService.streamChat = originalStreamChat;
+      await app.stop();
+    }
+  });
+
+  test("edit-user-and-regenerate promotes the new timeline to the session default and records the previous timeline", async () => {
+    const app = await createPlaygroundApp({
+      port: 0,
+      env: createTestEnv(dbPath),
+    });
+    const generationService = app.get(AiGenerationService);
+    const originalStreamChat = generationService.streamChat.bind(generationService);
+
+    await app.start();
+
+    try {
+      const server = app.get(Server);
+      const { accessToken } = await registerAndGetToken(server);
+      let answerIndex = 0;
+
+      generationService.streamChat = (async function* (request: IChatGenerationRequest) {
+        answerIndex += 1;
+        yield {
+          id: crypto.randomUUID(),
+          provider: request.provider ?? "ollama",
+          model: request.model ?? "gemma4:12b",
+          type: "message",
+          message: {
+            role: "assistant",
+            content: `Answer ${answerIndex}`,
+          },
+          finishReason: "stop",
+        };
+      }) as typeof generationService.streamChat;
+
+      const sessionResponse = await server.handle(
+        new Request("http://localhost/api/v1/ai/sessions", {
+          method: "POST",
+          headers: authHeaders(accessToken),
+          body: JSON.stringify({
+            title: "Edit Session",
+          }),
+        }),
+      );
+      expect(sessionResponse.status).toBe(201);
+      const session = await sessionResponse.json() as {
+        id: string;
+        defaultTimeline: { id: string };
+      };
+
+      await (await server.handle(
+        new Request(`http://localhost/api/v1/ai/sessions/${session.id}/timelines/${session.defaultTimeline.id}/generate`, {
+          method: "POST",
+          headers: authHeaders(accessToken),
+          body: JSON.stringify({
+            content: "Original question",
+            provider: "ollama",
+            model: "gemma4:12b",
+          }),
+        }),
+      )).text();
+
+      const turnsResponse = await server.handle(
+        new Request(`http://localhost/api/v1/ai/sessions/${session.id}/timelines/${session.defaultTimeline.id}/turns`, {
+          headers: { authorization: `Bearer ${accessToken}` },
+        }),
+      );
+      const turns = await turnsResponse.json() as {
+        items: Array<{ turn: { id: string } }>;
+      };
+
+      const editResponse = await server.handle(
+        new Request(`http://localhost/api/v1/ai/sessions/${session.id}/timelines/${session.defaultTimeline.id}/edit-user-and-regenerate`, {
+          method: "POST",
+          headers: authHeaders(accessToken),
+          body: JSON.stringify({
+            sourceTurnId: turns.items[0]?.turn.id,
+            content: "Edited question",
+            provider: "ollama",
+            model: "gemma4:12b",
+          }),
+        }),
+      );
+      expect(editResponse.status).toBe(200);
+      const events = parseSseEvents(await editResponse.text());
+      const startedEvent = events.find((event) => event.type === "started") as {
+        timeline?: { id?: string; previousTimelineId?: string };
+      } | undefined;
+      expect(startedEvent?.timeline?.id).toBeDefined();
+      expect(startedEvent?.timeline?.previousTimelineId).toBe(session.defaultTimeline.id);
+
+      const updatedSessionResponse = await server.handle(
+        new Request(`http://localhost/api/v1/ai/sessions/${session.id}`, {
+          headers: { authorization: `Bearer ${accessToken}` },
+        }),
+      );
+      const updatedSession = await updatedSessionResponse.json() as {
+        defaultTimelineId?: string;
+      };
+      expect(updatedSession.defaultTimelineId).toBe(startedEvent?.timeline?.id);
+    } finally {
+      generationService.streamChat = originalStreamChat;
+      await app.stop();
+    }
+  });
+
   test("todo CRUD and swagger routes work with libsql", async () => {
     const app = await createPlaygroundApp({
       port: 0,

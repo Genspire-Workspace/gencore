@@ -226,6 +226,7 @@ export interface IAiSessionTimelineResponseDto {
   sessionId: string;
   name?: string;
   isDefault: boolean;
+  previousTimelineId?: string;
   metadata?: Record<string, unknown>;
   createdAt: string;
   updatedAt: string;
@@ -418,6 +419,18 @@ export interface ICreateAiBranchRequestDto {
 export interface ICreateAiBranchResponseDto {
   branch: IAiSessionBranchResponseDto;
   timeline: IAiSessionTimelineResponseDto;
+}
+
+export interface ICreateAiSessionBranchRequestDto {
+  sourceTimelineId: string;
+  sourceTurnId: string;
+  title?: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface ICreateAiSessionBranchResponseDto {
+  session: IAiSessionResponseDto;
+  graph: IAiSessionGraphDto;
 }
 
 export interface IRegenerateAiAssistantRequestDto {

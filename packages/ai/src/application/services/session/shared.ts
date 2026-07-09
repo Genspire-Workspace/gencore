@@ -245,6 +245,79 @@ export async function cloneTimelinePrefix(
   return copied;
 }
 
+export async function cloneTimelinePrefixIntoSession(
+  db: AiSessionDbContext,
+  sourceTimelineId: string,
+  targetTimelineId: string,
+  sessionId: string,
+  inclusiveTurnIndex: number,
+  source: AiSessionTimelineTurnEntity["source"],
+): Promise<IAiSessionTurnSnapshot[]> {
+  const sourceSnapshots = await listTimelineTurnSnapshots(db, sourceTimelineId);
+  const copiedSnapshots: IAiSessionTurnSnapshot[] = [];
+
+  for (const snapshot of sourceSnapshots.filter((item) => item.timelineTurn.index <= inclusiveTurnIndex)) {
+    const now = new Date();
+
+    const turn = new AiSessionTurnEntity();
+    turn.id = crypto.randomUUID();
+    turn.sessionId = sessionId;
+    turn.status = snapshot.turn.status;
+    turn.provider = snapshot.turn.provider ?? null;
+    turn.model = snapshot.turn.model ?? null;
+    turn.startedAt = snapshot.turn.startedAt ?? null;
+    turn.finishedAt = snapshot.turn.finishedAt ?? null;
+    turn.durationMs = snapshot.turn.durationMs ?? null;
+    turn.finishReason = snapshot.turn.finishReason ?? null;
+    turn.error = snapshot.turn.error ?? null;
+    turn.metadata = snapshot.turn.metadata ?? null;
+    turn.createdAt = now;
+    turn.updatedAt = now;
+    await db.turns.add(turn);
+
+    const timelineTurn = new AiSessionTimelineTurnEntity();
+    timelineTurn.id = crypto.randomUUID();
+    timelineTurn.sessionId = sessionId;
+    timelineTurn.timelineId = targetTimelineId;
+    timelineTurn.turnId = turn.id;
+    timelineTurn.index = snapshot.timelineTurn.index;
+    timelineTurn.source = source;
+    timelineTurn.createdAt = now;
+    timelineTurn.updatedAt = now;
+    await db.timelineTurns.add(timelineTurn);
+
+    const messages: AiSessionMessageEntity[] = [];
+    for (const sourceMessage of snapshot.messages) {
+      const message = new AiSessionMessageEntity();
+      message.id = crypto.randomUUID();
+      message.sessionId = sessionId;
+      message.turnId = turn.id;
+      message.index = sourceMessage.index;
+      message.role = sourceMessage.role;
+      message.content = sourceMessage.content;
+      message.name = sourceMessage.name ?? null;
+      message.provider = sourceMessage.provider ?? null;
+      message.model = sourceMessage.model ?? null;
+      message.usage = sourceMessage.usage ?? null;
+      message.toolCalls = sourceMessage.toolCalls ?? null;
+      message.toolResults = sourceMessage.toolResults ?? null;
+      message.metadata = sourceMessage.metadata ?? null;
+      message.createdAt = now;
+      message.updatedAt = now;
+      await db.messages.add(message);
+      messages.push(message);
+    }
+
+    copiedSnapshots.push({
+      timelineTurn,
+      turn,
+      messages,
+    });
+  }
+
+  return copiedSnapshots;
+}
+
 export function toIso(value: Date | null | undefined): string | undefined {
   return value ? value.toISOString() : undefined;
 }
@@ -293,6 +366,7 @@ export function toTimelineResponse(timeline: AiSessionTimelineEntity) {
     sessionId: timeline.sessionId,
     name: timeline.name ?? undefined,
     isDefault: timeline.isDefault,
+    previousTimelineId: timeline.previousTimelineId ?? undefined,
     metadata: timeline.metadata ?? undefined,
     createdAt: timeline.createdAt.toISOString(),
     updatedAt: timeline.updatedAt.toISOString(),
@@ -390,4 +464,29 @@ export function toToolDefinitions(
     returnDirect: tool.returnDirect,
     metadata: tool.metadata,
   }));
+}
+
+export async function promoteSessionDefaultTimeline(
+  db: AiSessionDbContext,
+  session: AiSessionEntity,
+  timelineId: string,
+): Promise<void> {
+  const timelines = await db.timelines.list({
+    where: { sessionId: session.id } as Partial<AiSessionTimelineEntity>,
+    orderBy: "createdAt",
+    direction: "asc",
+  });
+
+  for (const timeline of timelines) {
+    const shouldBeDefault = timeline.id === timelineId;
+    if (timeline.isDefault !== shouldBeDefault) {
+      timeline.isDefault = shouldBeDefault;
+      timeline.updatedAt = new Date();
+      await db.timelines.update(timeline);
+    }
+  }
+
+  session.defaultTimelineId = timelineId;
+  session.updatedAt = new Date();
+  await db.sessions.update(session);
 }

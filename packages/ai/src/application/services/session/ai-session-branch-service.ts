@@ -51,6 +51,7 @@ export class AiSessionBranchService {
     targetTimeline.sessionId = session.id;
     targetTimeline.name = input.name?.trim() ? input.name.trim() : "Branch";
     targetTimeline.isDefault = false;
+    targetTimeline.previousTimelineId = input.sourceTimelineId;
     targetTimeline.metadata = input.metadata ?? null;
     targetTimeline.createdAt = now;
     targetTimeline.updatedAt = now;

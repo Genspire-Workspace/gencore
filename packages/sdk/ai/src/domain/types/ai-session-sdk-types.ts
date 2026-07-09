@@ -20,6 +20,8 @@ import type {
   ICreateAiBranchRequestDto,
   ICreateAiBranchResponseDto,
   ICreateAiMessageFeedbackRequestDto,
+  ICreateAiSessionBranchRequestDto,
+  ICreateAiSessionBranchResponseDto,
   IDeleteAiProviderResponseDto,
   IDeleteAiSessionResponseDto,
   IAiEmbeddingGenerateRequestDto,
@@ -62,6 +64,8 @@ export type {
   ICreateAiBranchRequestDto,
   ICreateAiBranchResponseDto,
   ICreateAiMessageFeedbackRequestDto,
+  ICreateAiSessionBranchRequestDto,
+  ICreateAiSessionBranchResponseDto,
   IDeleteAiProviderResponseDto,
   IDeleteAiSessionResponseDto,
   IAiEmbeddingGenerateRequestDto,
@@ -134,11 +138,28 @@ export interface IAiSessionEditingDraft {
   sessionId: string;
   timelineId: string;
   originalContent: AiMessageContent;
+  prompt: string;
+  attachments: IAiSessionAttachment[];
+}
+
+export interface IAiSessionOptimisticStreamState {
+  kind: "message" | "regenerate" | "edit";
+  started: boolean;
+  rollbackGraph: IAiSessionGraphDto | null;
+  rollbackActiveTimelineId: string | null;
+  optimisticTimelineId: string;
+  optimisticTurnId: string;
+  optimisticTimelineTurnId: string;
+  optimisticUserMessageId: string;
+  optimisticAssistantMessageId: string;
+  optimisticBranchId?: string;
 }
 
 export interface IAiSessionClientState {
   sessionId: string;
   graph: IAiSessionGraphDto | null;
+  persistedGraph: IAiSessionGraphDto | null;
+  optimisticGraph: IAiSessionGraphDto | null;
   activeTimelineId: string | null;
   messages: IAiSessionViewMessage[];
   prompt: string;
@@ -151,6 +172,7 @@ export interface IAiSessionClientState {
   streamStatus: string;
   error: string;
   activeStreamController: AbortController | null;
+  optimisticStream: IAiSessionOptimisticStreamState | null;
 }
 
 export interface IAiSessionWorkspaceSnapshot {

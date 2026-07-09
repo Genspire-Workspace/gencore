@@ -1,9 +1,11 @@
 // file: apps\playground-angular\src\app\features\ai\chat\chat-history.component.ts
 
-import { Component, effect, ElementRef, inject, input, output, viewChild } from '@angular/core';
+import { Component, effect, ElementRef, inject, input, model, output, viewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ChatMessageBubbleComponent } from './chat-message-bubble.component';
+import { ChatMessageBubbleAssistantComponent } from './chat-message-bubble-assistant.component';
+import { ChatMessageBubbleUserComponent } from './chat-message-bubble-user.component';
 import type {
+  IChatComposerAttachment,
   IUiChatMessage,
   IUiChatMessageActionEvent,
   IUiChatMessageFeedbackEvent,
@@ -15,7 +17,7 @@ import { ScrollService } from '../../../shared/scroll';
   host: {
     class: 'block flex min-h-0 flex-1 flex-col overflow-hidden rounded-3xl bg-base border border-base-300 p-4',
   },
-  imports: [CommonModule, ChatMessageBubbleComponent],
+  imports: [CommonModule, ChatMessageBubbleAssistantComponent, ChatMessageBubbleUserComponent],
   template: `
     @if (messages().length === 0 && !loading()) {
       <div
@@ -31,13 +33,26 @@ import { ScrollService } from '../../../shared/scroll';
       >
         @for (message of messages(); track message.id) {
           <div class="group flex w-full">
-            <app-ai-chat-message-bubble
-              [message]="message"
-              (edit)="edit.emit($event)"
-              (feedback)="feedback.emit($event)"
-              (regenerate)="regenerate.emit($event)"
-              (branch)="branch.emit($event)"
-            />
+            @if (message.role === 'user') {
+              <app-ai-chat-message-bubble-user
+                [message]="message"
+                [editing]="message.id === editingMessageId()"
+                [sending]="sending()"
+                [(prompt)]="editingPrompt"
+                [(attachments)]="editingAttachments"
+                (edit)="edit.emit($event)"
+                (submit)="submit.emit()"
+                (cancel)="cancel.emit()"
+                (cancelEdit)="cancelEdit.emit()"
+              />
+            } @else {
+              <app-ai-chat-message-bubble-assistant
+                [message]="message"
+                (feedback)="feedback.emit($event)"
+                (regenerate)="regenerate.emit($event)"
+                (branch)="branch.emit($event)"
+              />
+            }
           </div>
         }
       </div>
@@ -47,9 +62,17 @@ import { ScrollService } from '../../../shared/scroll';
 export class ChatHistoryComponent {
   readonly sessionId = input<string | null>(null);
   readonly messages = input.required<IUiChatMessage[]>();
+  readonly editingMessageId = input<string | null>(null);
   readonly loading = input(false);
   readonly sending = input(false);
+  readonly prompt = model('');
+  readonly attachments = model<IChatComposerAttachment[]>([]);
+  readonly editingPrompt = model('');
+  readonly editingAttachments = model<IChatComposerAttachment[]>([]);
   readonly edit = output<IUiChatMessageActionEvent>();
+  readonly submit = output<void>();
+  readonly cancel = output<void>();
+  readonly cancelEdit = output<void>();
   readonly feedback = output<IUiChatMessageFeedbackEvent>();
   readonly regenerate = output<IUiChatMessageActionEvent>();
   readonly branch = output<IUiChatMessageActionEvent>();

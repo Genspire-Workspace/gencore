@@ -1,7 +1,8 @@
 // file: packages\ai\src\application\services\session\service.ts
 
-import { Scoped } from "@genspire/core";
+import { GenError, Scoped } from "@genspire/core";
 import type {
+  ICreateAiSessionBranchInput,
   ICreateAiSessionInput,
   IDeleteAiSessionInput,
   IUpdateAiSessionInput,
@@ -9,7 +10,11 @@ import type {
 import { AiSessionEntity, AiSessionTimelineEntity } from "../../../domain/session/index.js";
 import { AiSessionDbContext } from "../../../infrastructure/persistence/ai-session-db-context.js";
 import {
+  cloneTimelinePrefixIntoSession,
+  getTimelineTurnByTurn,
   requireAccessibleSession,
+  requireTimelineInSession,
+  requireTurnInSession,
   toSessionResponse,
   toTimelineResponse,
   validateSessionTitle,
@@ -56,6 +61,7 @@ export class AiSessionService {
     timeline.sessionId = session.id;
     timeline.name = "Main";
     timeline.isDefault = true;
+    timeline.previousTimelineId = null;
     timeline.metadata = null;
     timeline.createdAt = now;
     timeline.updatedAt = now;
@@ -64,6 +70,71 @@ export class AiSessionService {
 
     await this.db.sessions.add(session);
     await this.db.timelines.add(timeline);
+    await this.db.saveChanges();
+
+    return {
+      ...toSessionResponse(session),
+      defaultTimeline: toTimelineResponse(timeline),
+    };
+  }
+
+  async createSessionBranch(input: ICreateAiSessionBranchInput) {
+    const sourceSession = await requireAccessibleSession(
+      this.db,
+      input.currentUser,
+      input.sessionId,
+    );
+    await requireTimelineInSession(this.db, sourceSession, input.sourceTimelineId);
+    const sourceTurn = await requireTurnInSession(this.db, sourceSession, input.sourceTurnId);
+    const sourceTimelineTurn = await getTimelineTurnByTurn(
+      this.db,
+      input.sourceTimelineId,
+      sourceTurn.id,
+    );
+
+    if (!sourceTimelineTurn) {
+      throw new GenError(
+        "Source turn is not attached to the requested timeline.",
+        "AI_TURN_NOT_IN_TIMELINE",
+      );
+    }
+
+    const now = new Date();
+    const session = new AiSessionEntity();
+    session.id = crypto.randomUUID();
+    session.userId = input.currentUser.id;
+    session.title =
+      validateSessionTitle(input.title) ??
+      validateSessionTitle(sourceSession.title) ??
+      "Branched session";
+    session.type = sourceSession.type;
+    session.settings = sourceSession.settings ?? null;
+    session.metadata = input.metadata ?? sourceSession.metadata ?? null;
+    session.createdAt = now;
+    session.updatedAt = now;
+
+    const timeline = new AiSessionTimelineEntity();
+    timeline.id = crypto.randomUUID();
+    timeline.sessionId = session.id;
+    timeline.name = "Main";
+    timeline.isDefault = true;
+    timeline.previousTimelineId = input.sourceTimelineId;
+    timeline.metadata = input.metadata ?? null;
+    timeline.createdAt = now;
+    timeline.updatedAt = now;
+
+    session.defaultTimelineId = timeline.id;
+
+    await this.db.sessions.add(session);
+    await this.db.timelines.add(timeline);
+    await cloneTimelinePrefixIntoSession(
+      this.db,
+      input.sourceTimelineId,
+      timeline.id,
+      session.id,
+      sourceTimelineTurn.index,
+      "branch_copy",
+    );
     await this.db.saveChanges();
 
     return {

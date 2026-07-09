@@ -40,13 +40,17 @@ import { TooltipDirective } from '../../../shared/tooltip';
 
         @if (canEdit()) {
           <button
-            class="inline-flex items-center justify-center rounded-md p-1 text-neutral transition hover:bg-base-300"
+            class="inline-flex items-center justify-center rounded-md p-1 transition"
+            [class.bg-primary/15]="editing()"
+            [class.text-primary]="editing()"
+            [class.text-neutral]="!editing()"
+            [class.hover:bg-base-300]="!editing()"
             type="button"
             (click)="edit.emit({ message: message() })"
-            appTooltip="Edit message"
+            [appTooltip]="editing() ? 'Editing this message' : 'Edit message'"
             tooltipPosition="bottom"
           >
-            <app-icon iconName="edit" size="sm" aria-hidden="true" />
+            <app-icon iconName="edit" size="sm" [filled]="editing()" aria-hidden="true" />
           </button>
         }
 
@@ -111,6 +115,7 @@ import { TooltipDirective } from '../../../shared/tooltip';
 })
 export class ChatMessageActionsComponent {
   readonly message = input.required<IUiChatMessage>();
+  readonly editing = input(false);
 
   readonly copy = output<IUiChatMessageActionEvent>();
   readonly edit = output<IUiChatMessageActionEvent>();

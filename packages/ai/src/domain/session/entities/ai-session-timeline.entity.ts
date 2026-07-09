@@ -17,6 +17,9 @@ export class AiSessionTimelineEntity {
   @Property({ type: "boolean" })
   isDefault = false;
 
+  @Property({ type: "string", nullable: true })
+  previousTimelineId?: string | null;
+
   @Property({ type: "json", nullable: true })
   metadata?: Record<string, unknown> | null;
 

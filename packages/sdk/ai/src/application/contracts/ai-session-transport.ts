@@ -2,6 +2,8 @@ import type {
   ICreateAiBranchRequestDto,
   ICreateAiBranchResponseDto,
   ICreateAiMessageFeedbackRequestDto,
+  ICreateAiSessionBranchRequestDto,
+  ICreateAiSessionBranchResponseDto,
   IDeleteAiSessionResponseDto,
   IAiSessionMessageFeedbackResponseDto,
   IAiSessionGraphDto,
@@ -40,6 +42,10 @@ export interface IAiSessionTransport {
     sessionId: string,
     input: ICreateAiBranchRequestDto,
   ): Promise<ICreateAiBranchResponseDto>;
+  createSessionBranch(
+    sessionId: string,
+    input: ICreateAiSessionBranchRequestDto,
+  ): Promise<ICreateAiSessionBranchResponseDto>;
   streamMessage(
     sessionId: string,
     timelineId: string,
