@@ -1,10 +1,63 @@
-import { Directive, effect, ElementRef, input, model, output, viewChild } from '@angular/core';
+import {
+  DestroyRef,
+  Directive,
+  ElementRef,
+  TemplateRef,
+  ViewContainerRef,
+  computed,
+  effect,
+  inject,
+  input,
+  model,
+  output,
+  signal,
+  viewChild,
+} from '@angular/core';
+import type { ConnectedPosition } from '@angular/cdk/overlay';
+import type { IAiPromptResponseDto } from '@genspire/sdk-ai';
 import type { IChatComposerAttachment } from './chat-message.types';
+import { OverlayService } from '../../../shared/overlay';
+import type { AppOverlayHandle } from '../../../shared/overlay';
+import { AiPromptClient } from '../prompts/ai-prompt.client';
 
 const CHAT_COMPOSER_ACCEPT =
   'image/*,.txt,.md,.markdown,.json,.jsonc,.csv,.ts,.tsx,.js,.jsx,.mjs,.cjs,.html,.css,.scss,.less,.py,.java,.cs,.go,.rs,.sh,.bash,.zsh,.ps1,.sql,.yml,.yaml,.xml,.svg';
 
+const CHAT_COMPOSER_TOKEN_TRIGGERS = ['/', '@', '$'] as const;
+const CHAT_COMPOSER_TOKEN_DROPDOWN_POSITIONS: ConnectedPosition[] = [
+  {
+    originX: 'start',
+    originY: 'bottom',
+    overlayX: 'start',
+    overlayY: 'top',
+    offsetY: 10,
+  },
+  {
+    originX: 'start',
+    originY: 'top',
+    overlayX: 'start',
+    overlayY: 'bottom',
+    offsetY: -10,
+  },
+];
+
 export type ChatComposerState = 'idle' | 'writing' | 'uploading' | 'editing' | 'generating';
+export type ChatComposerTokenKind = 'slash' | 'mention' | 'skill';
+
+interface IChatComposerTokenSession {
+  kind: ChatComposerTokenKind;
+  trigger: '/' | '@' | '$';
+  query: string;
+  start: number;
+  end: number;
+}
+
+export interface IChatComposerTokenSuggestion {
+  id: string;
+  label: string;
+  description: string;
+  insertText: string;
+}
 
 @Directive()
 export abstract class ChatComposerBaseDirective {
@@ -19,7 +72,55 @@ export abstract class ChatComposerBaseDirective {
   readonly cancel = output<void>();
 
   protected readonly accept = CHAT_COMPOSER_ACCEPT;
+  protected readonly composerRootRef = viewChild<ElementRef<HTMLElement>>('composerRoot');
   protected readonly textareaRef = viewChild<ElementRef<HTMLTextAreaElement>>('promptTextarea');
+  protected readonly tokenMenuTemplateRef = viewChild<TemplateRef<unknown>>('tokenMenu');
+  protected readonly activeTokenSession = signal<IChatComposerTokenSession | null>(null);
+  protected readonly highlightedTokenOptionIndex = signal(0);
+  protected readonly promptSuggestions = signal<IChatComposerTokenSuggestion[]>([]);
+  protected readonly tokenDropdownTitle = computed(() => {
+    const session = this.activeTokenSession();
+    if (!session) {
+      return '';
+    }
+
+    switch (session.kind) {
+      case 'slash':
+        return 'Slash commands';
+      case 'mention':
+        return 'References';
+      case 'skill':
+        return 'Skills and prompts';
+    }
+  });
+  protected readonly filteredTokenSuggestions = computed(() => {
+    const session = this.activeTokenSession();
+    if (!session) {
+      return [];
+    }
+
+    const query = session.query.trim().toLowerCase();
+    const suggestions = this.promptSuggestions();
+
+    if (!query) {
+      return suggestions;
+    }
+
+    return suggestions.filter((option) =>
+      [option.label, option.description, option.insertText].some((value) =>
+        value.toLowerCase().includes(query),
+      ),
+    );
+  });
+  protected readonly hasTokenSuggestions = computed(
+    () => this.activeTokenSession() !== null && this.filteredTokenSuggestions().length > 0,
+  );
+
+  private readonly promptClient = inject(AiPromptClient);
+  private readonly overlayService = inject(OverlayService);
+  private readonly viewContainerRef = inject(ViewContainerRef);
+  private readonly destroyRef = inject(DestroyRef);
+  private activeTokenOverlayHandle: AppOverlayHandle | null = null;
 
   constructor() {
     effect(() => {
@@ -34,6 +135,29 @@ export abstract class ChatComposerBaseDirective {
 
       queueMicrotask(() => this.resizeTextareaElement(textarea));
     });
+
+    effect(() => {
+      const session = this.activeTokenSession();
+      const composerRoot = this.composerRootRef()?.nativeElement;
+      const templateRef = this.tokenMenuTemplateRef();
+      const suggestions = this.filteredTokenSuggestions();
+
+      if (!session || !composerRoot || !templateRef || suggestions.length === 0) {
+        this.closeTokenOverlay();
+        return;
+      }
+
+      queueMicrotask(() => this.ensureTokenOverlay(composerRoot, templateRef));
+    });
+
+    effect(() => {
+      const suggestions = this.filteredTokenSuggestions();
+      const nextMaxIndex = Math.max(0, suggestions.length - 1);
+      this.highlightedTokenOptionIndex.update((current) => Math.min(current, nextMaxIndex));
+    });
+
+    void this.loadPromptSuggestions();
+    this.destroyRef.onDestroy(() => this.closeTokenOverlay());
   }
 
   async onFilesSelected(event: Event): Promise<void> {
@@ -90,9 +214,38 @@ export abstract class ChatComposerBaseDirective {
   onPromptChange(value: string, textarea: HTMLTextAreaElement): void {
     this.prompt.set(value);
     this.resizeTextareaElement(textarea);
+    this.syncActiveToken(textarea);
   }
 
   onPromptKeydown(event: KeyboardEvent): void {
+    if (this.hasTokenSuggestions()) {
+      switch (event.key) {
+        case 'ArrowDown':
+          event.preventDefault();
+          this.moveTokenSelection(1);
+          return;
+        case 'ArrowUp':
+          event.preventDefault();
+          this.moveTokenSelection(-1);
+          return;
+        case 'Escape':
+          event.preventDefault();
+          this.closeActiveTokenSession();
+          return;
+        case 'Tab':
+          event.preventDefault();
+          this.selectHighlightedTokenSuggestion();
+          return;
+        case 'Enter':
+          if (!event.shiftKey) {
+            event.preventDefault();
+            this.selectHighlightedTokenSuggestion();
+            return;
+          }
+          break;
+      }
+    }
+
     if (event.key !== 'Enter' || event.shiftKey) {
       return;
     }
@@ -124,6 +277,215 @@ export abstract class ChatComposerBaseDirective {
     }
 
     return `${Math.round(size / 104857.6) / 10} MB`;
+  }
+
+  onPromptSelectionChange(textarea: HTMLTextAreaElement): void {
+    this.syncActiveToken(textarea);
+  }
+
+  protected tokenSuggestionTrackBy(_: number, option: IChatComposerTokenSuggestion): string {
+    return option.id;
+  }
+
+  protected isTokenSuggestionHighlighted(index: number): boolean {
+    return this.highlightedTokenOptionIndex() === index;
+  }
+
+  protected selectTokenSuggestion(
+    option: IChatComposerTokenSuggestion,
+    overlay?: AppOverlayHandle,
+  ): void {
+    const session = this.activeTokenSession();
+    const textarea = this.textareaRef()?.nativeElement;
+    if (!session || !textarea) {
+      overlay?.close();
+      this.closeActiveTokenSession();
+      return;
+    }
+
+    const prefix = this.prompt().slice(0, session.start);
+    const suffix = this.prompt().slice(session.end);
+    const insertValue = `${session.trigger}${option.insertText}`;
+    const needsTrailingSpace = suffix.length === 0 || !/^\s/.test(suffix);
+    const nextPrompt = `${prefix}${insertValue}${needsTrailingSpace ? ' ' : ''}${suffix}`;
+    const nextCaret = prefix.length + insertValue.length + (needsTrailingSpace ? 1 : 0);
+
+    this.prompt.set(nextPrompt);
+    this.closeActiveTokenSession(overlay);
+
+    queueMicrotask(() => {
+      textarea.focus();
+      textarea.setSelectionRange(nextCaret, nextCaret);
+      this.resizeTextareaElement(textarea);
+    });
+  }
+
+  protected setHighlightedTokenSuggestion(index: number): void {
+    this.highlightedTokenOptionIndex.set(index);
+  }
+
+  protected closeActiveTokenSession(overlay?: AppOverlayHandle): void {
+    this.activeTokenSession.set(null);
+    this.highlightedTokenOptionIndex.set(0);
+    overlay?.close();
+    this.closeTokenOverlay();
+  }
+
+  private ensureTokenOverlay(
+    composerRoot: HTMLElement,
+    templateRef: TemplateRef<unknown>,
+  ): void {
+    if (this.activeTokenOverlayHandle) {
+      this.activeTokenOverlayHandle.overlayRef.updateSize({
+        width: `${composerRoot.getBoundingClientRect().width}px`,
+      });
+      this.activeTokenOverlayHandle.overlayRef.updatePosition();
+      return;
+    }
+
+    const handle = this.overlayService.createDropdownTemplate(
+      {
+        templateRef,
+        viewContainerRef: this.viewContainerRef,
+      },
+      {
+        origin: composerRoot,
+        hasBackdrop: true,
+        closeOnBackdropClick: true,
+        positions: CHAT_COMPOSER_TOKEN_DROPDOWN_POSITIONS,
+        matchOriginWidth: true,
+        panelClass: 'app-chat-composer-token-overlay',
+      },
+    );
+
+    this.activeTokenOverlayHandle = handle;
+    handle.afterClosed$.subscribe(() => {
+      if (this.activeTokenOverlayHandle?.id === handle.id) {
+        this.activeTokenOverlayHandle = null;
+      }
+    });
+  }
+
+  private closeTokenOverlay(): void {
+    this.activeTokenOverlayHandle?.close();
+    this.activeTokenOverlayHandle = null;
+  }
+
+  private syncActiveToken(textarea: HTMLTextAreaElement): void {
+    const selectionStart = textarea.selectionStart ?? this.prompt().length;
+    const nextSession = this.detectTokenSession(this.prompt(), selectionStart);
+    const currentSession = this.activeTokenSession();
+
+    if (this.areTokenSessionsEqual(currentSession, nextSession)) {
+      return;
+    }
+
+    this.activeTokenSession.set(nextSession);
+    this.highlightedTokenOptionIndex.set(0);
+  }
+
+  private detectTokenSession(
+    value: string,
+    caretIndex: number,
+  ): IChatComposerTokenSession | null {
+    const beforeCaret = value.slice(0, caretIndex);
+    const tokenMatch = /(^|\s)([\/@$])([^\s\/@$]*)$/.exec(beforeCaret);
+    if (!tokenMatch) {
+      return null;
+    }
+
+    const trigger = tokenMatch[2] as '/' | '@' | '$';
+    if (!CHAT_COMPOSER_TOKEN_TRIGGERS.includes(trigger)) {
+      return null;
+    }
+
+    const query = tokenMatch[3] ?? '';
+    const start = caretIndex - (query.length + 1);
+    const end = caretIndex;
+
+    return {
+      kind: this.mapTriggerToKind(trigger),
+      trigger,
+      query,
+      start,
+      end,
+    };
+  }
+
+  private mapTriggerToKind(trigger: '/' | '@' | '$'): ChatComposerTokenKind {
+    switch (trigger) {
+      case '/':
+        return 'slash';
+      case '@':
+        return 'mention';
+      case '$':
+        return 'skill';
+    }
+  }
+
+  private moveTokenSelection(delta: number): void {
+    const suggestions = this.filteredTokenSuggestions();
+    if (suggestions.length === 0) {
+      return;
+    }
+
+    const current = this.highlightedTokenOptionIndex();
+    const next = (current + delta + suggestions.length) % suggestions.length;
+    this.highlightedTokenOptionIndex.set(next);
+  }
+
+  private areTokenSessionsEqual(
+    left: IChatComposerTokenSession | null,
+    right: IChatComposerTokenSession | null,
+  ): boolean {
+    if (left === right) {
+      return true;
+    }
+
+    if (!left || !right) {
+      return false;
+    }
+
+    return (
+      left.kind === right.kind
+      && left.trigger === right.trigger
+      && left.query === right.query
+      && left.start === right.start
+      && left.end === right.end
+    );
+  }
+
+  private selectHighlightedTokenSuggestion(): void {
+    const suggestion = this.filteredTokenSuggestions()[this.highlightedTokenOptionIndex()];
+    if (!suggestion) {
+      return;
+    }
+
+    this.selectTokenSuggestion(suggestion, this.activeTokenOverlayHandle ?? undefined);
+  }
+
+  private async loadPromptSuggestions(): Promise<void> {
+    try {
+      const prompts = await this.promptClient.listPrompts();
+      this.promptSuggestions.set(prompts.map((prompt) => this.toTokenSuggestion(prompt)));
+    } catch {
+      this.promptSuggestions.set([]);
+    }
+  }
+
+  private toTokenSuggestion(prompt: IAiPromptResponseDto): IChatComposerTokenSuggestion {
+    const label = prompt.name?.trim() || prompt.id;
+    const description = prompt.description?.trim()
+      || prompt.argumentHint?.trim()
+      || prompt.type?.replaceAll('_', ' ')
+      || prompt.visibility;
+
+    return {
+      id: prompt.id,
+      label,
+      description,
+      insertText: prompt.id,
+    };
   }
 
   private async toAttachment(file: File): Promise<IChatComposerAttachment> {

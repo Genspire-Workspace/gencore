@@ -6,15 +6,20 @@ import { FormsModule } from '@angular/forms';
 import { IconComponent } from '../../../icons/icon.component';
 import { TooltipDirective } from '../../../shared/tooltip';
 import { ChatComposerBaseDirective } from './chat-composer.base';
+import { ChatComposerTokenMenuComponent } from './chat-composer-token-menu.component';
 
 @Component({
   selector: 'app-ai-chat-composer',
   host: {
     class: 'block',
   },
-  imports: [CommonModule, FormsModule, IconComponent, TooltipDirective],
+  imports: [CommonModule, FormsModule, IconComponent, TooltipDirective, ChatComposerTokenMenuComponent],
   template: `
-    <form class="flex flex-col gap-3 rounded-3xl border border-base-300 bg-base p-2" (ngSubmit)="onSubmit()">
+    <form
+      #composerRoot
+      class="flex flex-col gap-3 rounded-3xl border border-base-300 bg-base p-2"
+      (ngSubmit)="onSubmit()"
+    >
       <div class="flex items-center justify-between px-2 pt-1">
         <div class="inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-base-content/50">
           <span
@@ -34,11 +39,24 @@ import { ChatComposerBaseDirective } from './chat-composer.base';
         [ngModel]="prompt()"
         (ngModelChange)="onPromptChange($event, promptTextarea)"
         (keydown)="onPromptKeydown($event)"
+        (keyup)="onPromptSelectionChange(promptTextarea)"
+        (click)="onPromptSelectionChange(promptTextarea)"
+        (focus)="onPromptSelectionChange(promptTextarea)"
         name="prompt"
         placeholder="Ask something like: What is the capital of Spain?"
         [rows]="minRows()"
         [disabled]="sending()"
       ></textarea>
+
+      <ng-template #tokenMenu let-overlay>
+        <app-ai-chat-composer-token-menu
+          [title]="tokenDropdownTitle()"
+          [options]="filteredTokenSuggestions()"
+          [highlightedIndex]="highlightedTokenOptionIndex()"
+          (highlight)="setHighlightedTokenSuggestion($event)"
+          (select)="selectTokenSuggestion($event, overlay)"
+        />
+      </ng-template>
 
       @if (attachments().length > 0) {
         <div class="flex flex-wrap gap-2 px-2">

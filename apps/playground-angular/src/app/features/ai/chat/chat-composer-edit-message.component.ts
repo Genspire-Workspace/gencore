@@ -3,15 +3,17 @@ import { Component, output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { IconComponent } from '../../../icons/icon.component';
 import { ChatComposerBaseDirective } from './chat-composer.base';
+import { ChatComposerTokenMenuComponent } from './chat-composer-token-menu.component';
 
 @Component({
-  selector: 'app-ai-chat-edit-message-composer',
+  selector: 'app-ai-chat-composer-edit-message',
   host: {
     class: 'block',
   },
-  imports: [CommonModule, FormsModule, IconComponent],
+  imports: [CommonModule, FormsModule, IconComponent, ChatComposerTokenMenuComponent],
   template: `
     <form
+      #composerRoot
       class="flex flex-col gap-3 rounded-3xl border border-primary/25 bg-base p-2 shadow-sm"
       (ngSubmit)="onSubmit()"
     >
@@ -32,11 +34,24 @@ import { ChatComposerBaseDirective } from './chat-composer.base';
         [ngModel]="prompt()"
         (ngModelChange)="onPromptChange($event, promptTextarea)"
         (keydown)="onPromptKeydown($event)"
+        (keyup)="onPromptSelectionChange(promptTextarea)"
+        (click)="onPromptSelectionChange(promptTextarea)"
+        (focus)="onPromptSelectionChange(promptTextarea)"
         name="prompt"
         placeholder="Revise this message..."
         [rows]="minRows()"
         [disabled]="sending()"
       ></textarea>
+
+      <ng-template #tokenMenu let-overlay>
+        <app-ai-chat-composer-token-menu
+          [title]="tokenDropdownTitle()"
+          [options]="filteredTokenSuggestions()"
+          [highlightedIndex]="highlightedTokenOptionIndex()"
+          (highlight)="setHighlightedTokenSuggestion($event)"
+          (select)="selectTokenSuggestion($event, overlay)"
+        />
+      </ng-template>
 
       @if (attachments().length > 0) {
         <div class="flex flex-wrap gap-2 px-2">
@@ -104,6 +119,6 @@ import { ChatComposerBaseDirective } from './chat-composer.base';
     </form>
   `,
 })
-export class ChatEditMessageComposerComponent extends ChatComposerBaseDirective {
+export class ChatComposerEditMessageComponent extends ChatComposerBaseDirective {
   readonly cancelEdit = output<void>();
 }

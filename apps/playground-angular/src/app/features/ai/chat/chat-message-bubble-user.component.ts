@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, input, model, output } from '@angular/core';
-import { ChatEditMessageComposerComponent } from './chat-edit-message-composer.component';
+import { ChatComposerEditMessageComponent } from './chat-composer-edit-message.component';
 import { ChatMessageActionsComponent } from './chat-message-actions.component';
 import { ChatMessageContentComponent } from './chat-message-content.component';
 import type {
@@ -16,7 +16,7 @@ import type {
   },
   imports: [
     CommonModule,
-    ChatEditMessageComposerComponent,
+    ChatComposerEditMessageComponent,
     ChatMessageActionsComponent,
     ChatMessageContentComponent,
   ],
@@ -29,7 +29,7 @@ import type {
       [class.w-full]="editing()"
     >
       @if (editing()) {
-        <app-ai-chat-edit-message-composer
+        <app-ai-chat-composer-edit-message
           [(prompt)]="prompt"
           [(attachments)]="attachments"
           [sending]="sending()"
