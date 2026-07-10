@@ -15,7 +15,11 @@ import {
   signal,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import type { IAiModelResponseDto, IAiPromptResponseDto, IAiProviderResponseDto } from '@genspire/sdk-ai';
+import type {
+  IAiModelResponseDto,
+  IAiPromptResponseDto,
+  IAiProviderResponseDto,
+} from '@genspire/sdk-ai';
 import { appEnv } from '../../../../core/app-env';
 import { IconComponent } from '../../../../icons/icon.component';
 import { OverlayService } from '../../../../shared/overlay';
@@ -59,121 +63,120 @@ interface IAiModelCapabilitiesView {
   template: `
     <div class="flex h-full min-h-0 flex-col">
       <div class="flex-1 space-y-5 overflow-y-auto pr-1">
-      <div>
-        <h3 class="text-lg font-semibold text-base-content">Session Settings</h3>
-        <p class="mt-1 text-sm text-base-content/60">
-          Edit session metadata and generation defaults.
-        </p>
-      </div>
-
-      <div class="space-y-4">
-        <label class="block space-y-2">
-          <span class="text-sm font-medium text-base-content/80">Title</span>
-          <input
-            class="w-full rounded-2xl border border-base-300 bg-base px-4 py-3 text-base-content outline-none transition focus:border-primary"
-            type="text"
-            [ngModel]="title()"
-            (ngModelChange)="title.set($event)"
-          />
-        </label>
-
-        <label class="block space-y-2">
-          <span class="text-sm font-medium text-base-content/80">AI Model</span>
-          <div class="flex gap-2">
-            <input
-              class="min-w-0 flex-1 rounded-2xl border border-base-300 bg-base px-4 py-3 text-base-content outline-none transition focus:border-primary"
-              type="text"
-              [ngModel]="selectedModelPath()"
-              (ngModelChange)="updateModelPathValue($event)"
-              placeholder="provider:model"
-            />
-            <button
-              #modelPathTrigger
-              class="inline-flex h-12.5 w-12.5 shrink-0 items-center justify-center rounded-2xl border border-base-300 bg-base text-base-content/70 transition hover:bg-base-200 hover:text-base-content disabled:cursor-not-allowed disabled:opacity-50"
-              type="button"
-              (click)="openModelPathDropdown(modelPathTrigger)"
-              [disabled]="modelPathOptions().length === 0"
-              aria-label="Select provider:model path"
-            >
-              <app-icon iconName="travel_explore" size="sm" aria-hidden="true" />
-            </button>
-          </div>
-          <p class="text-xs text-base-content/55">
-            Quick selector across every available provider and model.
+        <div>
+          <h3 class="text-lg font-semibold text-base-content">Session Settings</h3>
+          <p class="mt-1 text-sm text-base-content/60">
+            Edit session metadata and generation defaults.
           </p>
-          @if (selectedModelTextLimitSummary()) {
-            <p class="text-xs text-base-content/55">
-              Text limits: {{ selectedModelTextLimitSummary() }}
-            </p>
-          }
-        </label>
-
-        <label class="block space-y-2">
-          <span class="text-sm font-medium text-base-content/80">System Prompt</span>
-          <textarea
-            class="min-h-28 w-full rounded-2xl border border-base-300 bg-base px-4 py-3 text-base-content outline-none transition focus:border-primary"
-            [ngModel]="systemPrompt()"
-            (ngModelChange)="systemPrompt.set($event)"
-          ></textarea>
-        </label>
+        </div>
 
         <div class="space-y-4">
           <label class="block space-y-2">
-            <div class="flex items-center justify-between gap-4">
-              <span class="text-sm font-medium text-base-content/80">Temperature</span>
-              <span class="min-w-16 text-right text-sm font-medium text-base-content/70">
-                {{ temperatureDisplay() }}
-              </span>
-            </div>
+            <span class="text-sm font-medium text-base-content/80">Title</span>
             <input
-              class="range range-primary w-full"
-              type="range"
-              min="0"
-              max="2"
-              step="0.1"
-              [ngModel]="temperatureSliderValue()"
-              (ngModelChange)="setTemperatureFromSlider($event)"
+              class="w-full rounded-2xl border border-base-300 bg-base px-4 py-3 text-base-content outline-none transition focus:border-primary"
+              type="text"
+              [ngModel]="title()"
+              (ngModelChange)="title.set($event)"
             />
           </label>
 
           <label class="block space-y-2">
-            <div class="flex items-center justify-between gap-4">
-              <span class="text-sm font-medium text-base-content/80">Top P</span>
-              <span class="min-w-16 text-right text-sm font-medium text-base-content/70">
-                {{ topPDisplay() }}
-              </span>
+            <span class="text-sm font-medium text-base-content/80">AI Model</span>
+            <div class="flex gap-2">
+              <input
+                class="min-w-0 flex-1 rounded-2xl border border-base-300 bg-base px-4 py-3 text-base-content outline-none transition focus:border-primary"
+                type="text"
+                [ngModel]="selectedModelPath()"
+                (ngModelChange)="updateModelPathValue($event)"
+                placeholder="provider:model"
+              />
+              <button
+                #modelPathTrigger
+                class="inline-flex h-12.5 w-12.5 shrink-0 items-center justify-center rounded-2xl border border-base-300 bg-base text-base-content/70 transition hover:bg-base-200 hover:text-base-content disabled:cursor-not-allowed disabled:opacity-50"
+                type="button"
+                (click)="openModelPathDropdown(modelPathTrigger)"
+                [disabled]="modelPathOptions().length === 0"
+                aria-label="Select provider:model path"
+              >
+                <app-icon iconName="travel_explore" size="sm" aria-hidden="true" />
+              </button>
             </div>
-            <input
-              class="range range-primary w-full"
-              type="range"
-              min="0"
-              max="1"
-              step="0.05"
-              [ngModel]="topPSliderValue()"
-              (ngModelChange)="setTopPFromSlider($event)"
-            />
+            <p class="text-xs text-base-content/55">
+              Quick selector across every available provider and model.
+            </p>
+            @if (selectedModelTextLimitSummary()) {
+              <p class="text-xs text-base-content/55">
+                Text limits: {{ selectedModelTextLimitSummary() }}
+              </p>
+            }
           </label>
 
           <label class="block space-y-2">
-            <div class="flex items-center justify-between gap-4">
-              <span class="text-sm font-medium text-base-content/80">Max Tokens</span>
-              <span class="min-w-20 text-right text-sm font-medium text-base-content/70">
-                {{ maxTokensDisplay() }}
-              </span>
-            </div>
-            <input
-              class="range range-primary w-full"
-              type="range"
-              min="0"
-              [max]="maxTokenSliderMax"
-              step="1"
-              [ngModel]="maxTokenSliderValue()"
-              (ngModelChange)="setMaxTokensFromSlider($event)"
-            />
+            <span class="text-sm font-medium text-base-content/80">System Prompt</span>
+            <textarea
+              class="min-h-28 w-full rounded-2xl border border-base-300 bg-base px-4 py-3 text-base-content outline-none transition focus:border-primary"
+              [ngModel]="systemPrompt()"
+              (ngModelChange)="systemPrompt.set($event)"
+            ></textarea>
           </label>
+
+          <div class="space-y-4">
+            <label class="block space-y-2">
+              <div class="flex items-center justify-between gap-4">
+                <span class="text-sm font-medium text-base-content/80">Temperature</span>
+                <span class="min-w-16 text-right text-sm font-medium text-base-content/70">
+                  {{ temperatureDisplay() }}
+                </span>
+              </div>
+              <input
+                class="range range-primary w-full"
+                type="range"
+                min="0"
+                max="2"
+                step="0.1"
+                [ngModel]="temperatureSliderValue()"
+                (ngModelChange)="setTemperatureFromSlider($event)"
+              />
+            </label>
+
+            <label class="block space-y-2">
+              <div class="flex items-center justify-between gap-4">
+                <span class="text-sm font-medium text-base-content/80">Top P</span>
+                <span class="min-w-16 text-right text-sm font-medium text-base-content/70">
+                  {{ topPDisplay() }}
+                </span>
+              </div>
+              <input
+                class="range range-primary w-full"
+                type="range"
+                min="0"
+                max="1"
+                step="0.05"
+                [ngModel]="topPSliderValue()"
+                (ngModelChange)="setTopPFromSlider($event)"
+              />
+            </label>
+
+            <label class="block space-y-2">
+              <div class="flex items-center justify-between gap-4">
+                <span class="text-sm font-medium text-base-content/80">Max Tokens</span>
+                <span class="min-w-20 text-right text-sm font-medium text-base-content/70">
+                  {{ maxTokensDisplay() }}
+                </span>
+              </div>
+              <input
+                class="range range-primary w-full"
+                type="range"
+                min="0"
+                [max]="maxTokenSliderMax"
+                step="1"
+                [ngModel]="maxTokenSliderValue()"
+                (ngModelChange)="setMaxTokensFromSlider($event)"
+              />
+            </label>
+          </div>
         </div>
-      </div>
-
       </div>
 
       <div class="mt-5 border-t border-base-300 pt-4">
@@ -217,12 +220,14 @@ interface IAiModelCapabilitiesView {
     </ng-template>
 
     <ng-template #deleteModal let-overlay>
-      <div class="w-[min(28rem,calc(100vw-2rem))] rounded-3xl border border-base-300 bg-base-100 p-6 shadow-2xl">
+      <div
+        class="w-[min(28rem,calc(100vw-2rem))] rounded-3xl border border-base-300 bg-base-100 p-6 shadow-2xl"
+      >
         <h3 class="text-lg font-semibold text-base-content">Delete Session</h3>
         <p class="mt-2 text-sm text-base-content/60">
           Delete
-          <span class="font-medium text-base-content">{{ title() || 'this session' }}</span>?
-          This action cannot be undone.
+          <span class="font-medium text-base-content">{{ title() || 'this session' }}</span
+          >? This action cannot be undone.
         </p>
 
         <div class="mt-6 flex items-center justify-end gap-3">
@@ -303,9 +308,13 @@ export class SessionConfigFormComponent {
     return `${providerId}:${modelName}`;
   });
 
-  protected readonly temperatureSliderValue = computed(() => this.readClampedNumber(this.temperature(), 0, 2, 1));
+  protected readonly temperatureSliderValue = computed(() =>
+    this.readClampedNumber(this.temperature(), 0, 2, 1),
+  );
   protected readonly topPSliderValue = computed(() => this.readClampedNumber(this.topP(), 0, 1, 1));
-  protected readonly maxTokenSliderValue = computed(() => this.resolveMaxTokenIndex(this.maxTokens()));
+  protected readonly maxTokenSliderValue = computed(() =>
+    this.resolveMaxTokenIndex(this.maxTokens()),
+  );
   protected readonly temperatureDisplay = computed(() => this.temperatureSliderValue().toFixed(1));
   protected readonly topPDisplay = computed(() => this.topPSliderValue().toFixed(2));
   protected readonly selectedModelCapabilities = computed<IAiModelCapabilitiesView | null>(() => {
@@ -351,7 +360,10 @@ export class SessionConfigFormComponent {
 
       this.title.set(session.title || '');
       this.provider.set(settings.provider || appEnv.defaultAiProvider);
-      this.model.set(settings.model || this.resolveDefaultModelValue(settings.provider || appEnv.defaultAiProvider));
+      this.model.set(
+        settings.model ||
+          this.resolveDefaultModelValue(settings.provider || appEnv.defaultAiProvider),
+      );
       this.systemPrompt.set(this.buildEffectiveSystemPrompt(settings));
       this.temperature.set(settings.temperature?.toString() || DEFAULT_TEMPERATURE);
       this.topP.set(settings.topP?.toString() || DEFAULT_TOP_P);
@@ -517,7 +529,12 @@ export class SessionConfigFormComponent {
     });
   }
 
-  private readClampedNumber(value: string | number, min: number, max: number, fallback: number): number {
+  private readClampedNumber(
+    value: string | number,
+    min: number,
+    max: number,
+    fallback: number,
+  ): number {
     const parsed = typeof value === 'number' ? value : Number(value.trim());
     if (!Number.isFinite(parsed)) {
       return fallback;
@@ -561,7 +578,9 @@ export class SessionConfigFormComponent {
     return closestIndex;
   }
 
-  private readModelCapabilities(model: IAiModelResponseDto | null): IAiModelCapabilitiesView | null {
+  private readModelCapabilities(
+    model: IAiModelResponseDto | null,
+  ): IAiModelCapabilitiesView | null {
     const capabilities = model?.capabilities;
     if (!capabilities || typeof capabilities !== 'object') {
       return null;
@@ -574,7 +593,12 @@ export class SessionConfigFormComponent {
   }
 
   private readPositiveInteger(value: unknown): number | undefined {
-    const parsed = typeof value === 'number' ? value : typeof value === 'string' ? Number(value.trim()) : Number.NaN;
+    const parsed =
+      typeof value === 'number'
+        ? value
+        : typeof value === 'string'
+          ? Number(value.trim())
+          : Number.NaN;
     if (!Number.isFinite(parsed)) {
       return undefined;
     }
@@ -596,8 +620,10 @@ export class SessionConfigFormComponent {
     return {
       provider: typeof settings['provider'] === 'string' ? settings['provider'] : undefined,
       model: typeof settings['model'] === 'string' ? settings['model'] : undefined,
-      systemPrompt: typeof settings['systemPrompt'] === 'string' ? settings['systemPrompt'] : undefined,
-      temperature: typeof settings['temperature'] === 'number' ? settings['temperature'] : undefined,
+      systemPrompt:
+        typeof settings['systemPrompt'] === 'string' ? settings['systemPrompt'] : undefined,
+      temperature:
+        typeof settings['temperature'] === 'number' ? settings['temperature'] : undefined,
       topP: typeof settings['topP'] === 'number' ? settings['topP'] : undefined,
       maxTokens: typeof settings['maxTokens'] === 'number' ? settings['maxTokens'] : undefined,
       prompts: this.readPromptReferences(settings['prompts']),
@@ -616,7 +642,9 @@ export class SessionConfigFormComponent {
     };
   }
 
-  private readPromptReference(value: unknown): { id?: string; name?: string; type?: string } | undefined {
+  private readPromptReference(
+    value: unknown,
+  ): { id?: string; name?: string; type?: string } | undefined {
     if (!value || typeof value !== 'object') {
       return undefined;
     }
@@ -658,23 +686,18 @@ export class SessionConfigFormComponent {
       return '';
     }
 
-    const prompt = prompts.find((candidate) =>
-      (reference?.id && candidate.id === reference.id)
-      || (
-        reference?.name
-        && typeof candidate.name === 'string'
-        && candidate.name.trim().toLowerCase() === reference.name.trim().toLowerCase()
-      )
-      || (
-        reference?.type
-        && typeof candidate.type === 'string'
-        && candidate.type.trim().toLowerCase() === reference.type.trim().toLowerCase()
-        && candidate.isDefault === true
-      )
-      || (
-        typeof candidate.name === 'string'
-        && candidate.name.trim().toLowerCase() === DEFAULT_SYSTEM_PROMPT_NAME.toLowerCase()
-      ),
+    const prompt = prompts.find(
+      (candidate) =>
+        (reference?.id && candidate.id === reference.id) ||
+        (reference?.name &&
+          typeof candidate.name === 'string' &&
+          candidate.name.trim().toLowerCase() === reference.name.trim().toLowerCase()) ||
+        (reference?.type &&
+          typeof candidate.type === 'string' &&
+          candidate.type.trim().toLowerCase() === reference.type.trim().toLowerCase() &&
+          candidate.isDefault === true) ||
+        (typeof candidate.name === 'string' &&
+          candidate.name.trim().toLowerCase() === DEFAULT_SYSTEM_PROMPT_NAME.toLowerCase()),
     );
 
     return typeof prompt?.template === 'string' ? prompt.template.trim() : '';
@@ -686,7 +709,9 @@ export class SessionConfigFormComponent {
       return '';
     }
 
-    const defaultPrompt = this.resolveDefaultSystemPromptTemplate(this.readSettings(this.session()));
+    const defaultPrompt = this.resolveDefaultSystemPromptTemplate(
+      this.readSettings(this.session()),
+    );
     if (!defaultPrompt) {
       return normalizedValue;
     }
@@ -715,8 +740,8 @@ export class SessionConfigFormComponent {
 
     const currentSystemPrompt = this.systemPrompt().trim();
     if (
-      (!settings.systemPrompt && !currentSystemPrompt)
-      || currentSystemPrompt === (settings.systemPrompt?.trim() ?? '')
+      (!settings.systemPrompt && !currentSystemPrompt) ||
+      currentSystemPrompt === (settings.systemPrompt?.trim() ?? '')
     ) {
       this.systemPrompt.set(this.buildEffectiveSystemPrompt(settings));
     }
@@ -757,6 +782,9 @@ export class SessionConfigFormComponent {
       }
     }
 
-    return models[0]?.name || (normalizedProviderId === appEnv.defaultAiProvider ? appEnv.defaultAiModel : '');
+    return (
+      models[0]?.name ||
+      (normalizedProviderId === appEnv.defaultAiProvider ? appEnv.defaultAiModel : '')
+    );
   }
 }
