@@ -116,6 +116,19 @@ export abstract class ChatComposerBaseDirective {
   protected readonly toolSuggestions = signal<IChatComposerTokenSuggestion[]>([]);
   protected readonly promptSuggestionsLoading = signal(false);
   protected readonly expandedPromptReferenceId = signal<string | null>(null);
+  protected readonly hasRequiredPromptVariablesFilled = computed(() => {
+    const promptRefs = this.references().filter(
+      (reference): reference is IChatComposerPromptReference => reference.kind === 'prompt',
+    );
+    if (promptRefs.length === 0) {
+      return false;
+    }
+    return promptRefs.every((reference) =>
+      reference.variables
+        .filter((variable) => variable.required)
+        .every((variable) => variable.value.trim().length > 0),
+    );
+  });
   protected readonly filteredTokenSuggestions = computed(() => {
     const session = this.activeTokenSession();
     if (!session) {
@@ -162,7 +175,7 @@ export abstract class ChatComposerBaseDirective {
   constructor() {
     effect(() => {
       const textarea = this.textareaRef()?.nativeElement;
-      this.prompt();
+      const prompt = this.prompt();
       this.minRows();
       this.maxRows();
 
@@ -170,7 +183,13 @@ export abstract class ChatComposerBaseDirective {
         return;
       }
 
-      queueMicrotask(() => this.resizeTextareaElement(textarea));
+      queueMicrotask(() => {
+        if (textarea.value !== prompt) {
+          textarea.value = prompt;
+        }
+
+        this.resizeTextareaElement(textarea);
+      });
     });
 
     effect(() => {
@@ -231,7 +250,7 @@ export abstract class ChatComposerBaseDirective {
     return (
       this.prompt().trim().length > 0
       || this.attachments().length > 0
-      || this.references().length > 0
+      || this.hasRequiredPromptVariablesFilled()
     );
   }
 
@@ -320,6 +339,13 @@ export abstract class ChatComposerBaseDirective {
       return;
     }
 
+    if (this.prompt().trim().length === 0 && this.hasRequiredPromptVariablesFilled()) {
+      void this.buildPromptFromReferences().then(() => {
+        queueMicrotask(() => this.submit.emit());
+      });
+      return;
+    }
+
     this.submit.emit();
   }
 
@@ -391,6 +417,46 @@ export abstract class ChatComposerBaseDirective {
     this.expandedPromptReferenceId.update((current) =>
       current === referenceId ? null : referenceId,
     );
+  }
+
+  clearComposer(): void {
+    this.prompt.set('');
+    this.attachments.set([]);
+    this.references.set([]);
+    this.expandedPromptReferenceId.set(null);
+    this.closeActiveTokenSession();
+  }
+
+  private async buildPromptFromReferences(): Promise<void> {
+    const promptRefs = this.references().filter(
+      (reference): reference is IChatComposerPromptReference => reference.kind === 'prompt',
+    );
+
+    const renderedParts: string[] = [];
+
+    for (const reference of promptRefs) {
+      try {
+        const prompt = await this.promptClient.getPrompt(reference.promptId);
+        const template = typeof prompt.template === 'string' ? prompt.template : '';
+        if (!template) {
+          continue;
+        }
+
+        const rendered = template.replaceAll(
+          /\{\{\s*([a-zA-Z0-9_.-]+)\s*\}\}/g,
+          (_match, variableName: string) => {
+            const variable = reference.variables.find((v) => v.name === variableName);
+            return variable?.value ?? '';
+          },
+        );
+        renderedParts.push(rendered);
+      } catch {
+        // skip prompts that fail to load
+      }
+    }
+
+    const nextPrompt = renderedParts.join('\n\n');
+    this.prompt.set(nextPrompt);
   }
 
   protected updatePromptReferenceVariable(
@@ -620,13 +686,15 @@ export abstract class ChatComposerBaseDirective {
   }
 
   private addPromptReference(prompt: IAiPromptResponseDto): void {
+    const referenceId = `prompt-${prompt.id}`;
+
     this.references.update((current) => {
       if (current.some((reference) => reference.kind === 'prompt' && reference.promptId === prompt.id)) {
         return current;
       }
 
       const reference: IChatComposerPromptReference = {
-        id: `prompt-${prompt.id}`,
+        id: referenceId,
         kind: 'prompt',
         promptId: prompt.id,
         name: prompt.name?.trim() || prompt.id,
@@ -648,6 +716,8 @@ export abstract class ChatComposerBaseDirective {
 
       return [...current, reference];
     });
+
+    this.expandedPromptReferenceId.set(referenceId);
   }
 
   private async toAttachment(file: File): Promise<IChatComposerAttachment> {

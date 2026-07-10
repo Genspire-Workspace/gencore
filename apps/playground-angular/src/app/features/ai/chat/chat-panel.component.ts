@@ -1,6 +1,6 @@
 // file: apps\playground-angular\src\app\features\ai\chat\chat-panel.component.ts
 
-import { Component, computed, input, model, output } from '@angular/core';
+import { Component, computed, input, model, output, viewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ChatHistoryComponent } from './chat-history.component';
 import { ChatComposerComponent } from './chat-composer.component';
@@ -69,7 +69,7 @@ import type { IAiSessionClientState } from '../sessions/ai-session-types';
         [sending]="sending()"
         [submitLocked]="isEditing()"
         [state]="composerState()"
-        (submit)="send.emit()"
+        (submit)="onComposerSubmit()"
         (cancel)="cancel.emit()"
       />
     </div>
@@ -95,6 +95,8 @@ export class ChatPanelComponent {
   readonly branch = output<IUiChatMessageActionEvent>();
   readonly timelineChange = output<string | null>();
   readonly cancelEdit = output<void>();
+
+  private readonly composerRef = viewChild(ChatComposerComponent);
 
   protected readonly title = computed(
     () => this.sessionState()?.graph?.session?.title ?? '',
@@ -163,4 +165,16 @@ export class ChatPanelComponent {
         };
       });
   });
+
+  protected onComposerSubmit(): void {
+    this.send.emit();
+    globalThis.setTimeout(() => this.clearComposer(), 100);
+  }
+
+  protected clearComposer(): void {
+    this.prompt.set('');
+    this.attachments.set([]);
+    this.references.set([]);
+    this.composerRef()?.clearComposer();
+  }
 }

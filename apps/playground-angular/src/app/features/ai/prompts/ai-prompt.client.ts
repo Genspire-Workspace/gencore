@@ -34,6 +34,10 @@ export class AiPromptClient {
     return response.items;
   }
 
+  async getPrompt(promptId: string): Promise<IAiPromptResponseDto> {
+    return await this.client.getPrompt(promptId);
+  }
+
   async createPrompt(input: ICreateAiPromptRequestDto): Promise<IAiPromptResponseDto> {
     return await this.client.createPrompt(input);
   }

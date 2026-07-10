@@ -1,8 +1,9 @@
 // file: apps\playground-angular\src\app\features\ai\sessions\ai-session-page.component.ts
 
 import { CommonModule } from '@angular/common';
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, inject, model, signal } from '@angular/core';
 import { ChatPanelComponent } from '../chat/chat-panel.component';
+import type { IChatComposerReference } from '../chat/chat-message.types';
 import { AiSessionStore } from './ai-session-store';
 import type { IAiSessionConfigDraft, IAiSessionResponse } from './ai-session-types';
 import { SessionConfigFormComponent } from './components/session-config-form.component';
@@ -43,12 +44,13 @@ import { StatusBannerComponent } from './components/status-banner.component';
           (promptChange)="store.setCurrentPrompt($event)"
           [attachments]="store.currentAttachments()"
           (attachmentsChange)="store.setCurrentAttachments($event)"
+          [(references)]="references"
           [editingPrompt]="store.currentEditingPrompt()"
           (editingPromptChange)="store.setCurrentEditingPrompt($event)"
           [editingAttachments]="store.currentEditingAttachments()"
           (editingAttachmentsChange)="store.setCurrentEditingAttachments($event)"
           (timelineChange)="store.setActiveTimeline($event)"
-          (send)="store.sendMessage()"
+          (send)="onSend()"
           (cancel)="store.stopStreaming()"
           (cancelEdit)="store.cancelEditMessage()"
           (edit)="store.beginEditMessage($event.message)"
@@ -82,6 +84,7 @@ import { StatusBannerComponent } from './components/status-banner.component';
 export class AiSessionPageComponent {
   protected readonly store = inject(AiSessionStore);
   protected readonly configuredSessionId = signal<string | null>(null);
+  protected readonly references = model<IChatComposerReference[]>([]);
 
   protected readonly configuredSession = computed<IAiSessionResponse | null>(() => {
     const sessionId = this.configuredSessionId();
@@ -105,6 +108,10 @@ export class AiSessionPageComponent {
 
   constructor() {
     void this.store.reloadSession();
+  }
+
+  protected async onSend(): Promise<void> {
+    await this.store.sendMessage();
   }
 
   protected toggleSettings(sessionId: string): void {

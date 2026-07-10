@@ -4,6 +4,7 @@ import { Component, effect, ElementRef, inject, input, model, output, viewChild 
 import { CommonModule } from '@angular/common';
 import { ChatMessageBubbleAssistantComponent } from './chat-message-bubble-assistant.component';
 import { ChatMessageBubbleUserComponent } from './chat-message-bubble-user.component';
+import { ChatHistoryScrollBottomComponent } from './chat-history-scroll-bottom.component';
 import type {
   IChatComposerAttachment,
   IChatComposerReference,
@@ -18,7 +19,7 @@ import { ScrollService } from '../../../shared/scroll';
   host: {
     class: 'block flex min-h-0 flex-1 flex-col overflow-hidden rounded-3xl bg-base border border-base-300 p-4',
   },
-  imports: [CommonModule, ChatMessageBubbleAssistantComponent, ChatMessageBubbleUserComponent],
+  imports: [CommonModule, ChatMessageBubbleAssistantComponent, ChatMessageBubbleUserComponent, ChatHistoryScrollBottomComponent],
   template: `
     @if (messages().length === 0 && !loading()) {
       <div
@@ -27,36 +28,46 @@ import { ScrollService } from '../../../shared/scroll';
         Start a session and send a message to see streamed responses.
       </div>
     } @else {
-      <div
-        #scrollContainer
-        class="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto pr-2"
-        (scroll)="onScroll()"
-      >
-        @for (message of messages(); track message.id) {
-          <div class="group flex w-full">
-            @if (message.role === 'user') {
-              <app-ai-chat-message-bubble-user
-                [message]="message"
-                [editing]="message.id === editingMessageId()"
-                [sending]="sending()"
-                [(prompt)]="editingPrompt"
-                [(attachments)]="editingAttachments"
-                [(references)]="editingReferences"
-                (edit)="edit.emit($event)"
-                (submit)="submit.emit()"
-                (cancel)="cancel.emit()"
-                (cancelEdit)="cancelEdit.emit()"
-              />
-            } @else {
-              <app-ai-chat-message-bubble-assistant
-                [message]="message"
-                (feedback)="feedback.emit($event)"
-                (regenerate)="regenerate.emit($event)"
-                (branch)="branch.emit($event)"
-              />
-            }
-          </div>
-        }
+      <div class="relative flex min-h-0 flex-1 flex-col">
+        <div
+          #scrollContainer
+          class="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto pr-2"
+          (scroll)="onScroll()"
+        >
+          @for (message of messages(); track message.id) {
+            <div class="group flex w-full">
+              @if (message.role === 'user') {
+                <app-ai-chat-message-bubble-user
+                  [message]="message"
+                  [editing]="message.id === editingMessageId()"
+                  [sending]="sending()"
+                  [(prompt)]="editingPrompt"
+                  [(attachments)]="editingAttachments"
+                  [(references)]="editingReferences"
+                  (edit)="edit.emit($event)"
+                  (submit)="submit.emit()"
+                  (cancel)="cancel.emit()"
+                  (cancelEdit)="cancelEdit.emit()"
+                />
+              } @else {
+                <app-ai-chat-message-bubble-assistant
+                  [message]="message"
+                  (feedback)="feedback.emit($event)"
+                  (regenerate)="regenerate.emit($event)"
+                  (branch)="branch.emit($event)"
+                />
+              }
+            </div>
+          }
+        </div>
+
+        <div class="absolute bottom-2 right-8 z-10 pointer-events-none">
+          <app-chat-history-scroll-bottom
+            class="pointer-events-auto"
+            [scrollContainer]="scrollContainer"
+            (scrolled)="onScrollToBottom()"
+          />
+        </div>
       </div>
     }
   `,
@@ -94,6 +105,10 @@ export class ChatHistoryComponent {
     }
 
     this.shouldFollowStreaming = this.isNearBottom(container);
+  }
+
+  protected onScrollToBottom(): void {
+    this.shouldFollowStreaming = true;
   }
 
   constructor() {

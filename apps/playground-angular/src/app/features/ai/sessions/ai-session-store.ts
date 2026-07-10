@@ -112,6 +112,8 @@ export class AiSessionStore {
 
   async sendMessage(sessionId?: string): Promise<void> {
     await this.workspace.sendMessage(sessionId);
+    this.workspace.setCurrentPrompt('');
+    this.workspace.setCurrentAttachments([]);
   }
 
   stopStreaming(sessionId?: string): void {
