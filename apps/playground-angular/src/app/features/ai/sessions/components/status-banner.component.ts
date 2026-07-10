@@ -14,7 +14,7 @@ type BannerSeverity = 'info' | 'danger';
   template: `
     @if (message()) {
       <div
-        class="mt-4 shrink-0 rounded-2xl border px-4 py-3 text-sm"
+        class="mt-4 rounded-2xl border px-4 py-3 text-sm"
         [class.border-info]="severity() === 'info'"
         [class.bg-info]="severity() === 'info'"
         [class.bg-info/10]="severity() === 'info'"

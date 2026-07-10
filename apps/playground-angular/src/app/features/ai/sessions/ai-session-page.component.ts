@@ -8,7 +8,6 @@ import { AiSessionStore } from './ai-session-store';
 import type { IAiSessionConfigDraft, IAiSessionResponse } from './ai-session-types';
 import { SessionConfigFormComponent } from './components/session-config-form.component';
 import { SessionSidebarComponent } from './components/session-sidebar.component';
-import { StatusBannerComponent } from './components/status-banner.component';
 
 @Component({
   selector: 'app-ai-session-page',
@@ -19,7 +18,6 @@ import { StatusBannerComponent } from './components/status-banner.component';
     CommonModule,
     SessionSidebarComponent,
     SessionConfigFormComponent,
-    StatusBannerComponent,
     ChatPanelComponent,
   ],
   template: `
@@ -66,13 +64,12 @@ import { StatusBannerComponent } from './components/status-banner.component';
             <div class="min-h-0 flex-1 overflow-y-auto">
               <app-ai-session-config-form
                 [session]="configuredSession()!"
+                [streamStatus]="store.streamStatus()"
+                [error]="store.error()"
                 (save)="saveSettings($event)"
                 (delete)="deleteSession($event)"
                 (cancel)="closeSettings()"
               />
-
-              <app-ai-status-banner [message]="store.streamStatus()" severity="info" />
-              <app-ai-status-banner [message]="store.error()" severity="danger" />
             </div>
           </aside>
         }

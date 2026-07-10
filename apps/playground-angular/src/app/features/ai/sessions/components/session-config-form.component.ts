@@ -26,6 +26,7 @@ import {
   ProviderModelPathDropdownComponent,
   type IAiProviderModelPathOption,
 } from '../../providers/components/provider-model-path-dropdown.component';
+import { StatusBannerComponent } from './status-banner.component';
 import type {
   IAiSessionConfigDraft,
   IAiSessionResponse,
@@ -53,6 +54,7 @@ interface IAiModelCapabilitiesView {
     FormsModule,
     IconComponent,
     ProviderModelPathDropdownComponent,
+    StatusBannerComponent,
   ],
   template: `
     <div class="flex h-full min-h-0 flex-col">
@@ -174,30 +176,35 @@ interface IAiModelCapabilitiesView {
 
       </div>
 
-      <div class="mt-5 flex items-center justify-end gap-3 border-t border-base-300 pt-4">
-        <button
-          class="mr-auto rounded-2xl border border-danger/30 px-4 py-2.5 text-sm font-medium text-danger transition hover:bg-danger/10"
-          type="button"
-          (click)="openDeleteModal()"
-        >
-          Delete
-        </button>
+      <div class="mt-5 border-t border-base-300 pt-4">
+        <app-ai-status-banner [message]="streamStatus()" severity="info" />
+        <app-ai-status-banner [message]="error()" severity="danger" />
 
-        <button
-          class="rounded-2xl border border-base-300 px-4 py-2.5 text-sm font-medium text-base-content transition hover:bg-base-200"
-          type="button"
-          (click)="cancel.emit()"
-        >
-          Close
-        </button>
+        <div class="mt-4 flex items-center justify-end gap-3">
+          <button
+            class="mr-auto rounded-2xl border border-danger/30 px-4 py-2.5 text-sm font-medium text-danger transition hover:bg-danger/10"
+            type="button"
+            (click)="openDeleteModal()"
+          >
+            Delete
+          </button>
 
-        <button
-          class="rounded-2xl bg-accent px-4 py-2.5 text-sm font-medium text-accent-content transition hover:bg-accent/80"
-          type="button"
-          (click)="save.emit(readDraft())"
-        >
-          Save
-        </button>
+          <button
+            class="rounded-2xl border border-base-300 px-4 py-2.5 text-sm font-medium text-base-content transition hover:bg-base-200"
+            type="button"
+            (click)="cancel.emit()"
+          >
+            Close
+          </button>
+
+          <button
+            class="rounded-2xl bg-accent px-4 py-2.5 text-sm font-medium text-accent-content transition hover:bg-accent/80"
+            type="button"
+            (click)="save.emit(readDraft())"
+          >
+            Save
+          </button>
+        </div>
       </div>
     </div>
 
@@ -240,6 +247,8 @@ interface IAiModelCapabilitiesView {
 })
 export class SessionConfigFormComponent {
   readonly session = input.required<IAiSessionResponse>();
+  readonly streamStatus = input('');
+  readonly error = input('');
 
   readonly save = output<IAiSessionConfigDraft>();
   readonly cancel = output<void>();
